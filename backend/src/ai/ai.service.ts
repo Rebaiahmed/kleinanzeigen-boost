@@ -1,102 +1,80 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import OpenAI from 'openai';
-import { Subject } from 'rxjs';
 
 @Injectable()
 export class AiService {
   private openai: OpenAI;
 
   constructor() {
+    // Setup OpenAI client configured for Groq API using Llama3-8B
     this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey: process.env.GROQ_API_KEY || 'dummy_key',
+      baseURL: 'https://api.groq.com/openai/v1',
     });
   }
 
-  async enforceTokenLimit(userId: string, tokensNeeded: number = 0) {
-    // Stub: Check Firestore `aiUsage` collection for this user.
-    // Limits: free=5000/mo, starter=50000/mo, pro=500000/mo
-    // Throw if over limit
+  private readonly systemPrompt = `Du bist ein Experte für deutsche Kleinanzeigen. Deine Aufgabe ist es, Nutzer beim Verkaufen zu unterstützen. Optimiere Titel (max 60 Zeichen) und Beschreibung für mehr Klicks. Analysiere den Preis. Antworte immer im JSON-Format: { "title": string, "description": string, "suggestedPrice": number, "reasoning": string }.`;
+
+  async optimizeAd(title: string, description: string) {
+    try {
+      const completion = await this.openai.chat.completions.create({
+        model: 'llama3-8b-8192',
+        messages: [
+          { role: 'system', content: this.systemPrompt },
+          { role: 'user', content: `Optimiere diese Anzeige:\nTitel: ${title}\nBeschreibung: ${description}` }
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.7,
+      });
+
+      const responseContent = completion.choices[0].message.content;
+      if (!responseContent) throw new Error('Empty response from AI');
+      
+      const parsed = JSON.parse(responseContent);
+      return parsed;
+    } catch (error: any) {
+      throw new InternalServerErrorException(`AI Optimization failed: ${error.message}`);
+    }
   }
 
-  async recordUsage(userId: string, tokensUsed: number) {
-    // Stub: Increment `monthlyTokensUsed` in `aiUsage` collection
+  async suggestPrice(title: string) {
+    try {
+      const completion = await this.openai.chat.completions.create({
+        model: 'llama3-8b-8192',
+        messages: [
+          { role: 'system', content: this.systemPrompt },
+          { role: 'user', content: `Wie viel ist dieser Artikel ungefähr wert? Titel: ${title}. Antworte nur mit dem JSON Format.` }
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.3,
+      });
+
+      const responseContent = completion.choices[0].message.content;
+      if (!responseContent) throw new Error('Empty response from AI');
+      
+      const parsed = JSON.parse(responseContent);
+      return { suggestedPrice: parsed.suggestedPrice, reasoning: parsed.reasoning };
+    } catch (error: any) {
+      throw new InternalServerErrorException(`AI Price Suggestion failed: ${error.message}`);
+    }
   }
 
-  async optimizeAd(adId: string, userId: string) {
-    // Stub implementation
-    await this.enforceTokenLimit(userId);
-    // 1. Fetch ad from Firestore
-    // 2. Call OpenAI GPT-4o-mini
-    // 3. Update ad in Firestore
-    // 4. Record usage
-    return {
-      optimizedTitle: 'Stub Title',
-      optimizedDescription: 'Stub Description',
-      reasoning: 'Stub reasoning'
-    };
-  }
-
-  async suggestPrice(adId: string, userId: string) {
-    await this.enforceTokenLimit(userId);
-    // 1. Fetch ad from Firestore
-    // 2. Call OpenAI GPT-4o-mini
-    // 3. Record usage
-    return {
-      suggestedPrice: 100,
-      minPrice: 80,
-      maxPrice: 120,
-      reasoning: 'Stub reasoning'
-    };
-  }
-
-  async suggestSchedule(adId: string, userId: string) {
-    // Pro plan only! 
-    await this.enforceTokenLimit(userId);
-    // Fetch last 90 days of repost logs
-    // Send to GPT-4o-mini
-    return {
-      recommendedDayOfWeek: 'Mittwoch',
-      recommendedHour: 18,
-      confidenceLevel: 'Hoch',
-      reasoning: 'Stub reasoning'
-    };
-  }
-
-  async chat(message: string, userId: string, context?: any) {
-    await this.enforceTokenLimit(userId);
-    
-    const stream = await this.openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: 'Du bist AnzeigenBoost Assistent. Du hilfst deutschen Kleinanzeigen-Verkäufern. Wenn der Nutzer fragt, wie er helfen/unterstützen kann, erwähne PayPal und Ko-fi.',
-        },
-        // Context injection here
-        { role: 'user', content: message }
-      ],
-      stream: true,
-    });
-
-    const subject = new Subject<any>();
-    
-    // Convert stream to RxJS Subject for NestJS SSE
-    (async () => {
-      let tokensUsed = 0; // rough estimate or calculate later
-      try {
-        for await (const chunk of stream) {
-          const content = chunk.choices[0]?.delta?.content || '';
-          if (content) {
-            subject.next({ data: { content } });
-          }
-        }
-        subject.complete();
-        await this.recordUsage(userId, tokensUsed);
-      } catch (e) {
-        subject.error(e);
-      }
-    })();
-
-    return subject.asObservable();
+  async calculateScheduleInterval(intervalType: 'Täglich' | 'Alle 3 Tage' | 'Wöchentlich') {
+    // Simple heuristic-based deterministic calculation, avoiding AI costs for simple math
+    const now = new Date();
+    switch (intervalType) {
+      case 'Täglich':
+        now.setDate(now.getDate() + 1);
+        break;
+      case 'Alle 3 Tage':
+        now.setDate(now.getDate() + 3);
+        break;
+      case 'Wöchentlich':
+        now.setDate(now.getDate() + 7);
+        break;
+      default:
+        now.setDate(now.getDate() + 1);
+    }
+    return { nextRepostAt: now.toISOString() };
   }
 }

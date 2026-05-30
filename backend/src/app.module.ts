@@ -5,6 +5,11 @@ import { ScheduleModule } from '@nestjs/schedule';
 
 import { SupportModule } from './support/support.module';
 import { AiModule } from './ai/ai.module';
+import { FirebaseModule } from './firebase/firebase.module';
+import { AuthModule } from './auth/auth.module';
+import { AdsModule } from './ads/ads.module';
+import { AutomationModule } from './automation/automation.module';
+import { SchedulerModule } from './scheduler/scheduler.module';
 
 @Module({
   imports: [
@@ -15,7 +20,12 @@ import { AiModule } from './ai/ai.module';
     }]),
     SupportModule,
     AiModule,
-    // TODO: Import Auth, Users, Ads, Scheduler, Automation, Credentials, Firebase Modules
+    FirebaseModule,
+    AuthModule,
+    AdsModule,
+    AutomationModule,
+    SchedulerModule,
+    // TODO: Import Users, Credentials Modules
   ],
   controllers: [],
   providers: [

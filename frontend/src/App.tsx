@@ -1,22 +1,19 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { Landing } from './pages/Landing';
-import { Dashboard } from './pages/Dashboard';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Auth } from './pages/Auth';
 import { Ads } from './pages/Ads';
-import { Settings } from './pages/Settings';
-import { AiAssistant } from './pages/AiAssistant';
 import { AppShell } from './components/layout/AppShell';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Landing />} />
+        <Route path="/" element={<Navigate to="/auth" replace />} />
+        <Route path="/auth" element={<Auth />} />
         {/* Authenticated Routes wrapped in AppShell */}
-        <Route path="/dashboard" element={<AppShell><Dashboard /></AppShell>} />
-        <Route path="/ads" element={<AppShell><Ads /></AppShell>} />
-        <Route path="/settings" element={<AppShell><Settings /></AppShell>} />
-        <Route path="/ai" element={<AppShell><AiAssistant /></AppShell>} />
+        <Route path="/m-meine-anzeigen" element={<AppShell><Ads /></AppShell>} />
+        {/* Catch-all redirect to ads for the simplified view */}
+        <Route path="*" element={<Navigate to="/m-meine-anzeigen" replace />} />
       </Routes>
     </BrowserRouter>
   );

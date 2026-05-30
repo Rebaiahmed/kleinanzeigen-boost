@@ -1,0 +1,17 @@
+name: CI
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Lint & test backend
+        run: cd backend && npm ci && npm run lint && npm run test
+      - name: Lint frontend
+        run: cd frontend && npm ci && npm run lint
+      - name: Build check automation
+        run: cd automation && npm ci && npm run build

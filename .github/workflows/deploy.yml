@@ -1,0 +1,46 @@
+name: Deploy
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/anzeigenboost-backend:latest
+      - name: Build and push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/anzeigenboost-frontend:latest
+      - name: Build and push automation
+        uses: docker/build-push-action@v5
+        with:
+          context: ./automation
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/anzeigenboost-automation:latest
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/anzeigenboost
+            docker-compose -f docker-compose.prod.yml pull
+            docker-compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker system prune -f
+      - name: Health check
+        run: sleep 15 && curl -f https://anzeigenboost.de/api/health || exit 1

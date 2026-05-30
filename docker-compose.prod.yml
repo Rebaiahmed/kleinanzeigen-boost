@@ -1,0 +1,38 @@
+version: '3.9'
+services:
+  backend:
+    image: ghcr.io/YOURUSERNAME/anzeigenboost-backend:latest
+    restart: always
+    env_file: /opt/anzeigenboost/.env.backend
+    networks: [anzeigenboost]
+    expose: ["3000"]
+
+  frontend:
+    image: ghcr.io/YOURUSERNAME/anzeigenboost-frontend:latest
+    restart: always
+    ports: ["80:80", "443:443"]
+    volumes:
+      - certbot-www:/var/www/certbot
+      - certbot-conf:/etc/letsencrypt
+    networks: [anzeigenboost]
+
+  automation:
+    image: ghcr.io/YOURUSERNAME/anzeigenboost-automation:latest
+    restart: always
+    env_file: /opt/anzeigenboost/.env.automation
+    networks: [anzeigenboost]
+    # NOT exposed externally — Docker network only
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - certbot-www:/var/www/certbot
+      - certbot-conf:/etc/letsencrypt
+
+volumes:
+  certbot-www:
+  certbot-conf:
+
+networks:
+  anzeigenboost:
+    driver: bridge

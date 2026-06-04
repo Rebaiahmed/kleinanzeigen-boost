@@ -245,17 +245,14 @@ export class AiService {
       systemInstruction: this.optimizeAdPrompt,
       generationConfig: {
         responseMimeType: 'application/json',
-        maxOutputTokens: 600, // Rule One
+        maxOutputTokens: 400, // 60-word desc ≈ 80 tokens + JSON overhead ≈ 150 total; 400 gives 2.5× buffer
       },
     });
 
-    // Extract only needed fields (Rule Four)
-    const userPrompt = `
-Optimize the following listing:
-Title: ${title}
-Description: ${description}
-Category: ${category}
-`;
+    // Extract only needed fields (Rule Four) — truncate description to 300 chars to keep prompt small
+    const descSlice = (description || '').slice(0, 300);
+    const userPrompt =
+      `Title: ${title}\nDescription: ${descSlice}\nCategory: ${category}`;
 
     let responseText = '';
     let promptTokenCount = 0;
@@ -267,27 +264,40 @@ Category: ${category}
       const result = await model.generateContent([userPrompt]);
       const response = await result.response;
       responseText = response.text();
-      console.log(`[KI-Opt] Gemini responded (attempt 1), raw length: ${responseText.length}`);
+      console.log(`[KI-Opt] Gemini responded (attempt 1), raw length: ${responseText.length}, finish: ${response.candidates?.[0]?.finishReason}`);
       promptTokenCount = response.usageMetadata?.promptTokenCount || 0;
       candidatesTokenCount = response.usageMetadata?.candidatesTokenCount || 0;
+
+      if (!isJsonComplete(responseText)) {
+        throw new Error(`TRUNCATED: response ends at char ${responseText.length}`);
+      }
       const cleaned = cleanAndExtractJson(responseText);
       parsedJson = JSON.parse(cleaned);
     } catch (error: any) {
-      console.error('[KI-Opt] Parse error (attempt 1):', error);
+      console.error('[KI-Opt] Attempt 1 failed:', error.message);
+
+      // Retry with ultra-short constraints to guarantee the JSON fits in 400 tokens
+      const retryPrompt =
+        `Optimize this German classified ad. Return ONLY valid JSON, no extra text.\n` +
+        `{"improvedTitle":"<max 50 chars>","improvedDescription":"<max 40 words>","improvementSummary":"<max 10 words>"}\n\n` +
+        `Ad title: ${title}\nAd category: ${category}`;
+
       try {
-        const retryPrompt = `${userPrompt}\nReturn ONLY a valid JSON object matching the requested schema. Make the description very brief and concise (under 80 words) to ensure it does not exceed output token limits. Do not include markdown code fences, do not include surrounding text.`;
         console.log('[KI-Opt] Calling Gemini API (retry attempt 2)...');
         const result = await model.generateContent([retryPrompt]);
         const response = await result.response;
         responseText = response.text();
-        console.log(`[KI-Opt] Gemini responded (attempt 2), raw length: ${responseText.length}`);
+        console.log(`[KI-Opt] Gemini responded (attempt 2), raw length: ${responseText.length}, finish: ${response.candidates?.[0]?.finishReason}`);
         promptTokenCount += response.usageMetadata?.promptTokenCount || 0;
         candidatesTokenCount += response.usageMetadata?.candidatesTokenCount || 0;
+
+        if (!isJsonComplete(responseText)) {
+          throw new Error(`TRUNCATED on retry: response ends at char ${responseText.length}`);
+        }
         const cleaned = cleanAndExtractJson(responseText);
         parsedJson = JSON.parse(cleaned);
       } catch (retryError: any) {
-        console.error('Gemini Ad Optimization retry failed. Raw response:', responseText);
-        console.error('Retry parse error:', retryError);
+        console.error('[KI-Opt] Retry failed:', retryError.message, '| raw:', responseText.slice(0, 120));
         throw new HttpException(
           `Fehler bei der KI-Optimierung: Die Antwort konnte nicht verarbeitet werden. Bitte versuche es erneut.`,
           HttpStatus.INTERNAL_SERVER_ERROR,
@@ -451,6 +461,22 @@ ${messageHistory.map((m, idx) => `[Message ${idx + 1}]: ${m}`).join('\n')}
   }
 }
 
+
+/**
+ * Quick completeness guard — returns false if the response is truncated JSON.
+ * Checks that after stripping markdown fences there is a { ... } pair.
+ */
+function isJsonComplete(text: string): boolean {
+  if (!text) return false;
+  const stripped = text
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/, '')
+    .trim();
+  const open = stripped.lastIndexOf('{');
+  const close = stripped.lastIndexOf('}');
+  return open !== -1 && close > open;
+}
 
 function cleanAndExtractJson(text: string): string {
   if (!text) return '';

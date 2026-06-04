@@ -149,7 +149,7 @@ export class AiService {
     }
 
     const model = this.genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash', // Rule Seven
+      model: 'gemini-2.0-flash', // 1500 RPD free tier vs 20 RPD for 2.5-flash
       systemInstruction: this.analyzePhotosPrompt,
       generationConfig: {
         responseMimeType: 'application/json',
@@ -241,7 +241,7 @@ export class AiService {
     }
 
     const model = this.genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash', // Rule Seven
+      model: 'gemini-2.0-flash', // 1500 RPD free tier vs 20 RPD for 2.5-flash
       systemInstruction: this.optimizeAdPrompt,
       generationConfig: {
         responseMimeType: 'application/json',
@@ -274,6 +274,12 @@ export class AiService {
       const cleaned = cleanAndExtractJson(responseText);
       parsedJson = JSON.parse(cleaned);
     } catch (error: any) {
+      // Surface quota errors immediately — no point retrying
+      const quotaErr = extractQuotaError(error);
+      if (quotaErr) {
+        console.error('[KI-Opt] Quota exceeded:', quotaErr.message);
+        throw new HttpException(quotaErr.message, HttpStatus.TOO_MANY_REQUESTS);
+      }
       console.error('[KI-Opt] Attempt 1 failed:', error.message);
 
       // Retry with ultra-short constraints to guarantee the JSON fits in 400 tokens
@@ -297,6 +303,12 @@ export class AiService {
         const cleaned = cleanAndExtractJson(responseText);
         parsedJson = JSON.parse(cleaned);
       } catch (retryError: any) {
+        // Surface quota errors from retry
+        const quotaErr = extractQuotaError(retryError);
+        if (quotaErr) {
+          console.error('[KI-Opt] Quota exceeded on retry:', quotaErr.message);
+          throw new HttpException(quotaErr.message, HttpStatus.TOO_MANY_REQUESTS);
+        }
         console.error('[KI-Opt] Retry failed:', retryError.message, '| raw:', responseText.slice(0, 120));
         throw new HttpException(
           `Fehler bei der KI-Optimierung: Die Antwort konnte nicht verarbeitet werden. Bitte versuche es erneut.`,
@@ -321,7 +333,7 @@ export class AiService {
     }
 
     const model = this.genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash', // Rule Seven
+      model: 'gemini-2.0-flash', // 1500 RPD free tier vs 20 RPD for 2.5-flash
       systemInstruction: this.priceCheckPrompt,
       generationConfig: {
         responseMimeType: 'application/json',
@@ -382,7 +394,7 @@ export class AiService {
     }
 
     const model = this.genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash', // Rule Seven
+      model: 'gemini-2.0-flash', // 1500 RPD free tier vs 20 RPD for 2.5-flash
       systemInstruction: this.replySuggestionsPrompt,
       generationConfig: {
         responseMimeType: 'application/json',
@@ -437,30 +449,48 @@ ${messageHistory.map((m, idx) => `[Message ${idx + 1}]: ${m}`).join('\n')}
   }
 
   /**
-   * Minimal Gemini connectivity check.
-   * Called by GET /api/ai/health (no auth) to power the panel health indicator dot.
+   * Health check — does NOT call Gemini (would burn quota).
+   * Validates only: key is present, non-empty, looks like a real key (39+ chars).
+   * Returns ok=true if the key is configured; latencyMs=0 (no network call).
    */
   async healthCheck(): Promise<{ ok: boolean; latencyMs: number; error?: string }> {
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey || geminiKey === 'dummy_key' || geminiKey.trim() === '') {
       return { ok: false, latencyMs: 0, error: 'GEMINI_API_KEY not configured' };
     }
-
-    const model = this.genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      generationConfig: { maxOutputTokens: 5 },
-    });
-
-    const start = Date.now();
-    try {
-      await model.generateContent(['ping']);
-      return { ok: true, latencyMs: Date.now() - start };
-    } catch (err: any) {
-      return { ok: false, latencyMs: Date.now() - start, error: err.message };
+    // A real Gemini API key is always 39 characters starting with "AI"
+    const looksValid = geminiKey.length >= 30 && !geminiKey.includes('dummy');
+    if (!looksValid) {
+      return { ok: false, latencyMs: 0, error: 'GEMINI_API_KEY looks invalid' };
     }
+    return { ok: true, latencyMs: 0 };
   }
 }
 
+
+/**
+ * Detects a Google API quota-exceeded (429) error and returns a German-language
+ * user-facing message including how long to wait.
+ */
+function extractQuotaError(err: any): { message: string } | null {
+  const raw = err?.message || '';
+  if (!raw.includes('Quota exceeded') && !raw.includes('RESOURCE_EXHAUSTED') && !raw.includes('quota')) {
+    return null;
+  }
+
+  // Try to extract retryDelay from the error message (e.g. "Please retry in 54.77s")
+  const delayMatch = raw.match(/retry in ([\d.]+)s/i);
+  const delaySec = delayMatch ? Math.ceil(parseFloat(delayMatch[1])) : null;
+  const delayMin = delaySec ? Math.ceil(delaySec / 60) : null;
+
+  const waitMsg = delayMin
+    ? ` Bitte warte ${delayMin} Minute${delayMin !== 1 ? 'n' : ''} und versuche es erneut.`
+    : ' Bitte versuche es später erneut.';
+
+  return {
+    message: `KI-Tageslimit erreicht (Free-Tier: 1.500 Anfragen/Tag).${waitMsg} Für unbegrenzte Nutzung: Gemini API-Schlüssel auf Paid-Tier upgraden.`,
+  };
+}
 
 /**
  * Quick completeness guard — returns false if the response is truncated JSON.

@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, UnauthorizedException, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { FirebaseService } from '../firebase/firebase.service';
 import { AutomationService } from '../automation/automation.service';
@@ -218,4 +218,113 @@ export class AuthService {
     }
     return { status: 'expired' };
   }
+
+  /**
+   * Starts a visible browser login job on the automation worker.
+   * Awaits the 202 handshake from the worker (5s timeout) so we can fail fast
+   * if the worker is not available, rather than returning a jobId that instantly fails.
+   */
+  async initiateVisibleLogin(email: string): Promise<{ jobId: string }> {
+    const jobId = crypto.randomUUID();
+
+    // Create job record in Firestore
+    await this.firebaseService.firestore.collection('loginJobs').doc(jobId).set({
+      jobId,
+      email,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    });
+
+    // Await the worker's 202 acceptance (short timeout — the worker should respond
+    // immediately with { accepted: true } and then run the browser in background)
+    try {
+      await this.automationService.callAutomationWorkerFast('login/visible', { jobId, email });
+    } catch (err: any) {
+      // Clean up the Firestore job so we don't leave orphaned docs
+      await this.firebaseService.firestore
+        .collection('loginJobs')
+        .doc(jobId)
+        .delete()
+        .catch(() => {});
+
+      const isUnavailable =
+        err.message?.includes('404') ||
+        err.message?.includes('ECONNREFUSED') ||
+        err.message?.includes('ECONNRESET') ||
+        err.message?.includes('timeout');
+
+      throw new HttpException(
+        {
+          message: isUnavailable
+            ? 'Der Browser-Login-Service ist nicht verfügbar. Bitte nutze den Cookie Bypass-Tab.'
+            : `Login-Dienst Fehler: ${err.message}`,
+        },
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+
+    return { jobId };
+  }
+
+  /**
+   * Polls the automation worker for the job status and, on success,
+   * converts the cookies into a JWT session.
+   */
+  async getLoginJobStatus(jobId: string): Promise<{
+    status: 'pending' | 'waiting-for-user' | 'success' | 'failed';
+    accessToken?: string;
+    error?: string;
+  }> {
+    // Forward the status poll to the automation worker
+    let workerJob: any;
+    try {
+      workerJob = await this.automationService.getFromAutomationWorker(`login/visible/${jobId}`);
+    } catch (err: any) {
+      // Fallback: read from Firestore job doc
+      const jobDoc = await this.firebaseService.firestore.collection('loginJobs').doc(jobId).get();
+      if (!jobDoc.exists) {
+        throw new HttpException({ message: 'Job nicht gefunden' }, HttpStatus.NOT_FOUND);
+      }
+      workerJob = jobDoc.data();
+    }
+
+    if (workerJob.status === 'success' && workerJob.cookies) {
+      // Finalise: build JWT, persist session
+      const jobDoc = await this.firebaseService.firestore.collection('loginJobs').doc(jobId).get();
+      const email = jobDoc.data()?.email || 'unknown';
+      const userId = Buffer.from(email).toString('base64');
+      const token = this.jwtService.sign({ email, sub: userId });
+
+      await this.firebaseService.firestore.collection('sessions').doc(userId).set({
+        token,
+        status: 'active',
+        lastLogin: new Date().toISOString(),
+        marketplaceCookies: workerJob.cookies,
+      }, { merge: true });
+
+      // Clean up the job doc
+      await this.firebaseService.firestore.collection('loginJobs').doc(jobId).delete().catch(() => {});
+
+      return { status: 'success', accessToken: token };
+    }
+
+    return {
+      status: workerJob.status,
+      // Sanitize raw axios/network errors so they don't leak to the user
+      error: sanitizeWorkerError(workerJob.error),
+    };
+  }
+}
+
+function sanitizeWorkerError(raw?: string): string | undefined {
+  if (!raw) return undefined;
+  if (
+    raw.includes('404') ||
+    raw.includes('ECONNREFUSED') ||
+    raw.includes('ECONNRESET') ||
+    raw.includes('status code')
+  ) {
+    return 'Der Browser-Login-Service ist nicht verfügbar. Bitte nutze den Cookie Bypass-Tab.';
+  }
+  return raw;
 }

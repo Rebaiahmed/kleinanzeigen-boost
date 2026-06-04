@@ -15,3 +15,5 @@ jobs:
         run: cd frontend && npm ci && npm run lint
       - name: Build check automation
         run: cd automation && npm ci && npm run build
+      - name: Build check extension
+        run: cd extension && npm ci && npm run build

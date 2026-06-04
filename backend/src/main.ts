@@ -1,8 +1,12 @@
 import { NestFactory } from '@nestjs/core';
+import * as dotenv from 'dotenv';
+dotenv.config();
+
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import * as cookieParser from 'cookie-parser';
+import { ALLOWED_ORIGINS } from './common/constants/cors.constants';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -13,7 +17,7 @@ async function bootstrap() {
   
   // CORS
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: ALLOWED_ORIGINS,
     credentials: true,
   });
 

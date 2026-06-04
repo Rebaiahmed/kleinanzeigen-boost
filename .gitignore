@@ -1,0 +1,48 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+web_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+**/dist/
+frontend/dist/
+backend/dist/
+automation/dist/
+.tsconfig.tsbuildinfo
+backend/src/tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# Env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+automation/.env
+
+# Firebase files
+.firebase/
+frontend/.firebase/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test response data / secret configs
+cookie.txt
+login_response.json
+sync_payload.json
+firebase-sa.json
+frontend/firebase-sa.json
+*.local

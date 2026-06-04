@@ -1,46 +1,59 @@
-name: Deploy
+name: Production Monorepo Deployment Pipeline
+
 on:
   push:
-    branches: [main]
+    branches: [ main ]
+
 jobs:
-  deploy:
+  audit-and-validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Login to GHCR
-        uses: docker/login-action@v3
+
+      - name: Initialize Node.js Environment
+        uses: actions/setup-node@v4
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push backend
-        uses: docker/build-push-action@v5
+          node-version: 20
+          cache: 'npm'
+
+      - name: Validate Backend TypeScript
+        run: cd backend && npm ci && npx tsc --noEmit
+
+      - name: Validate Frontend TypeScript
+        run: cd frontend && npm ci && npx tsc --noEmit
+
+      - name: Validate Automation TypeScript
+        run: cd automation && npm ci && npx tsc --noEmit
+
+  deploy-services:
+    needs: audit-and-validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize Node.js Environment
+        uses: actions/setup-node@v4
         with:
-          context: ./backend
-          push: true
-          tags: ghcr.io/${{ github.repository_owner }}/anzeigenboost-backend:latest
-      - name: Build and push frontend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend
-          push: true
-          tags: ghcr.io/${{ github.repository_owner }}/anzeigenboost-frontend:latest
-      - name: Build and push automation
-        uses: docker/build-push-action@v5
-        with:
-          context: ./automation
-          push: true
-          tags: ghcr.io/${{ github.repository_owner }}/anzeigenboost-automation:latest
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /opt/anzeigenboost
-            docker-compose -f docker-compose.prod.yml pull
-            docker-compose -f docker-compose.prod.yml up -d --remove-orphans
-            docker system prune -f
-      - name: Health check
-        run: sleep 15 && curl -f https://anzeigenboost.de/api/health || exit 1
+          node-version: 20
+          cache: 'npm'
+
+      # 1. Backend NestJS Build
+      - name: Build NestJS Backend
+        run: cd backend && npm ci && npm run build
+
+      # 2. Automation Worker Build
+      - name: Build Automation Worker
+        run: cd automation && npm ci && npm run build
+
+      # 3. Frontend Build & Deploy to Firebase Hosting
+      - name: Build & Deploy Frontend
+        run: |
+          cd frontend
+          npm ci && npm run build
+          npx firebase-tools deploy --only hosting --project kleinanzeigen-app --token ${{ secrets.FIREBASE_TOKEN }}
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      # 4. Build Chrome Extension
+      - name: Build Chrome Extension
+        run: cd extension && npm ci && npm run build

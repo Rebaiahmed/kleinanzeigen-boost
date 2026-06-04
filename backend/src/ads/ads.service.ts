@@ -1,18 +1,78 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
+
+import { AutomationService } from '../automation/automation.service';
 
 @Injectable()
 export class AdsService {
-  constructor(private readonly firebaseService: FirebaseService) {}
+  constructor(
+    private readonly firebaseService: FirebaseService,
+    private readonly automationService: AutomationService
+  ) {}
+
+  async getAds(userId: string) {
+    const db = this.firebaseService.firestore;
+    const snapshot = await db.collection('users').doc(userId).collection('ads').get();
+    const ads = snapshot.docs.map(doc => doc.data());
+    return { success: true, ads };
+  }
 
   async syncAds(userId: string) {
-    // Stub: Calls Automation Service to scrape ads and upserts to Firestore
-    return { success: true, message: 'Sync triggered successfully' };
+    const db = this.firebaseService.firestore;
+    
+    // 1. Fetch user cookies
+    const sessionDoc = await db.collection('sessions').doc(userId).get();
+    if (!sessionDoc.exists || sessionDoc.data()?.status !== 'active') {
+      throw new UnauthorizedException('No active session found. Please log in again.');
+    }
+    
+    const cookies = sessionDoc.data()?.marketplaceCookies;
+    if (!cookies || !cookies.length) {
+      throw new UnauthorizedException('No marketplace cookies found.');
+    }
+
+    // 2. Call Worker to scrape ads
+    const workerResponse = await this.automationService.callAutomationWorker('sync', { cookies });
+    
+    if (!workerResponse.success) {
+      if (workerResponse.error === 'Session expired') {
+        await db.collection('sessions').doc(userId).update({ status: 'expired' });
+        throw new UnauthorizedException('Kleinanzeigen session expired. Please log in again.');
+      }
+      throw new InternalServerErrorException(workerResponse.error || 'Failed to sync ads');
+    }
+
+    const ads = workerResponse.ads || [];
+
+    // 3. Upsert ads to Firestore
+    const batch = db.batch();
+    for (const ad of ads) {
+      const adRef = db.collection('users').doc(userId).collection('ads').doc(ad.id);
+      batch.set(adRef, ad, { merge: true });
+    }
+    
+    await batch.commit();
+
+    return { success: true, message: 'Sync complete', ads };
   }
 
   async addAd(userId: string, adData: any) {
-    // Stub: Triggers browser automation to post a new ad
-    return { success: true, message: 'Ad creation triggered' };
+    const result = await this.automationService.callAutomationWorker('ads/create', { userId, adData });
+    if (!result.success) {
+      throw new InternalServerErrorException(result.error || 'Ad creation failed');
+    }
+    // Persist the new ad to Firestore
+    const db = this.firebaseService.firestore;
+    const adRef = db
+      .collection('users')
+      .doc(userId)
+      .collection('ads')
+      .doc(result.adId || adData.id || Date.now().toString());
+    await adRef.set(
+      { ...adData, status: 'active', createdAt: new Date().toISOString() },
+      { merge: true },
+    );
+    return { success: true, ad: result.ad };
   }
 
   async repostAd(userId: string, adId: string) {
@@ -73,5 +133,45 @@ export class AdsService {
     });
 
     return { success: true, message: 'Auto-repost status toggled' };
+  }
+
+  async activateAd(userId: string, adId: string) {
+    const db = this.firebaseService.firestore;
+    const adRef = db.collection('users').doc(userId).collection('ads').doc(adId);
+    await adRef.update({ status: 'Aktiv' });
+    // Stub: call automation worker to activate ad on Kleinanzeigen
+    return { success: true, message: 'Anzeige wurde aktiviert' };
+  }
+
+  async pauseAd(userId: string, adId: string) {
+    const db = this.firebaseService.firestore;
+    const adRef = db.collection('users').doc(userId).collection('ads').doc(adId);
+    await adRef.update({ status: 'Pausiert' });
+    // Stub: call automation worker to pause ad on Kleinanzeigen
+    return { success: true, message: 'Anzeige wurde pausiert' };
+  }
+
+  async deleteAd(userId: string, adId: string) {
+    const db = this.firebaseService.firestore;
+    const adRef = db.collection('users').doc(userId).collection('ads').doc(adId);
+    await adRef.delete();
+    // Stub: call automation worker to delete ad on Kleinanzeigen
+    return { success: true, message: 'Anzeige wurde gelöscht' };
+  }
+
+  async saveDraft(userId: string, adData: any) {
+    const db = this.firebaseService.firestore;
+    const adId = adData.id || `draft_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    const adRef = db.collection('users').doc(userId).collection('ads').doc(adId);
+
+    const newAd = {
+      ...adData,
+      id: adId,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    };
+
+    await adRef.set(newAd, { merge: true });
+    return { success: true, ad: newAd };
   }
 }

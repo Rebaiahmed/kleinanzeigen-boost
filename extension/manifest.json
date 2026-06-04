@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "AnzeigenBoost",
+  "version": "1.0.0",
+  "description": "Automatisches Reposten von Kleinanzeigen direkt im Browser ohne die Website zu verlassen.",
+  "permissions": [
+    "storage",
+    "alarms",
+    "notifications",
+    "cookies"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:3000/*",
+    "http://localhost:3000/*",
+    "https://api.anzeigenboost.de/*",
+    "https://*.kleinanzeigen.de/*"
+  ],
+  "action": {
+    "default_popup": "src/popup/index.html",
+    "default_title": "AnzeigenBoost"
+  },
+  "background": {
+    "service_worker": "src/background/index.ts"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.kleinanzeigen.de/*"],
+      "js": ["src/content/index.ts"]
+    }
+  ]
+}

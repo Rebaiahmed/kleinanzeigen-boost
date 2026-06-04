@@ -5,6 +5,8 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 
+import { AutomationModule } from '../automation/automation.module';
+
 @Module({
   imports: [
     PassportModule,
@@ -12,6 +14,7 @@ import { JwtStrategy } from './jwt.strategy';
       secret: process.env.JWT_SECRET || 'fallback_secret_for_dev',
       signOptions: { expiresIn: '7d' },
     }),
+    AutomationModule,
   ],
   providers: [AuthService, JwtStrategy],
   controllers: [AuthController],

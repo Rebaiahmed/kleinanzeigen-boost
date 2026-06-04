@@ -1,0 +1,14 @@
+{
+  "name": "kleinanzeigen-boost",
+  "version": "1.0.0",
+  "description": "KleinanzeigenBoost Monorepo",
+  "scripts": {
+    "start": "concurrently \"npm run start:frontend\" \"npm run start:backend\" \"npm run start:automation\"",
+    "start:frontend": "cd frontend && npm run dev",
+    "start:backend": "cd backend && npm run start:dev",
+    "start:automation": "cd automation && DEBUG_BROWSER=false npm run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

@@ -1,6 +1,5 @@
 import React from 'react';
 import { TopBar } from './TopBar';
-import { FloatingChat } from '../ai/FloatingChat';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -16,8 +15,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           KleinanzeigenBoost — Deine Anzeigen immer ganz oben <span className="mx-2">|</span> Made with <span className="text-red-500">♥</span> in Germany
         </div>
       </footer>
-
-      <FloatingChat />
     </div>
   );
 }

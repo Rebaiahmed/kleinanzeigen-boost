@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { FirebaseService } from '../firebase/firebase.service';
 import { AutomationService } from '../automation/automation.service';
 
@@ -12,7 +12,7 @@ export class SchedulerService {
     private readonly automationService: AutomationService
   ) {}
 
-  @Cron('*/10 * * * *') // Runs every 10 minutes
+  @Cron('*/1 * * * *') // Runs every 1 minute
   async handleRepostCron() {
     this.logger.log('Running scheduled repost check...');
     const db = this.firebaseService.firestore;
@@ -35,6 +35,9 @@ export class SchedulerService {
         for (const adDoc of adsSnapshot.docs) {
           const adId = adDoc.id;
           const adData = adDoc.data();
+
+          // Read per-ad interval (fallback: 1440 min = 24 h)
+          const repostIntervalMinutes: number = adData.repostIntervalMinutes ?? 1440;
           
           this.logger.log(`Initiating automated repost for Ad: ${adId} (User: ${userId})`);
 
@@ -48,14 +51,19 @@ export class SchedulerService {
           try {
             const result = await this.automationService.callAutomationWorker('repost', { userId, adId, adData });
             
-            // 3. On success, update state
+            // 3. On success, update state with dynamic next repost time
             if (result.success) {
+              const nextRepostAt = new Date(
+                Date.now() + repostIntervalMinutes * 60 * 1000,
+              ).toISOString();
+
               await db.collection('users').doc(userId).collection('ads').doc(adId).update({
                 status: 'active',
                 lastPostedAt: new Date().toISOString(),
-                // Simplistic next calculate, usually fetched from Ad schema intervals
-                nextRepostAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                nextRepostAt,
               });
+
+              this.logger.log(`Repost scheduled: next in ${repostIntervalMinutes} minutes`);
             }
           } catch (error: any) {
             this.logger.error(`Repost failed for ${adId}: ${error.message}`);

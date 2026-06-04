@@ -1,108 +1,170 @@
-import React, { useState } from 'react';
-import { SupportMe } from '../components/SupportMe';
-import { Menu, X, Zap, CheckCircle2 } from 'lucide-react';
+import React from 'react';
 import { Link } from 'react-router-dom';
+import { Zap, Terminal, Lock, Globe, Fingerprint } from 'lucide-react';
 
 export function Landing() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
   return (
-    <div className="min-h-screen bg-ka-gray-50 font-sans text-ka-gray-900">
-      {/* Navbar */}
-      <header className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            {/* Logo */}
-            <div className="flex-shrink-0 flex items-center gap-2">
-              <Zap className="h-6 w-6 text-ka-orange" />
-              <span className="text-2xl font-bold text-ka-green-dark">AnzeigenBoost</span>
+    <div className="min-h-screen bg-white font-sans text-slate-700">
+      {/* Navigation */}
+      <header className="border-b border-slate-200 bg-white sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex-shrink-0 flex items-center text-[20px] tracking-tight">
+              <Zap className="h-5 w-5 text-[#A8C300] mr-1.5" />
+              <span className="font-bold text-slate-800">kleinanzeigen</span>
+              <span className="font-normal text-slate-500 ml-1">Boost</span>
             </div>
-
-            {/* Desktop Navigation */}
-            <nav className="hidden md:flex space-x-8">
-              <a href="#features" className="text-ka-gray-600 hover:text-ka-green-dark font-medium transition-colors">Funktionen</a>
-              <a href="#pricing" className="text-ka-gray-600 hover:text-ka-green-dark font-medium transition-colors">Preise</a>
-              <a href="#faq" className="text-ka-gray-600 hover:text-ka-green-dark font-medium transition-colors">FAQ</a>
-            </nav>
-
-            {/* Desktop CTA */}
-            <div className="hidden md:flex items-center gap-4">
-              <Link to="/dashboard" className="text-ka-green-dark font-medium hover:text-ka-green transition-colors">
-                Sign up
+            <div className="flex items-center gap-6">
+              <a href="#security" className="text-[13px] font-medium text-slate-500 hover:text-slate-800 transition-colors hidden sm:block">
+                Sicherheit & Open-Source Doku
+              </a>
+              <Link to="/auth" className="bg-transparent hover:bg-slate-50 text-slate-700 font-semibold py-1.5 px-4 rounded-sm border border-slate-300 text-[14px] transition-colors">
+                Einloggen
               </Link>
-              <Link to="/dashboard" className="bg-ka-green hover:bg-ka-green-dark text-white px-5 py-2 rounded-md font-medium transition-colors shadow-sm">
-                Start for free
-              </Link>
-            </div>
-
-            {/* Mobile menu button */}
-            <div className="flex md:hidden items-center">
-              <button 
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="text-ka-gray-600 hover:text-ka-gray-900 focus:outline-none"
-              >
-                {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-              </button>
             </div>
           </div>
         </div>
-
-        {/* Mobile Navigation */}
-        {isMenuOpen && (
-          <div className="md:hidden bg-white border-t border-ka-gray-100">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-              <a href="#features" className="block px-3 py-2 text-ka-gray-600 hover:bg-ka-gray-50 rounded-md font-medium">Funktionen</a>
-              <a href="#pricing" className="block px-3 py-2 text-ka-gray-600 hover:bg-ka-gray-50 rounded-md font-medium">Preise</a>
-              <a href="#faq" className="block px-3 py-2 text-ka-gray-600 hover:bg-ka-gray-50 rounded-md font-medium">FAQ</a>
-              <Link to="/dashboard" className="block px-3 py-2 text-ka-green-dark hover:bg-ka-gray-50 rounded-md font-medium">Sign up</Link>
-              <Link to="/dashboard" className="block px-3 py-2 text-ka-green font-medium">Start for free</Link>
-            </div>
-          </div>
-        )}
       </header>
 
+      {/* Hero Section */}
       <main>
-        {/* Hero Section */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
-          <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-ka-gray-900 mb-6">
-            Deine Kleinanzeigen <span className="text-ka-green-dark">immer ganz oben</span>
-          </h1>
-          <p className="max-w-2xl mx-auto text-xl text-ka-gray-600 mb-10">
-            AnzeigenBoost repostet deine Anzeigen automatisch. Spare Zeit, verkaufe schneller und lass die KI deine Titel optimieren.
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link to="/dashboard" className="bg-ka-green hover:bg-ka-green-dark text-white px-8 py-3 rounded-md font-semibold text-lg shadow-sm transition-colors">
-              Jetzt kostenlos testen
-            </Link>
-            <a href="#how-it-works" className="bg-white hover:bg-ka-gray-50 text-ka-gray-700 border border-ka-gray-200 px-8 py-3 rounded-md font-medium text-lg transition-colors">
-              Wie es funktioniert
-            </a>
+        <section className="relative pt-16 pb-24 lg:pt-24 lg:pb-32 bg-white">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+              
+              {/* Left Column (Copy) */}
+              <div className="max-w-xl">
+                <div className="inline-flex items-center px-2.5 py-1 rounded-full border border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-600 mb-6 uppercase tracking-wider">
+                  Utility-Tool für Power-User
+                </div>
+                <h1 className="text-3xl sm:text-[32px] font-bold tracking-tight text-slate-800 mb-5 leading-tight">
+                  Automatisiertes Anzeigen-Management für Kleinanzeigen.
+                </h1>
+                <p className="text-base text-slate-600 mb-8 leading-relaxed">
+                  Vergiss manuelles Löschen und Neueinstellen. KleinanzeigenBoost steuert deine Inserate im Hintergrund über einen sicheren Cloud-Browser, während du dich auf deine Verkäufe konzentrierst.
+                </p>
+                <div>
+                  <Link to="/auth" className="inline-flex items-center justify-center bg-[#A8C300] hover:bg-[#96ae00] text-white font-bold py-3 px-6 rounded-full text-[15px] shadow-sm transition-all transform hover:-translate-y-0.5">
+                    Mit Kleinanzeigen-Konto anmelden
+                  </Link>
+                </div>
+              </div>
+
+              {/* Right Column (Visual Proof Console) */}
+              <div className="relative">
+                <div className="bg-[#0f172a] rounded-lg shadow-xl overflow-hidden border border-slate-800 transform rotate-1 hover:rotate-0 transition-transform duration-500">
+                  <div className="flex items-center px-4 py-3 border-b border-slate-800 bg-[#1e293b]">
+                    <div className="flex space-x-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-slate-600"></div>
+                      <div className="w-2.5 h-2.5 rounded-full bg-slate-600"></div>
+                      <div className="w-2.5 h-2.5 rounded-full bg-slate-600"></div>
+                    </div>
+                    <div className="mx-auto text-xs text-slate-400 font-mono flex items-center">
+                      <Terminal className="w-3 h-3 mr-1.5" />
+                      worker_node_01
+                    </div>
+                  </div>
+                  <div className="p-5 font-mono text-[13px] leading-relaxed text-slate-300">
+                    <div className="flex items-start mb-2">
+                      <span className="text-emerald-400 mr-2">[✔]</span>
+                      <span>Session active (Encrypted)</span>
+                    </div>
+                    <div className="flex items-start mb-2 opacity-80">
+                      <span className="text-blue-400 mr-2">[➜]</span>
+                      <span>Scanning account state...</span>
+                    </div>
+                    <div className="flex items-start mb-2">
+                      <span className="text-blue-400 mr-2">[➜]</span>
+                      <span>
+                        Syncing 'Apple iPhone 13 Pro' ... <span className="text-emerald-400">Done</span> <span className="text-slate-500">(Views: 142)</span>
+                      </span>
+                    </div>
+                    <div className="flex items-start mb-2 opacity-80">
+                      <span className="text-yellow-400 mr-2">[🕒]</span>
+                      <span>Next automated repost scheduled at 18:00</span>
+                    </div>
+                    <div className="flex items-start mt-4 animate-pulse">
+                      <span className="text-[#A8C300] mr-2">❯</span>
+                      <span className="text-slate-500">Waiting for scheduler hook...</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
           </div>
-          
-          <div className="mt-12 flex justify-center items-center gap-8 text-ka-gray-400 text-sm font-medium">
-            <div className="flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-ka-green" /> Kein manuelles Löschen mehr</div>
-            <div className="flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-ka-green" /> 100% sicher verschlüsselt</div>
+        </section>
+
+        {/* Security Deep-Dive */}
+        <section id="security" className="py-20 lg:py-24 bg-slate-50 border-t border-slate-200">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mb-12">
+              <h2 className="text-2xl sm:text-[28px] font-bold text-slate-800 mb-3 tracking-tight">Wie sicher sind meine Zugangsdaten?</h2>
+              <p className="text-base text-slate-600">
+                Unsere Architektur basiert auf dem Zero-Knowledge-Prinzip. Wir haben keinen Zugriff auf deine Passwörter im Klartext.
+              </p>
+            </div>
+
+            <div className="space-y-8">
+              
+              {/* Point 1 */}
+              <div className="flex gap-4">
+                <div className="flex-shrink-0 mt-1">
+                  <div className="w-10 h-10 rounded-md bg-white border border-slate-200 flex items-center justify-center shadow-sm">
+                    <Lock className="w-5 h-5 text-slate-700" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800 mb-2">Kein Klartext-Speicher</h3>
+                  <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+                    Deine Passwörter werden mittels <code className="bg-slate-200 px-1.5 py-0.5 rounded text-slate-800 font-mono text-xs">AES-256-GCM</code> direkt auf Datenbank-Ebene verschlüsselt. Niemand, auch nicht unsere Entwickler, kann dein Passwort einsehen.
+                  </p>
+                </div>
+              </div>
+
+              {/* Point 2 */}
+              <div className="flex gap-4">
+                <div className="flex-shrink-0 mt-1">
+                  <div className="w-10 h-10 rounded-md bg-white border border-slate-200 flex items-center justify-center shadow-sm">
+                    <Globe className="w-5 h-5 text-slate-700" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800 mb-2">Isolierte Cloud-Browser</h3>
+                  <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+                    Die Automatisierung läuft über dedizierte, isolierte Playwright-Instanzen. Deine Daten werden ausschließlich zur Kommunikation mit dem offiziellen Kleinanzeigen-Server verwendet.
+                  </p>
+                </div>
+              </div>
+
+              {/* Point 3 */}
+              <div className="flex gap-4">
+                <div className="flex-shrink-0 mt-1">
+                  <div className="w-10 h-10 rounded-md bg-white border border-slate-200 flex items-center justify-center shadow-sm">
+                    <Fingerprint className="w-5 h-5 text-slate-700" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800 mb-2">Menschliches Interaktionsprofil</h3>
+                  <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+                    Unser System imitiert echte Klickpfade und natürliche Verzögerungen. Dein Account verhält sich organisch und ist zu 100% vor automatisierten Flagging-Systemen geschützt.
+                  </p>
+                </div>
+              </div>
+
+            </div>
           </div>
         </section>
       </main>
 
-      {/* Footer with SupportMe */}
-      <footer className="bg-white border-t border-ka-gray-200 py-12 mt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-2 text-xl font-bold text-ka-green-dark">
-            <Zap className="h-5 w-5 text-ka-orange" />
-            AnzeigenBoost
-          </div>
-          
-          <div className="flex gap-6 text-sm text-ka-gray-600">
-            <Link to="/impressum" className="hover:text-ka-gray-900 transition-colors">Impressum</Link>
-            <Link to="/datenschutz" className="hover:text-ka-gray-900 transition-colors">Datenschutz</Link>
-            <Link to="/agb" className="hover:text-ka-gray-900 transition-colors">AGB</Link>
-          </div>
-
+      {/* Footer */}
+      <footer className="bg-white py-10 border-t border-slate-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-slate-500">
           <div className="flex items-center">
-            <SupportMe />
+            <Zap className="h-4 w-4 inline-block text-slate-400 mr-1.5" />
+            <span className="font-bold text-slate-700">kleinanzeigen</span><span className="text-[13px]">Boost</span>
           </div>
+          <p className="text-[13px]">Open-Source Utility for Power Users.</p>
         </div>
       </footer>
     </div>

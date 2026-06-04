@@ -10,6 +10,8 @@ import { AuthModule } from './auth/auth.module';
 import { AdsModule } from './ads/ads.module';
 import { AutomationModule } from './automation/automation.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
+import { EbayModule } from './ebay/ebay.module';
+import { VintedModule } from './vinted/vinted.module';
 
 @Module({
   imports: [
@@ -25,7 +27,9 @@ import { SchedulerModule } from './scheduler/scheduler.module';
     AdsModule,
     AutomationModule,
     SchedulerModule,
-    // TODO: Import Users, Credentials Modules
+    EbayModule,
+    VintedModule,
+    // TODO: Import Users Modules
   ],
   controllers: [],
   providers: [

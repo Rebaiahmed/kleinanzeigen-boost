@@ -8,7 +8,7 @@ This document details the multi-service system architecture, data flow schemas, 
 
 ## 1. System Topology
 
-The AnzeigenBoost ecosystem comprises four primary components interacting with a central database (Firebase Firestore) and external APIs (Kleinanzeigen.de and AI services).
+The AnzeigenBoost ecosystem comprises four primary components interacting with a central database (Firebase Firestore) and external APIs (Kleinanzeigen.de, Vinted, eBay, and AI services).
 
 ```mermaid
 graph TD
@@ -27,7 +27,9 @@ graph TD
     
     %% External Services
     Kleinanzeigen[("Kleinanzeigen.de<br>(Target Marketplace)")]
-    XAI["xAI / OpenAI API<br>(Grok Model)"]
+    Gemini["Google Gemini 2.5 Flash<br>(Vision & Text AI)"]
+    Ebay["eBay REST API<br>(DE/US Marketplace)"]
+    Vinted["Vinted.de<br>(Clothing Marketplace)"]
 
     %% Communications
     WebClient -->|HTTP / JWT| NestBackend
@@ -36,9 +38,11 @@ graph TD
     
     NestBackend -->|Read/Write State| Firestore
     NestBackend -->|HTTP / X-Internal-Secret| PlaywrightWorker
-    NestBackend -->|AI Optimize / Chat / Price| XAI
+    NestBackend -->|AI Analyze / Optimize / Price / Reply| Gemini
+    NestBackend -->|OAuth 2.0 + Sell Inventory API| Ebay
     
     PlaywrightWorker -->|Puppeteer / Playwright Automation| Kleinanzeigen
+    PlaywrightWorker -->|Browser Automation| Vinted
 ```
 
 ---
@@ -50,6 +54,7 @@ AnzeigenBoost is structured as a monorepo consisting of:
 | Component | Technology Stack | Core Role | Key Directory Location |
 | :--- | :--- | :--- | :--- |
 | **Backend** | NestJS 10, TypeScript, Axios, JWT | Session storage, Orchestration, cron execution, AI integrations, Firestore mapping | [`backend/src/`](file:///Users/ahmed/Documents/me/kleinzeigen_project/backend/src) |
+| **eBay Module** | eBay REST Sell API with OAuth 2.0 | Cross-platform listing management | [`backend/src/ebay/`](file:///Users/ahmed/Documents/me/kleinzeigen_project/backend/src/ebay/) |
 | **Frontend** | React 18, Vite, TailwindCSS | Web dashboard, subscription control, AI chat dashboard, settings management | [`frontend/src/`](file:///Users/ahmed/Documents/me/kleinzeigen_project/frontend/src) |
 | **Automation** | Express, Playwright, Headless Chrome | Executing browser automation tasks (Login, 2FA, scraping ads, reposting) | [`automation/src/`](file:///Users/ahmed/Documents/me/kleinzeigen_project/automation/src) |
 | **Extension** | Manifest V3, React 18, Vite, TailwindCSS | Chrome-injected badges, details-page repost buttons, quick dashboard & local cookie handshake | [`extension/src/`](file:///Users/ahmed/Documents/me/kleinzeigen_project/extension/src) |
@@ -65,17 +70,27 @@ AnzeigenBoost uses Firebase Firestore as its persistence layer. The data models 
 │   └── {userId} (Document)
 │       ├── email: string
 │       ├── accountStatus: 'active' | 'expired'
+│       ├── ebayAccessToken: string (encrypted)
+│       ├── ebayRefreshToken: string (encrypted)
+│       ├── ebayTokenExpiresAt: string (ISO string)
 │       └── ads (Sub-collection)
 │           └── {adId} (Document)
 │               ├── id: string (Kleinanzeigen ID)
 │               ├── title: string
 │               ├── description: string
 │               ├── price: number
-│               ├── status: 'active' | 'pending_repost' | 'reserviert' | 'Pausiert'
+│               ├── status: 'active' | 'pending_repost' | 'reserviert' | 'Pausiert' | 'pending'
 │               ├── autoRepost: boolean
 │               ├── repostIntervalMinutes: number (e.g. 1440)
 │               ├── lastPostedAt: ISO-String
-│               └── nextRepostAt: ISO-String
+│               ├── nextRepostAt: ISO-String
+│               ├── vintedId: string
+│               ├── vintedUrl: string
+│               ├── vintedLastPostedAt: string (ISO string)
+│               ├── vintedStatus: string
+│               ├── ebayListingId: string
+│               ├── ebayUrl: string
+│               └── ebayLastPostedAt: string (ISO string)
 │
 ├── sessions (Collection)
 │   └── {userId} (Document)
@@ -176,6 +191,68 @@ sequenceDiagram
 
 ---
 
+### 4.4 Photo-to-Prefill AI Flow
+Extracts structured product data from uploaded photos to prefill new ad creation forms.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as User / Browser
+    participant Frontend as React Frontend
+    participant Backend as NestJS Backend
+    participant Gemini as Gemini 2.5 Flash
+
+    User->>Frontend: Uploads photos (Max 8)
+    Frontend->>Backend: POST /api/ai/analyze-photos (Multipart FormData)
+    Backend->>Gemini: generateContent([batched images, prompt]) (Max 800 tokens)
+    Note over Gemini: Analyze all photos in a single API call
+    Gemini-->>Backend: Return structured JSON string
+    Note over Backend: Parse JSON & validate structure (retry once if invalid)
+    Backend-->>Frontend: Return prefilled listing details
+    Frontend->>User: Prefill editable form (User reviews/edits)
+    User->>Frontend: Copies fields or triggers cross-posting
+```
+
+---
+
+### 4.5 eBay OAuth + Listing Flow
+Connects user accounts and publishes listings to the official eBay marketplace.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as User
+    participant Frontend as React Frontend
+    participant Backend as NestJS Backend
+    participant Ebay as eBay REST API
+
+    %% OAuth Handshake
+    User->>Frontend: Click "Verbinden" (eBay)
+    Frontend->>Backend: GET /api/ebay/connect?token={jwt}
+    Backend-->>User: Redirect to signin.ebay.de OAuth consent screen
+    User->>Ebay: Accept Consent / Authorize Application
+    Ebay-->>Backend: GET /api/ebay/callback?code={code}&state={userId}
+    Backend->>Ebay: POST /identity/v1/oauth2/token (Exchange code)
+    Ebay-->>Backend: Return Access & Refresh Tokens
+    Note over Backend: Encrypt tokens via AES-256-GCM<br/>Save to Firestore credentials collection
+
+    %% Listing Flow
+    User->>Frontend: Trigger eBay Cross-Post
+    Frontend->>Backend: POST /api/ads/{adId}/cross-post/ebay
+    Note over Backend: Decrypt & check/refresh token if expired
+    Backend->>Ebay: PUT /sell/inventory/v1/inventory_item/{sku} (Set details/images)
+    Backend->>Ebay: POST /sell/account/v1/fulfillment_policy (Create local pickup policy)
+    Backend->>Ebay: POST /sell/inventory/v1/location/default (Register default location)
+    Backend->>Ebay: POST /sell/inventory/v1/offer (Create offer linking SKU & category)
+    Backend->>Ebay: POST /sell/inventory/v1/offer/{offerId}/publish (Publish offer)
+    Ebay-->>Backend: Return { listingId, url }
+    Note over Backend: Save listing details on ad document in Firestore
+    Backend-->>Frontend: Return { success: true, url }
+    Frontend->>User: Display success toast and active green link
+```
+
+---
+
 ## 5. Security & Cryptography
 
 ### 5.1 AES-256-GCM Session Encryption
@@ -191,7 +268,23 @@ The `automation` service is deployed internally. All HTTP communication from the
 
 ---
 
-## 6. Future Multi-Platform Expansion Path
+## 6. LLM Cost Management
+
+To optimize operational expenses while maintaining low-latency processing:
+
+- **Gemini 2.5 Flash Free Tier:** Utilizes Google's generative free tier providing up to 1,500 requests per day at zero platform cost.
+- **Enforced Usage Limits:** Tracks API consumption inside the `aiUsage` Firestore collection. Restricts free plans to 5 requests/month and starter plans to 30 requests/month, preventing denial-of-service bill inflation.
+- **Explicit Output Controls:** Every Gemini invocation enforces strict limits via `maxOutputTokens` configured per endpoint:
+  - Photo Analysis (`analyze-photos`): Max 800 tokens
+  - Ad Text Optimization (`optimize-ad`): Max 600 tokens
+  - Price Check (`price-check`): Max 400 tokens
+  - Reply Suggestions (`reply-suggestions`): Max 300 tokens
+- **Batched Image Analysis:** Transmits all selected product photos in a single API call (supporting up to 16 images in Gemini 2.5 Flash), avoiding multiple consecutive image calls.
+- **Gemini Paid Tier Upgrade Path:** Provides a seamless pay-as-you-go transition path to paid Gemini API endpoints when daily free limits are exhausted. Paid tier costs are set at $0.075 per million input tokens and $0.30 per million output tokens, keeping individual listing costs fractionally small.
+
+---
+
+## 7. Future Multi-Platform Expansion Path
 
 The architecture is designed to support modular expansions to other European marketplaces.
 
@@ -207,10 +300,10 @@ The architecture is designed to support modular expansions to other European mar
                           │
           ┌───────────────┼───────────────┐
           ▼               ▼               ▼
-   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-   │  Germany    │ │   Austria   │ │ Switzerland │
-   │Kleinanzeigen│ │ Willhaben.at│ │ Ricardo.ch  │
-   └─────────────┘ └─────────────┘ └─────────────┘
+    ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+    │  Germany    │ │   Austria   │ │ Switzerland │
+    │Kleinanzeigen│ │ Willhaben.at│ │ Ricardo.ch  │
+    └─────────────┘ └─────────────┘ └─────────────┘
 ```
 
 By abstracting site interactions inside the automation worker's routes `/login`, `/sync`, and `/repost`, adding secondary platforms (such as Willhaben.at or Ricardo.ch) requires adding targeted page-object wrappers to Playwright without altering the database schema or the frontend views.

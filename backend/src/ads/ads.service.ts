@@ -1,13 +1,16 @@
 import { Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
-
 import { AutomationService } from '../automation/automation.service';
+import { EbayService } from '../ebay/ebay.service';
+import { VintedService } from '../vinted/vinted.service';
 
 @Injectable()
 export class AdsService {
   constructor(
     private readonly firebaseService: FirebaseService,
-    private readonly automationService: AutomationService
+    private readonly automationService: AutomationService,
+    private readonly ebayService: EbayService,
+    private readonly vintedService: VintedService
   ) {}
 
   async getAds(userId: string) {
@@ -173,5 +176,33 @@ export class AdsService {
 
     await adRef.set(newAd, { merge: true });
     return { success: true, ad: newAd };
+  }
+
+  async updateAd(userId: string, adId: string, updateData: { title?: string; description?: string }) {
+    const db = this.firebaseService.firestore;
+    const adRef = db.collection('users').doc(userId).collection('ads').doc(adId);
+
+    const doc = await adRef.get();
+    if (!doc.exists) {
+      throw new UnauthorizedException('Ad not found or does not belong to you');
+    }
+
+    const payload: any = {};
+    if (updateData.title !== undefined) payload.title = updateData.title;
+    if (updateData.description !== undefined) payload.description = updateData.description;
+
+    if (Object.keys(payload).length > 0) {
+      await adRef.update(payload);
+    }
+
+    return { success: true, message: 'Anzeige erfolgreich aktualisiert' };
+  }
+
+  async crossPostEbay(userId: string, adId: string) {
+    return this.ebayService.crossPostAd(userId, adId);
+  }
+
+  async crossPostVinted(userId: string, adId: string) {
+    return this.vintedService.crossPostAd(userId, adId);
   }
 }

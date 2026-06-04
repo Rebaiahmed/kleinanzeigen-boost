@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, UseGuards, Req, Patch } from '@nestjs/common';
 import { AdsService } from './ads.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -55,5 +55,30 @@ export class AdsController {
   @Post('draft')
   async saveDraft(@Req() req: any, @Body() adData: any) {
     return this.adsService.saveDraft(req.user.userId, adData);
+  }
+
+  @Patch(':id')
+  async updateAd(
+    @Req() req: any,
+    @Param('id') adId: string,
+    @Body() body: { title?: string; description?: string }
+  ) {
+    return this.adsService.updateAd(req.user.userId, adId, body);
+  }
+
+  @Post(':id/cross-post/ebay')
+  async crossPostEbay(
+    @Req() req: any,
+    @Param('id') adId: string
+  ) {
+    return this.adsService.crossPostEbay(req.user.userId, adId);
+  }
+
+  @Post(':id/cross-post/vinted')
+  async crossPostVinted(
+    @Req() req: any,
+    @Param('id') adId: string
+  ) {
+    return this.adsService.crossPostVinted(req.user.userId, adId);
   }
 }

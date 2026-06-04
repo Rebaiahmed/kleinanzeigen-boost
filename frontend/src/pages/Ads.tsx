@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, X, RefreshCw, Sparkles, Check, Loader2, AlertCircle } from 'lucide-react';
+import { Calendar, X, RefreshCw, Sparkles, Check, Loader2, AlertCircle, Lock } from 'lucide-react';
 import { useAdsActions } from '../hooks/useAdsActions';
 import { AdGrid } from '../components/AdGrid';
 import { Toast } from '../components/Toast';
@@ -31,6 +31,18 @@ export function Ads() {
   const [isEbayConnected, setIsEbayConnected] = useState(false);
   const [isVintedConnected, setIsVintedConnected] = useState(false);
   const [isPostingVinted, setIsPostingVinted] = useState(false);
+
+  // Vinted Connection Modal State
+  const [isVintedModalOpen, setIsVintedModalOpen] = useState(false);
+  const [vintedEmail, setVintedEmail] = useState('');
+  const [vintedPassword, setVintedPassword] = useState('');
+  const [isConnectingVinted, setIsConnectingVinted] = useState(false);
+  const [vintedConnectError, setVintedConnectError] = useState<string | null>(null);
+
+  // Banner State
+  const [isBannerDismissed, setIsBannerDismissed] = useState(
+    localStorage.getItem('platform_banner_dismissed') === 'true'
+  );
 
   const {
     fetchAds,
@@ -74,6 +86,17 @@ export function Ads() {
         .catch(() => {});
     }
   }, [fetchAds]);
+
+  // Listen for eBay connected message from popup
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'EBAY_CONNECTED') {
+        setIsEbayConnected(true);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   // Poll Gemini health whenever the KI-Opt panel is open
   useEffect(() => {
@@ -170,6 +193,63 @@ export function Ads() {
     setIsApplyingAll(false);
   };
 
+  const handleConnectEbay = () => {
+    const apiBase = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
+    const token = localStorage.getItem('kb_session') || localStorage.getItem('token');
+    
+    // Calculate center of screen for popup
+    const width = 600;
+    const height = 700;
+    const left = window.screen.width / 2 - width / 2;
+    const top = window.screen.height / 2 - height / 2;
+
+    window.open(
+      `${apiBase}/ebay/connect?token=${token}`,
+      'eBay Login',
+      `width=${width},height=${height},left=${left},top=${top}`
+    );
+  };
+
+  const handleConnectVinted = () => {
+    setVintedEmail('');
+    setVintedPassword('');
+    setVintedConnectError(null);
+    setIsVintedModalOpen(true);
+  };
+
+  const submitVintedConnection = async () => {
+    setIsConnectingVinted(true);
+    setVintedConnectError(null);
+    try {
+      const apiBase = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
+      const token = localStorage.getItem('kb_session') || localStorage.getItem('token');
+      const res = await fetch(`${apiBase}/vinted/credentials`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ email: vintedEmail, password: vintedPassword })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Fehler beim Verbinden mit Vinted');
+      
+      setIsVintedConnected(true);
+      setIsVintedModalOpen(false);
+    } catch (err: any) {
+      setVintedConnectError(err.message || 'Netzwerkfehler');
+    } finally {
+      setIsConnectingVinted(false);
+    }
+  };
+
+  const dismissBanner = () => {
+    localStorage.setItem('platform_banner_dismissed', 'true');
+    setIsBannerDismissed(true);
+  };
+
+  const showBanner = !isBannerDismissed && (!isEbayConnected || !isVintedConnected) && !isLoading;
+
   return (
     <div className="w-full relative">
       {isPostingVinted && (
@@ -185,6 +265,126 @@ export function Ads() {
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Vinted Connection Modal */}
+      {isVintedModalOpen && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-sm shadow-xl w-full max-w-md overflow-hidden">
+            <div className="px-5 py-4 border-b border-[#e5e5e5] flex justify-between items-center bg-[#F9FAFB]">
+              <h3 className="font-bold text-[16px] text-gray-800">Vinted verbinden</h3>
+              <button
+                onClick={() => setIsVintedModalOpen(false)}
+                className="text-gray-500 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-5">
+              <p className="text-[13px] text-gray-600 mb-4">
+                Verbinde dein Vinted-Konto, um Anzeigen direkt aus dem Dashboard auf Vinted zu cross-posten.
+              </p>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[12px] font-semibold text-gray-700 mb-1">
+                    Vinted E-Mail oder Benutzername
+                  </label>
+                  <input
+                    type="text"
+                    value={vintedEmail}
+                    onChange={(e) => setVintedEmail(e.target.value)}
+                    className="w-full p-2.5 text-[14px] border border-gray-300 rounded-sm focus:border-ka-green focus:ring-1 focus:ring-ka-green outline-none"
+                    placeholder="E-Mail eingeben"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-[12px] font-semibold text-gray-700 mb-1">
+                    Passwort
+                  </label>
+                  <input
+                    type="password"
+                    value={vintedPassword}
+                    onChange={(e) => setVintedPassword(e.target.value)}
+                    className="w-full p-2.5 text-[14px] border border-gray-300 rounded-sm focus:border-ka-green focus:ring-1 focus:ring-ka-green outline-none"
+                    placeholder="Passwort eingeben"
+                  />
+                </div>
+
+                <div className="bg-green-50 border border-green-100 p-3 rounded-sm flex items-start gap-2 mt-2">
+                  <Lock className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-green-800 leading-relaxed">
+                    Deine Zugangsdaten werden mit starker AES-256 Verschlüsselung auf unseren Servern gespeichert und ausschließlich für automatisierte Cross-Posts verwendet.
+                  </p>
+                </div>
+              </div>
+
+              {vintedConnectError && (
+                <div className="mt-4 bg-red-50 text-red-600 text-[13px] p-3 rounded-sm flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <p>{vintedConnectError}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="px-5 py-4 border-t border-[#e5e5e5] bg-[#F9FAFB] flex justify-end gap-3">
+              <button
+                onClick={() => setIsVintedModalOpen(false)}
+                className="px-4 py-2 text-[14px] font-medium text-gray-600 hover:text-gray-800 transition-colors"
+                disabled={isConnectingVinted}
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={submitVintedConnection}
+                disabled={!vintedEmail || !vintedPassword || isConnectingVinted}
+                className="bg-pink-600 hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-sm font-semibold text-[14px] flex items-center gap-2 transition-colors"
+              >
+                {isConnectingVinted && <Loader2 className="w-4 h-4 animate-spin" />}
+                Verbinden
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Plattformen verbinden Banner */}
+      {showBanner && (
+        <div className="bg-[#f2f7fb] border border-[#d1e5f5] rounded-sm p-4 mb-6 flex items-start justify-between relative shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div>
+              <p className="text-[14px] font-semibold text-[#0064d2] mb-1">
+                Verbinde Vinted und eBay um deine Anzeigen auf mehreren Plattformen zu inserieren
+              </p>
+              <div className="flex gap-2 mt-2">
+                {!isVintedConnected && (
+                  <button
+                    onClick={handleConnectVinted}
+                    className="flex items-center gap-1.5 bg-pink-50 hover:bg-pink-100 border border-pink-200 text-pink-700 font-medium py-1.5 px-3 rounded-sm transition-colors text-[13px]"
+                  >
+                    Vinted verbinden
+                  </button>
+                )}
+                {!isEbayConnected && (
+                  <button
+                    onClick={handleConnectEbay}
+                    className="flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-medium py-1.5 px-3 rounded-sm transition-colors text-[13px]"
+                  >
+                    eBay verbinden
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+          <button 
+            onClick={dismissBanner}
+            className="text-[#0064d2] hover:text-[#004e9a] p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
@@ -254,13 +454,9 @@ export function Ads() {
               setIsPostingVinted(false);
             }
           }}
-          onEbayCrossPost={async (adId) => {
-            const res = await handleEbayCrossPost(adId);
-            if (res.success) {
-              refreshAds();
-            }
-            return res;
-          }}
+          onEbayCrossPost={handleEbayCrossPost}
+          onConnectVinted={handleConnectVinted}
+          onConnectEbay={handleConnectEbay}
           isEbayConnected={isEbayConnected}
           isVintedConnected={isVintedConnected}
         />
@@ -549,6 +745,89 @@ export function Ads() {
           </div>
         )}
       </div>
+
+      {/* Vinted Connection Modal */}
+      {isVintedModalOpen && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-sm shadow-xl w-full max-w-md overflow-hidden">
+            <div className="px-5 py-4 border-b border-[#e5e5e5] flex justify-between items-center bg-[#F9FAFB]">
+              <h3 className="font-bold text-[16px] text-gray-800">Vinted verbinden</h3>
+              <button
+                onClick={() => setIsVintedModalOpen(false)}
+                className="text-gray-500 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-5">
+              <p className="text-[13px] text-gray-600 mb-4">
+                Verbinde dein Vinted-Konto, um Anzeigen direkt aus dem Dashboard auf Vinted zu cross-posten.
+              </p>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[12px] font-semibold text-gray-700 mb-1">
+                    Vinted E-Mail oder Benutzername
+                  </label>
+                  <input
+                    type="text"
+                    value={vintedEmail}
+                    onChange={(e) => setVintedEmail(e.target.value)}
+                    className="w-full p-2.5 text-[14px] border border-gray-300 rounded-sm focus:border-ka-green focus:ring-1 focus:ring-ka-green outline-none"
+                    placeholder="E-Mail eingeben"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-[12px] font-semibold text-gray-700 mb-1">
+                    Passwort
+                  </label>
+                  <input
+                    type="password"
+                    value={vintedPassword}
+                    onChange={(e) => setVintedPassword(e.target.value)}
+                    className="w-full p-2.5 text-[14px] border border-gray-300 rounded-sm focus:border-ka-green focus:ring-1 focus:ring-ka-green outline-none"
+                    placeholder="Passwort eingeben"
+                  />
+                </div>
+
+                <div className="bg-green-50 border border-green-100 p-3 rounded-sm flex items-start gap-2 mt-2">
+                  <Lock className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-green-800 leading-relaxed">
+                    Deine Zugangsdaten werden mit starker AES-256 Verschlüsselung auf unseren Servern gespeichert und ausschließlich für automatisierte Cross-Posts verwendet.
+                  </p>
+                </div>
+              </div>
+
+              {vintedConnectError && (
+                <div className="mt-4 bg-red-50 text-red-600 text-[13px] p-3 rounded-sm flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <p>{vintedConnectError}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="px-5 py-4 border-t border-[#e5e5e5] bg-[#F9FAFB] flex justify-end gap-3">
+              <button
+                onClick={() => setIsVintedModalOpen(false)}
+                className="px-4 py-2 text-[14px] font-medium text-gray-600 hover:text-gray-800 transition-colors"
+                disabled={isConnectingVinted}
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={submitVintedConnection}
+                disabled={!vintedEmail || !vintedPassword || isConnectingVinted}
+                className="bg-pink-600 hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-sm font-semibold text-[14px] flex items-center gap-2 transition-colors"
+              >
+                {isConnectingVinted && <Loader2 className="w-4 h-4 animate-spin" />}
+                Verbinden
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Backdrop for panel */}
       {optimizePanelAdId && (

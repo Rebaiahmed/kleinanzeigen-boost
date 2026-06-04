@@ -7,7 +7,9 @@ import {
   CheckCircle2,
   Clock,
   PauseCircle,
-  X
+  X,
+  Loader2,
+  Lock
 } from 'lucide-react';
 
 export interface AdCardProps {
@@ -16,8 +18,12 @@ export interface AdCardProps {
   onAIOptimize: (adId: string) => void;
   onPriceCheck: (adId: string) => void;
   onSchedule: (adId: string) => void;
-  onVintedCrossPost: (adId: string) => void;
-  onEbayCrossPost: (adId: string) => void;
+  onVintedCrossPost: (adId: string, reserveAfterPost: boolean) => Promise<any>;
+  onEbayCrossPost: (adId: string) => Promise<any>;
+  onConnectVinted: () => void;
+  onConnectEbay: () => void;
+  isEbayConnected?: boolean;
+  isVintedConnected?: boolean;
 }
 
 // Inline Vinted Logo (pink, 14px size)
@@ -69,15 +75,85 @@ export function AdCard({
   onSchedule,
   onVintedCrossPost,
   onEbayCrossPost,
+  onConnectVinted,
+  onConnectEbay,
+  isEbayConnected,
+  isVintedConnected,
 }: AdCardProps) {
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
+  const [showEbayConfirm, setShowEbayConfirm] = useState(false);
+  const [isPostingEbay, setIsPostingEbay] = useState(false);
+  const [ebayError, setEbayError] = useState<string | null>(null);
 
-  // Dynamic connection and posted states for Vinted & eBay (using ad properties with deterministic fallbacks)
-  const isVintedConnected = ad.vintedConnected ?? (parseInt(ad.id) % 3 !== 0);
-  const isVintedPosted = ad.vintedPosted ?? (isVintedConnected && parseInt(ad.id) % 2 === 0);
+  // Vinted State
+  const [showVintedConfirm, setShowVintedConfirm] = useState(false);
+  const [isPostingVinted, setIsPostingVinted] = useState(false);
+  const [vintedError, setVintedError] = useState<string | null>(null);
+  const [reserveAfterPost, setReserveAfterPost] = useState(true);
 
-  const isEbayConnected = ad.ebayConnected ?? (parseInt(ad.id) % 4 !== 0);
-  const isEbayPosted = ad.ebayPosted ?? (isEbayConnected && parseInt(ad.id) % 2 !== 0);
+  const vintedConnected = isVintedConnected ?? false;
+  const isVintedPosted = !!ad.vintedId || !!ad.vintedUrl;
+
+  const ebayConnected = isEbayConnected ?? false;
+  const isEbayPosted = !!ad.ebayListingId || !!ad.ebayUrl;
+
+  const handleEbayClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!ebayConnected) {
+      onConnectEbay();
+    } else if (isEbayPosted && ad.ebayUrl) {
+      window.open(ad.ebayUrl, '_blank');
+    } else {
+      setShowEbayConfirm(true);
+    }
+  };
+
+  const handleConfirmEbayCrossPost = async () => {
+    setShowEbayConfirm(false);
+    setIsPostingEbay(true);
+    setEbayError(null);
+    try {
+      const res = await onEbayCrossPost(ad.id);
+      if (!res.success) {
+        setEbayError(res.error || 'Fehler beim Posten auf eBay.');
+        setTimeout(() => setEbayError(null), 6000);
+      }
+    } catch (err) {
+      setEbayError('Netzwerkfehler beim eBay-Posting.');
+      setTimeout(() => setEbayError(null), 6000);
+    } finally {
+      setIsPostingEbay(false);
+    }
+  };
+
+  const handleVintedClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!vintedConnected) {
+      onConnectVinted();
+    } else if (isVintedPosted && ad.vintedUrl) {
+      window.open(ad.vintedUrl, '_blank');
+    } else {
+      setShowVintedConfirm(true);
+    }
+  };
+
+  const handleConfirmVintedCrossPost = async () => {
+    setShowVintedConfirm(false);
+    setIsPostingVinted(true);
+    setVintedError(null);
+    try {
+      const res = await onVintedCrossPost(ad.id, reserveAfterPost);
+      if (!res.success) {
+        setVintedError(res.error || 'Fehler beim Posten auf Vinted.');
+        setTimeout(() => setVintedError(null), 6000);
+      }
+    } catch (err) {
+      setVintedError('Netzwerkfehler beim Vinted-Posting.');
+      setTimeout(() => setVintedError(null), 6000);
+    } finally {
+      setIsPostingVinted(false);
+    }
+  };
 
   // Auto-Repost formatting
   const nextFormatted = ad.nextRepostAt
@@ -177,38 +253,98 @@ export function AdCard({
           </button>
 
           {/* Vinted */}
-          <button
-            onClick={() => isVintedConnected && onVintedCrossPost(ad.id)}
-            disabled={!isVintedConnected}
-            title={!isVintedConnected ? "Vinted nicht verbunden" : isVintedPosted ? "Gepostet auf Vinted" : "Auf Vinted posten"}
-            className={`flex-1 border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors ${
-              !isVintedConnected
-                ? "border-gray-200 text-gray-300 bg-gray-50/50 cursor-not-allowed"
-                : isVintedPosted
-                  ? "border-green-500 text-green-700 bg-green-50/20 hover:bg-green-50"
-                  : "border-gray-300 text-gray-700 hover:border-pink-500 hover:text-pink-600 hover:bg-pink-50"
-            }`}
-          >
-            <VintedLogo />
-            <span>Vinted</span>
-          </button>
+          <div className="relative flex-1 group">
+            <button
+              onClick={handleVintedClick}
+              disabled={isPostingVinted}
+              title={!vintedConnected ? "Vinted verbinden um zu aktivieren" : isVintedPosted ? "Auf Vinted ansehen →" : "Auf Vinted posten"}
+              className={`w-full border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors relative ${
+                !vintedConnected
+                  ? "border-gray-200 text-gray-400 bg-gray-50 hover:bg-gray-100 cursor-pointer"
+                  : isVintedPosted
+                    ? "border-green-500 text-green-700 bg-green-50/20 hover:bg-green-50 cursor-pointer"
+                    : "border-gray-300 text-gray-700 hover:border-pink-500 hover:text-pink-600 hover:bg-pink-50 cursor-pointer"
+              }`}
+            >
+              {isPostingVinted ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-pink-600" />
+              ) : (
+                <div className="relative flex items-center">
+                  <VintedLogo />
+                  {!vintedConnected && (
+                    <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
+                      <Lock className="w-2 h-2 text-gray-500" />
+                    </div>
+                  )}
+                  {isVintedPosted && (
+                    <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full border border-white" />
+                  )}
+                </div>
+              )}
+              <span className={!vintedConnected ? 'text-gray-400 opacity-80' : ''}>
+                {isVintedPosted ? 'Gepostet' : 'Vinted'}
+              </span>
+            </button>
+
+            {vintedError && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-red-600 text-white text-[10px] py-1.5 px-2.5 rounded-sm shadow-xl z-20 w-48 text-center animate-in fade-in slide-in-from-bottom-1">
+                <span>{vintedError}</span>
+                <button 
+                  onClick={() => setVintedError(null)} 
+                  className="absolute top-0.5 right-1 font-bold text-white hover:text-red-200"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* eBay */}
-          <button
-            onClick={() => isEbayConnected && onEbayCrossPost(ad.id)}
-            disabled={!isEbayConnected}
-            title={!isEbayConnected ? "eBay nicht verbunden" : isEbayPosted ? "Gepostet auf eBay" : "Auf eBay posten"}
-            className={`flex-1 border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors ${
-              !isEbayConnected
-                ? "border-gray-200 text-gray-300 bg-gray-50/50 cursor-not-allowed"
-                : isEbayPosted
-                  ? "border-green-500 text-green-700 bg-green-50/20 hover:bg-green-50"
-                  : "border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50"
-            }`}
-          >
-            <EbayLogo />
-            <span>eBay</span>
-          </button>
+          <div className="relative flex-1 group">
+            <button
+              onClick={handleEbayClick}
+              disabled={isPostingEbay}
+              title={!ebayConnected ? "eBay verbinden" : isEbayPosted ? "Auf eBay ansehen →" : "Auf eBay posten"}
+              className={`w-full border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors relative ${
+                !ebayConnected
+                  ? "border-gray-200 text-gray-400 bg-gray-50 hover:bg-gray-100 cursor-pointer"
+                  : isEbayPosted
+                    ? "border-green-500 text-green-700 bg-green-50/20 hover:bg-green-50 cursor-pointer"
+                    : "border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 cursor-pointer"
+              }`}
+            >
+              {isPostingEbay ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+              ) : (
+                <div className="relative flex items-center">
+                  <EbayLogo />
+                  {!ebayConnected && (
+                    <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
+                      <Lock className="w-2 h-2 text-gray-500" />
+                    </div>
+                  )}
+                  {isEbayPosted && (
+                    <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full border border-white" />
+                  )}
+                </div>
+              )}
+              <span className={!ebayConnected ? 'text-gray-400 opacity-80' : ''}>
+                {isEbayPosted ? 'Gepostet' : 'eBay'}
+              </span>
+            </button>
+
+            {ebayError && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-red-600 text-white text-[10px] py-1.5 px-2.5 rounded-sm shadow-xl z-20 w-48 text-center animate-in fade-in slide-in-from-bottom-1">
+                <span>{ebayError}</span>
+                <button 
+                  onClick={() => setEbayError(null)} 
+                  className="absolute top-0.5 right-1 font-bold text-white hover:text-red-200"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Mobile Actions Collapsed Trigger */}
@@ -262,43 +398,65 @@ export function AdCard({
             </button>
 
             {/* Vinted */}
-            <button
-              onClick={() => {
-                if (isVintedConnected) {
-                  setIsBottomSheetOpen(false);
-                  onVintedCrossPost(ad.id);
-                }
-              }}
-              disabled={!isVintedConnected}
-              className={`flex items-center justify-center gap-2.5 w-full py-3 px-4 border rounded-lg font-semibold text-sm transition-colors ${
-                !isVintedConnected
-                  ? "border-gray-200 text-gray-300 bg-gray-50/50 cursor-not-allowed"
-                  : isVintedPosted
-                    ? "border-green-500 text-green-700 bg-green-50/30 hover:bg-green-50"
-                    : "border-gray-300 text-gray-700 hover:border-pink-500 hover:text-pink-600 hover:bg-pink-50"
-              }`}
-            >
-              <VintedLogo />
-              <span>
-                {!isVintedConnected 
-                  ? "Vinted (nicht verbunden)" 
-                  : isVintedPosted 
-                    ? "Auf Vinted (Gepostet)" 
-                    : "Auf Vinted cross-posten"}
-              </span>
-            </button>
+            <div className="w-full relative">
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!vintedConnected) {
+                    setVintedError("Vinted ist nicht verbunden. Bitte verbinde es in den Einstellungen.");
+                    setTimeout(() => setVintedError(null), 5000);
+                  } else if (isVintedPosted && ad.vintedUrl) {
+                    window.open(ad.vintedUrl, '_blank');
+                    setIsBottomSheetOpen(false);
+                  } else {
+                    setIsBottomSheetOpen(false);
+                    setShowVintedConfirm(true);
+                  }
+                }}
+                disabled={isPostingVinted}
+                className={`w-full py-3 px-4 rounded-lg font-semibold text-sm transition-colors flex items-center justify-center gap-2 border ${
+                  !vintedConnected
+                    ? "border-gray-200 text-gray-400 bg-gray-50/50 cursor-pointer"
+                    : isVintedPosted
+                      ? "border-green-500 text-green-700 bg-green-50/30 hover:bg-green-50 cursor-pointer"
+                      : "border-gray-300 text-gray-700 hover:border-pink-500 hover:text-pink-600 hover:bg-pink-50 cursor-pointer"
+                }`}
+              >
+                {isPostingVinted ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-pink-600" />
+                ) : (
+                  <VintedLogo />
+                )}
+                <span>
+                  {!vintedConnected 
+                    ? "Vinted (nicht verbunden)" 
+                    : isVintedPosted 
+                      ? "Auf Vinted (Gepostet)" 
+                      : "Auf Vinted cross-posten"}
+                </span>
+              </button>
+              {vintedError && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-red-600 text-white text-[10px] py-1.5 px-2.5 rounded-sm shadow-xl z-20 w-48 text-center animate-in fade-in slide-in-from-bottom-1">
+                  <span>{vintedError}</span>
+                  <button 
+                    onClick={() => setVintedError(null)} 
+                    className="absolute top-0.5 right-1 font-bold text-white hover:text-red-200"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* eBay */}
             <button
-              onClick={() => {
-                if (isEbayConnected) {
-                  setIsBottomSheetOpen(false);
-                  onEbayCrossPost(ad.id);
-                }
+              onClick={(e) => {
+                setIsBottomSheetOpen(false);
+                handleEbayClick(e);
               }}
-              disabled={!isEbayConnected}
+              disabled={!ebayConnected}
               className={`flex items-center justify-center gap-2.5 w-full py-3 px-4 border rounded-lg font-semibold text-sm transition-colors ${
-                !isEbayConnected
+                !ebayConnected
                   ? "border-gray-200 text-gray-300 bg-gray-50/50 cursor-not-allowed"
                   : isEbayPosted
                     ? "border-green-500 text-green-700 bg-green-50/30 hover:bg-green-50"
@@ -307,7 +465,7 @@ export function AdCard({
             >
               <EbayLogo />
               <span>
-                {!isEbayConnected 
+                {!ebayConnected 
                   ? "eBay (nicht verbunden)" 
                   : isEbayPosted 
                     ? "Auf eBay (Gepostet)" 
@@ -322,6 +480,79 @@ export function AdCard({
             >
               Abbrechen
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* eBay Cross-Post Confirmation Modal */}
+      {showEbayConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xxs">
+          <div className="bg-white rounded-sm border border-gray-200 shadow-2xl p-5 w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <h4 className="text-[15px] font-bold text-gray-800 flex items-center gap-1.5 mb-2">
+              <EbayLogo /> Inserieren bestätigen
+            </h4>
+            <p className="text-[13px] text-gray-600 mb-3 leading-normal">
+              Möchtest du das Produkt <strong className="text-gray-800" dangerouslySetInnerHTML={{ __html: ad.title }} /> auf eBay.de als Festpreis-Angebot inserieren?
+            </p>
+            <div className="bg-blue-50 border border-blue-100 rounded-sm p-2.5 text-[11px] text-blue-800 font-semibold mb-4 leading-relaxed">
+              Hinweis: Auf eBay.de als Festpreis-Angebot inserieren (Abholung vor Ort).
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowEbayConfirm(false)}
+                className="px-3 py-1.5 text-[12px] font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-sm transition-colors"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={handleConfirmEbayCrossPost}
+                className="px-3 py-1.5 text-[12px] font-bold bg-[#A8C300] hover:bg-[#96ae00] text-white rounded-sm transition-colors"
+              >
+                Bestätigen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Vinted Cross-Post Confirmation Modal */}
+      {showVintedConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xxs">
+          <div className="bg-white rounded-sm border border-gray-200 shadow-2xl p-5 w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <h4 className="text-[15px] font-bold text-gray-800 flex items-center gap-1.5 mb-2">
+              <VintedLogo /> Inserieren bestätigen
+            </h4>
+            <p className="text-[13px] text-gray-600 mb-3 leading-normal">
+              Möchtest du das Produkt <strong className="text-gray-800" dangerouslySetInnerHTML={{ __html: ad.title }} /> auf Vinted veröffentlichen?
+            </p>
+            
+            <div className="flex items-start gap-2 mb-4 bg-pink-50/30 border border-pink-100/50 p-2.5 rounded-sm">
+              <input
+                type="checkbox"
+                id="reserve-after-post"
+                checked={reserveAfterPost}
+                onChange={(e) => setReserveAfterPost(e.target.checked)}
+                className="w-4 h-4 text-[#A8C300] border-gray-300 rounded focus:ring-[#A8C300] shrink-0 mt-0.5 cursor-pointer"
+              />
+              <label htmlFor="reserve-after-post" className="text-[12px] text-gray-655 select-none cursor-pointer leading-tight">
+                Inserat nach dem Veröffentlichen als reserviert markieren (empfohlen für Einzelstücke)
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowVintedConfirm(false)}
+                className="px-3 py-1.5 text-[12px] font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-sm transition-colors"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={handleConfirmVintedCrossPost}
+                className="px-3 py-1.5 text-[12px] font-bold bg-[#A8C300] hover:bg-[#96ae00] text-white rounded-sm transition-colors"
+              >
+                Auf Vinted posten
+              </button>
+            </div>
           </div>
         </div>
       )}

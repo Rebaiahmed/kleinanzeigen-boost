@@ -7,8 +7,12 @@ interface AdGridProps {
   onAIOptimize: (adId: string) => void;
   onPriceCheck: (adId: string) => void;
   onSchedule: (adId: string) => void;
-  onVintedCrossPost: (adId: string) => void;
-  onEbayCrossPost: (adId: string) => void;
+  onVintedCrossPost: (adId: string, reserveAfterPost: boolean) => Promise<any>;
+  onEbayCrossPost: (adId: string) => Promise<any>;
+  onConnectVinted: () => void;
+  onConnectEbay: () => void;
+  isEbayConnected?: boolean;
+  isVintedConnected?: boolean;
 }
 
 export function AdGrid({
@@ -19,6 +23,10 @@ export function AdGrid({
   onSchedule,
   onVintedCrossPost,
   onEbayCrossPost,
+  onConnectVinted,
+  onConnectEbay,
+  isEbayConnected,
+  isVintedConnected,
 }: AdGridProps) {
   return (
     <div className="space-y-3">
@@ -32,6 +40,10 @@ export function AdGrid({
           onSchedule={onSchedule}
           onVintedCrossPost={onVintedCrossPost}
           onEbayCrossPost={onEbayCrossPost}
+          onConnectVinted={onConnectVinted}
+          onConnectEbay={onConnectEbay}
+          isEbayConnected={isEbayConnected}
+          isVintedConnected={isVintedConnected}
         />
       ))}
     </div>

@@ -6,6 +6,7 @@ import { CreateWithAi } from './pages/CreateWithAi';
 import { AppShell } from './components/layout/AppShell';
 import { Landing } from './pages/Landing';
 import { AuthCallback } from './pages/AuthCallback';
+import { EbaySuccess } from './pages/EbaySuccess';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/ebay/callback/success" element={<EbaySuccess />} />
         {/* Authenticated Routes wrapped in AppShell */}
         <Route path="/m-meine-anzeigen" element={<AppShell><Ads /></AppShell>} />
         <Route path="/create-with-ai" element={<AppShell><CreateWithAi /></AppShell>} />

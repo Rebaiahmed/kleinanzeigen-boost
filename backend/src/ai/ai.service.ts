@@ -1,80 +1,78 @@
-import { Injectable, InternalServerErrorException, HttpException, HttpStatus } from '@nestjs/common';
-import OpenAI from 'openai';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { FirebaseService } from '../firebase/firebase.service';
 import * as fs from 'fs';
 import * as path from 'path';
-import { AI_CONFIG } from '../config/ai.constants';
 
 @Injectable()
 export class AiService {
-  private openai: OpenAI;
   private genAI: GoogleGenerativeAI;
-  private systemPrompt: string;
+  private analyzePhotosPrompt: string;
+  private optimizeAdPrompt: string;
+  private priceCheckPrompt: string;
+  private replySuggestionsPrompt: string;
 
   constructor(private readonly firebaseService: FirebaseService) {
-    // Setup OpenAI client configured for xAI (Grok) API
-    this.openai = new OpenAI({
-      apiKey: process.env.GROQ_API_KEY || 'dummy_key',
-      baseURL: 'https://api.x.ai/v1',
-    });
-
     // Setup Google Generative AI client
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'dummy_key');
 
-    // Load system prompt from file so it can be edited without touching TS source
-    this.systemPrompt = fs.readFileSync(
-      path.join(__dirname, 'prompts/marketplace.system.txt'),
+    // Load system prompts from files at module initialization (Rule Five)
+    this.analyzePhotosPrompt = fs.readFileSync(
+      path.join(__dirname, 'prompts/analyze-photos.system.txt'),
+      'utf-8',
+    );
+    this.optimizeAdPrompt = fs.readFileSync(
+      path.join(__dirname, 'prompts/optimize-ad.system.txt'),
+      'utf-8',
+    );
+    this.priceCheckPrompt = fs.readFileSync(
+      path.join(__dirname, 'prompts/price-check.system.txt'),
+      'utf-8',
+    );
+    this.replySuggestionsPrompt = fs.readFileSync(
+      path.join(__dirname, 'prompts/reply-suggestions.system.txt'),
       'utf-8',
     );
   }
 
-  async optimizeAd(title: string, description: string) {
+  private async logUsage(userId: string, promptTokens: number, candidatesTokens: number) {
     try {
-      const completion = await this.openai.chat.completions.create({
-        model: AI_CONFIG.model,
-        messages: [
-          { role: 'system', content: this.systemPrompt },
-          { role: 'user', content: `Optimiere diese Anzeige:\nTitel: ${title}\nBeschreibung: ${description}` }
-        ],
-        response_format: { type: 'json_object' },
-        temperature: AI_CONFIG.temperature,
-      });
+      const db = this.firebaseService.firestore;
+      const now = new Date();
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const usageRef = db.collection('aiUsage').doc(userId);
+      const usageDoc = await usageRef.get();
 
-      const responseContent = completion.choices[0].message.content;
-      if (!responseContent) throw new Error('Empty response from AI');
-      
-      const parsed = JSON.parse(responseContent);
-      return parsed;
-    } catch (error: any) {
-      throw new InternalServerErrorException(`AI Optimization failed: ${error.message}`);
-    }
-  }
+      let usageData = {
+        callsCount: 0,
+        promptTokens: 0,
+        candidatesTokens: 0,
+        month: currentMonth,
+      };
 
-  async suggestPrice(title: string) {
-    try {
-      const completion = await this.openai.chat.completions.create({
-        model: AI_CONFIG.model,
-        messages: [
-          { role: 'system', content: this.systemPrompt },
-          { role: 'user', content: `Wie viel ist dieser Artikel ungefähr wert? Titel: ${title}. Antworte nur mit dem JSON Format.` }
-        ],
-        response_format: { type: 'json_object' },
-        temperature: AI_CONFIG.priceTemperature,
-      });
+      if (usageDoc.exists) {
+        const data = usageDoc.data()!;
+        if (data.month === currentMonth) {
+          usageData = {
+            callsCount: data.callsCount || 0,
+            promptTokens: data.promptTokens || 0,
+            candidatesTokens: data.candidatesTokens || 0,
+            month: currentMonth,
+          };
+        }
+      }
 
-      const responseContent = completion.choices[0].message.content;
-      if (!responseContent) throw new Error('Empty response from AI');
-      
-      const parsed = JSON.parse(responseContent);
-      return { suggestedPrice: parsed.suggestedPrice, reasoning: parsed.reasoning };
-    } catch (error: any) {
-      throw new InternalServerErrorException(`AI Price Suggestion failed: ${error.message}`);
+      usageData.callsCount += 1;
+      usageData.promptTokens += promptTokens;
+      usageData.candidatesTokens += candidatesTokens;
+
+      await usageRef.set(usageData, { merge: true });
+    } catch (err: any) {
+      console.warn('Failed to log AI usage to Firestore:', err.message);
     }
   }
 
   async calculateScheduleInterval(intervalType: 'Täglich' | 'Alle 3 Tage' | 'Wöchentlich') {
-    // Simple heuristic-based deterministic calculation, avoiding AI costs for simple math
     const now = new Date();
     switch (intervalType) {
       case 'Täglich':
@@ -114,7 +112,7 @@ export class AiService {
     };
 
     if (usageDoc.exists) {
-      const data = usageDoc.data();
+      const data = usageDoc.data()!;
       if (data.month === currentMonth) {
         usageData = {
           callsCount: data.callsCount || 0,
@@ -151,11 +149,11 @@ export class AiService {
     }
 
     const model = this.genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      systemInstruction: this.systemPrompt,
+      model: 'gemini-2.5-flash', // Rule Seven
+      systemInstruction: this.analyzePhotosPrompt,
       generationConfig: {
         responseMimeType: 'application/json',
-        maxOutputTokens: 2048,
+        maxOutputTokens: 800, // Rule One
       },
     });
 
@@ -189,7 +187,7 @@ export class AiService {
       throw new HttpException(`Fehler bei der KI-Analyse: ${errMsg}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    // 5. Try to parse JSON output; retry once if parsing fails
+    // 5. Try to parse JSON output; retry once with more explicit prompt if parsing fails (Rule Two)
     let parsedJson: any = null;
     try {
       const cleaned = cleanAndExtractJson(responseText);
@@ -198,7 +196,7 @@ export class AiService {
       console.error('Failed to parse Gemini response on first attempt. Raw response:', responseText);
       console.error('Parse error:', parseError);
       try {
-        const retryPrompt = `${userPrompt}\nReturn only the JSON object, nothing else.`;
+        const retryPrompt = `${userPrompt}\nReturn ONLY a valid JSON object matching the requested schema. Do not include markdown code fences, do not include surrounding text.`;
         const result = await model.generateContent([retryPrompt, ...imageParts]);
         const response = await result.response;
         responseText = response.text();
@@ -216,7 +214,7 @@ export class AiService {
       }
     }
 
-    // 6. Update usage in Firestore and increment monthly count
+    // 6. Update usage in Firestore and increment monthly count (Rule Six)
     usageData.callsCount += 1;
     usageData.promptTokens += promptTokenCount;
     usageData.candidatesTokens += candidatesTokenCount;
@@ -230,7 +228,229 @@ export class AiService {
       remainingCallsThisMonth,
     };
   }
+
+  async optimizeExistingAd(userId: string, title: string, description: string, category: string) {
+    console.log(`[KI-Opt] optimizeExistingAd START — userId: ${userId}, title: "${title?.slice(0, 40)}"`);
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey || geminiKey === 'dummy_key' || geminiKey.trim() === '') {
+      console.error('[KI-Opt] No GEMINI_API_KEY configured');
+      throw new HttpException(
+        'KI-Analysedienst nicht konfiguriert. Bitte trage einen gültigen GEMINI_API_KEY in der backend/.env Datei ein.',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    const model = this.genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash', // Rule Seven
+      systemInstruction: this.optimizeAdPrompt,
+      generationConfig: {
+        responseMimeType: 'application/json',
+        maxOutputTokens: 600, // Rule One
+      },
+    });
+
+    // Extract only needed fields (Rule Four)
+    const userPrompt = `
+Optimize the following listing:
+Title: ${title}
+Description: ${description}
+Category: ${category}
+`;
+
+    let responseText = '';
+    let promptTokenCount = 0;
+    let candidatesTokenCount = 0;
+    let parsedJson: any = null;
+
+    try {
+      console.log('[KI-Opt] Calling Gemini API (attempt 1)...');
+      const result = await model.generateContent([userPrompt]);
+      const response = await result.response;
+      responseText = response.text();
+      console.log(`[KI-Opt] Gemini responded (attempt 1), raw length: ${responseText.length}`);
+      promptTokenCount = response.usageMetadata?.promptTokenCount || 0;
+      candidatesTokenCount = response.usageMetadata?.candidatesTokenCount || 0;
+      const cleaned = cleanAndExtractJson(responseText);
+      parsedJson = JSON.parse(cleaned);
+    } catch (error: any) {
+      console.error('[KI-Opt] Parse error (attempt 1):', error);
+      try {
+        const retryPrompt = `${userPrompt}\nReturn ONLY a valid JSON object matching the requested schema. Make the description very brief and concise (under 80 words) to ensure it does not exceed output token limits. Do not include markdown code fences, do not include surrounding text.`;
+        console.log('[KI-Opt] Calling Gemini API (retry attempt 2)...');
+        const result = await model.generateContent([retryPrompt]);
+        const response = await result.response;
+        responseText = response.text();
+        console.log(`[KI-Opt] Gemini responded (attempt 2), raw length: ${responseText.length}`);
+        promptTokenCount += response.usageMetadata?.promptTokenCount || 0;
+        candidatesTokenCount += response.usageMetadata?.candidatesTokenCount || 0;
+        const cleaned = cleanAndExtractJson(responseText);
+        parsedJson = JSON.parse(cleaned);
+      } catch (retryError: any) {
+        console.error('Gemini Ad Optimization retry failed. Raw response:', responseText);
+        console.error('Retry parse error:', retryError);
+        throw new HttpException(
+          `Fehler bei der KI-Optimierung: Die Antwort konnte nicht verarbeitet werden. Bitte versuche es erneut.`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+    }
+
+    // Log Usage to Firestore (Rule Six)
+    await this.logUsage(userId, promptTokenCount, candidatesTokenCount);
+
+    return parsedJson;
+  }
+
+  async suggestPrice(userId: string, title: string) {
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey || geminiKey === 'dummy_key' || geminiKey.trim() === '') {
+      throw new HttpException(
+        'KI-Analysedienst nicht konfiguriert. Bitte trage einen gültigen GEMINI_API_KEY in der backend/.env Datei ein.',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    const model = this.genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash', // Rule Seven
+      systemInstruction: this.priceCheckPrompt,
+      generationConfig: {
+        responseMimeType: 'application/json',
+        maxOutputTokens: 400, // Rule One
+      },
+    });
+
+    const userPrompt = `Valuate this item title: ${title}`;
+
+    let responseText = '';
+    let promptTokenCount = 0;
+    let candidatesTokenCount = 0;
+    let parsedJson: any = null;
+
+    try {
+      const result = await model.generateContent([userPrompt]);
+      const response = await result.response;
+      responseText = response.text();
+      promptTokenCount = response.usageMetadata?.promptTokenCount || 0;
+      candidatesTokenCount = response.usageMetadata?.candidatesTokenCount || 0;
+      const cleaned = cleanAndExtractJson(responseText);
+      parsedJson = JSON.parse(cleaned);
+    } catch (error: any) {
+      console.error('Gemini Price Valuate failed on first attempt. Raw response:', responseText);
+      console.error('Parse error:', error);
+      try {
+        const retryPrompt = `${userPrompt}\nReturn ONLY a valid JSON object matching the requested schema. Do not include markdown code fences, do not include surrounding text.`;
+        const result = await model.generateContent([retryPrompt]);
+        const response = await result.response;
+        responseText = response.text();
+        promptTokenCount += response.usageMetadata?.promptTokenCount || 0;
+        candidatesTokenCount += response.usageMetadata?.candidatesTokenCount || 0;
+        const cleaned = cleanAndExtractJson(responseText);
+        parsedJson = JSON.parse(cleaned);
+      } catch (retryError: any) {
+        console.error('Gemini Price Valuate retry failed. Raw response:', responseText);
+        console.error('Retry parse error:', retryError);
+        throw new HttpException(
+          `Fehler bei der Preisanalyse: Die Antwort konnte nicht verarbeitet werden. Bitte versuche es erneut.`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+    }
+
+    // Log Usage to Firestore (Rule Six)
+    await this.logUsage(userId, promptTokenCount, candidatesTokenCount);
+
+    return { suggestedPrice: parsedJson.suggestedPrice, reasoning: parsedJson.reasoning };
+  }
+
+  async suggestReply(userId: string, messageHistory: string[]) {
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey || geminiKey === 'dummy_key' || geminiKey.trim() === '') {
+      throw new HttpException(
+        'KI-Analysedienst nicht konfiguriert. Bitte trage einen gültigen GEMINI_API_KEY in der backend/.env Datei ein.',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    const model = this.genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash', // Rule Seven
+      systemInstruction: this.replySuggestionsPrompt,
+      generationConfig: {
+        responseMimeType: 'application/json',
+        maxOutputTokens: 300, // Rule One
+      },
+    });
+
+    const userPrompt = `
+Message history (latest messages at the end):
+${messageHistory.map((m, idx) => `[Message ${idx + 1}]: ${m}`).join('\n')}
+`;
+
+    let responseText = '';
+    let promptTokenCount = 0;
+    let candidatesTokenCount = 0;
+    let parsedJson: any = null;
+
+    try {
+      const result = await model.generateContent([userPrompt]);
+      const response = await result.response;
+      responseText = response.text();
+      promptTokenCount = response.usageMetadata?.promptTokenCount || 0;
+      candidatesTokenCount = response.usageMetadata?.candidatesTokenCount || 0;
+      const cleaned = cleanAndExtractJson(responseText);
+      parsedJson = JSON.parse(cleaned);
+    } catch (error: any) {
+      console.error('Gemini Reply Suggestions failed on first attempt. Raw response:', responseText);
+      console.error('Parse error:', error);
+      try {
+        const retryPrompt = `${userPrompt}\nReturn ONLY a valid JSON object matching the requested schema. Do not include markdown code fences, do not include surrounding text.`;
+        const result = await model.generateContent([retryPrompt]);
+        const response = await result.response;
+        responseText = response.text();
+        promptTokenCount += response.usageMetadata?.promptTokenCount || 0;
+        candidatesTokenCount += response.usageMetadata?.candidatesTokenCount || 0;
+        const cleaned = cleanAndExtractJson(responseText);
+        parsedJson = JSON.parse(cleaned);
+      } catch (retryError: any) {
+        console.error('Gemini Reply Suggestions retry failed. Raw response:', responseText);
+        console.error('Retry parse error:', retryError);
+        throw new HttpException(
+          `Fehler bei den Antwortvorschlägen: Die Antwort konnte nicht verarbeitet werden. Bitte versuche es erneut.`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+    }
+
+    // Log Usage to Firestore (Rule Six)
+    await this.logUsage(userId, promptTokenCount, candidatesTokenCount);
+
+    return parsedJson;
+  }
+
+  /**
+   * Minimal Gemini connectivity check.
+   * Called by GET /api/ai/health (no auth) to power the panel health indicator dot.
+   */
+  async healthCheck(): Promise<{ ok: boolean; latencyMs: number; error?: string }> {
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey || geminiKey === 'dummy_key' || geminiKey.trim() === '') {
+      return { ok: false, latencyMs: 0, error: 'GEMINI_API_KEY not configured' };
+    }
+
+    const model = this.genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      generationConfig: { maxOutputTokens: 5 },
+    });
+
+    const start = Date.now();
+    try {
+      await model.generateContent(['ping']);
+      return { ok: true, latencyMs: Date.now() - start };
+    } catch (err: any) {
+      return { ok: false, latencyMs: Date.now() - start, error: err.message };
+    }
+  }
 }
+
 
 function cleanAndExtractJson(text: string): string {
   if (!text) return '';

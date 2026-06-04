@@ -25,9 +25,11 @@ export interface AdsActionsReturn {
   ) => Promise<void>;
   handleAIOptimize: (adId: string) => Promise<void>;
   handlePriceCheck: (adId: string) => Promise<void>;
-  handleVintedCrossPost: (adId: string) => Promise<void>;
-  handleEbayCrossPost: (adId: string) => Promise<void>;
-  saveDraft: (adData: any) => Promise<boolean>;
+  handleVintedCrossPost: (adId: string) => Promise<{ success: boolean; url?: string; error?: string }>;
+  handleEbayCrossPost: (adId: string) => Promise<{ success: boolean; url?: string; error?: string }>;
+  saveDraft: (adData: any) => Promise<any>;
+  optimizeExistingAd: (title: string, description: string, category: string, price: string | number) => Promise<any>;
+  updateAdFields: (adId: string, fields: { title?: string; description?: string }) => Promise<boolean>;
   isSyncing: boolean;
   toastMessage: string | null;
   toastType: ToastType;
@@ -177,27 +179,53 @@ export function useAdsActions(): AdsActionsReturn {
   );
 
   const handleVintedCrossPost = useCallback(
-    async (adId: string) => {
-      showToast('Vinted Cross-Post gestartet...', 'success');
-      setTimeout(() => {
-        showToast('Erfolgreich auf Vinted gepostet!', 'success');
-      }, 1500);
+    async (adId: string): Promise<{ success: boolean; url?: string; error?: string }> => {
+      try {
+        const res = await fetch(`${API_URL}/ads/${adId}/cross-post/vinted`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+          },
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast('Erfolgreich auf Vinted gepostet!', 'success');
+          return { success: true, url: data.url };
+        } else {
+          return { success: false, error: data.message || 'Fehler beim Posten auf Vinted.' };
+        }
+      } catch (err) {
+        return { success: false, error: 'Netzwerkfehler beim Vinted Cross-Post.' };
+      }
     },
     [showToast],
   );
 
   const handleEbayCrossPost = useCallback(
-    async (adId: string) => {
-      showToast('eBay Cross-Post gestartet...', 'success');
-      setTimeout(() => {
-        showToast('Erfolgreich auf eBay gepostet!', 'success');
-      }, 1500);
+    async (adId: string): Promise<{ success: boolean; url?: string; error?: string }> => {
+      try {
+        const res = await fetch(`${API_URL}/ads/${adId}/cross-post/ebay`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+          },
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast('Erfolgreich auf eBay gepostet!', 'success');
+          return { success: true, url: data.url };
+        } else {
+          return { success: false, error: data.message || 'Fehler beim Posten auf eBay.' };
+        }
+      } catch (err) {
+        return { success: false, error: 'Netzwerkfehler beim eBay Cross-Post.' };
+      }
     },
     [showToast],
   );
 
   const saveDraft = useCallback(
-    async (adData: any): Promise<boolean> => {
+    async (adData: any): Promise<any> => {
       try {
         const res = await fetch(`${API_URL}/ads/draft`, {
           method: 'POST',
@@ -210,13 +238,98 @@ export function useAdsActions(): AdsActionsReturn {
         const data = await res.json();
         if (data.success) {
           showToast('Entwurf wurde erfolgreich gespeichert', 'success');
-          return true;
+          return data;
         } else {
           showToast(data.message || 'Fehler beim Speichern des Entwurfs', 'error');
-          return false;
+          return null;
         }
       } catch {
         showToast('Fehler beim Speichern des Entwurfs', 'error');
+        return null;
+      }
+    },
+    [showToast],
+  );
+
+  const optimizeExistingAd = useCallback(
+    async (title: string, description: string, category: string, price: string | number): Promise<any> => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+        console.warn('[KI-Opt] Request aborted after 30s timeout');
+      }, 30_000);
+
+      try {
+        console.log(`[KI-Opt] POST /ai/optimize-ad — title: "${title?.slice(0, 40)}", category: "${category}"`);
+
+        const res = await fetch(`${API_URL}/ai/optimize-ad`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${getToken()}`,
+          },
+          body: JSON.stringify({ title, description, category, price }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (res.status === 401) {
+          console.warn('[KI-Opt] 401 Unauthorized — redirecting to login');
+          handleUnauthorized();
+          return null;
+        }
+
+        const data = await res.json().catch(() => ({}));
+        console.log(`[KI-Opt] Response status: ${res.status}`, data);
+
+        if (res.ok) {
+          return data;
+        } else {
+          const errMsg = data.message || data.error || `HTTP ${res.status}`;
+          console.error(`[KI-Opt] Error response ${res.status}:`, data);
+          // Return an error object so the panel can render it
+          return { __error: true, status: res.status, message: errMsg };
+        }
+      } catch (err: any) {
+        clearTimeout(timeoutId);
+        if (err.name === 'AbortError') {
+          console.error('[KI-Opt] Timed out after 30s');
+          return { __error: true, status: 0, message: 'KI-Optimierung nicht verfügbar — bitte später versuchen' };
+        }
+        console.error('[KI-Opt] Network error:', err);
+        return { __error: true, status: 0, message: err.message || 'Netzwerkfehler' };
+      }
+    },
+    [showToast],
+  );
+
+
+  const updateAdFields = useCallback(
+    async (adId: string, fields: { title?: string; description?: string }): Promise<boolean> => {
+      try {
+        const res = await fetch(`${API_URL}/ads/${adId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${getToken()}`,
+          },
+          body: JSON.stringify(fields),
+        });
+        if (res.status === 401) {
+          handleUnauthorized();
+          return false;
+        }
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast('Anzeige erfolgreich aktualisiert', 'success');
+          return true;
+        } else {
+          showToast(data.message || 'Aktualisierung fehlgeschlagen', 'error');
+          return false;
+        }
+      } catch (err) {
+        showToast('Netzwerkfehler bei der Aktualisierung', 'error');
         return false;
       }
     },
@@ -232,6 +345,8 @@ export function useAdsActions(): AdsActionsReturn {
     handleVintedCrossPost,
     handleEbayCrossPost,
     saveDraft,
+    optimizeExistingAd,
+    updateAdFields,
     isSyncing,
     toastMessage,
     toastType,

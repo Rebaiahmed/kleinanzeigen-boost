@@ -1,28 +1,67 @@
-import { Controller, Post, Body, UseGuards, UseInterceptors, UploadedFiles, Req, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards, UseInterceptors, UploadedFiles, Req, HttpException, HttpStatus } from '@nestjs/common';
 import { AiService } from './ai.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
 
-@UseGuards(JwtAuthGuard)
 @Controller('api/ai')
 export class AiController {
   constructor(private readonly aiService: AiService) {}
 
+  /**
+   * GET /api/ai/health (no auth guard — used by the panel health indicator)
+   * Calls Gemini with a minimal prompt and returns response time in ms.
+   */
+  @Get('health')
+  async health() {
+    return this.aiService.healthCheck();
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post('optimize')
-  async optimize(@Body() body: { title: string; description: string }) {
-    return this.aiService.optimizeAd(body.title, body.description);
+  async optimize(
+    @Req() req: any,
+    @Body() body: { title: string; description: string; category?: string }
+  ) {
+    console.log(`[KI-Opt] optimize called — userId: ${req.user?.userId}`);
+    return this.aiService.optimizeExistingAd(
+      req.user.userId,
+      body.title,
+      body.description,
+      body.category || 'Sonstiges'
+    );
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Post('optimize-ad')
+  async optimizeAd(
+    @Req() req: any,
+    @Body() body: { title: string; description: string; category: string }
+  ) {
+    console.log(`[KI-Opt] optimize-ad called — userId: ${req.user?.userId}, title: "${body.title?.slice(0, 40)}"`);
+    return this.aiService.optimizeExistingAd(
+      req.user.userId,
+      body.title,
+      body.description,
+      body.category
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post('price')
-  async suggestPrice(@Body() body: { title: string }) {
-    return this.aiService.suggestPrice(body.title);
+  async suggestPrice(
+    @Req() req: any,
+    @Body() body: { title: string }
+  ) {
+    return this.aiService.suggestPrice(req.user.userId, body.title);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('schedule')
   async calculateSchedule(@Body() body: { interval: 'Täglich' | 'Alle 3 Tage' | 'Wöchentlich' }) {
     return this.aiService.calculateScheduleInterval(body.interval);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('analyze-photos')
   @UseInterceptors(FilesInterceptor('images', 8, {
     limits: { fileSize: 4 * 1024 * 1024 } // 4MB
@@ -36,5 +75,17 @@ export class AiController {
       throw new HttpException('Mindestens ein Foto muss hochgeladen werden.', HttpStatus.BAD_REQUEST);
     }
     return this.aiService.analyzePhotos(req.user.userId, files, hint);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('reply-suggestions')
+  async replySuggestions(
+    @Req() req: any,
+    @Body() body: { messageHistory: string[] }
+  ) {
+    if (!body.messageHistory || !Array.isArray(body.messageHistory)) {
+      throw new HttpException('messageHistory Array ist erforderlich.', HttpStatus.BAD_REQUEST);
+    }
+    return this.aiService.suggestReply(req.user.userId, body.messageHistory);
   }
 }

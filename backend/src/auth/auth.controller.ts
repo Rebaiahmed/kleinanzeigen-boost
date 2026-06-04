@@ -104,5 +104,13 @@ export class AuthController {
   async status(@Req() req: any) {
     return this.authService.getStatus(req.user.userId);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('logout')
+  async logout(@Req() req: any, @Res({ passthrough: true }) res: Response) {
+    await this.authService.logout(req.user.userId);
+    res.clearCookie('kb_session');
+    return { success: true };
+  }
 }
 

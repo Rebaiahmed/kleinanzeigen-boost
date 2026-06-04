@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, LogOut } from 'lucide-react';
+import { User, LogOut, Settings } from 'lucide-react';
 
-function getUserFromToken(): { email: string; initials: string } | null {
+function getUserFromToken(): { email: string; initials: string; fullEmail: string } | null {
   try {
     const token = localStorage.getItem('kb_session') || localStorage.getItem('token');
     if (!token) return null;
@@ -14,7 +14,7 @@ function getUserFromToken(): { email: string; initials: string } | null {
     const prefix = email.split('@')[0];
     const display = prefix.charAt(0).toUpperCase() + prefix.slice(1).replace(/[._-]/g, ' ');
     const initials = prefix.slice(0, 2).toUpperCase();
-    return { email: display, initials };
+    return { email: display, initials, fullEmail: email };
   } catch {
     return null;
   }
@@ -24,10 +24,47 @@ export function TopBar() {
   const navigate = useNavigate();
   const user = useMemo(() => getUserFromToken(), []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('kb_session');
-    localStorage.removeItem('token');
-    navigate('/auth');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsDropdownOpen(false);
+      }
+    };
+    
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isDropdownOpen]);
+
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem('kb_session') || localStorage.getItem('token');
+      const apiBase = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
+      await fetch(`${apiBase}/auth/logout`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      localStorage.removeItem('kb_session');
+      localStorage.removeItem('token');
+      sessionStorage.clear();
+      navigate('/auth');
+    }
   };
 
   return (
@@ -43,28 +80,61 @@ export function TopBar() {
           </div>
           
           {/* Right: Profile & Logout */}
-          <div className="flex items-center gap-3 border-l border-[#d4d4d4] pl-4">
+          <div className="flex items-center gap-3 border-l border-[#d4d4d4] pl-4 relative" ref={dropdownRef}>
             {user ? (
               <>
                 <div className="hidden sm:flex flex-col items-end">
                   <span className="text-[13px] font-bold text-[#333] leading-tight">{user.email}</span>
                 </div>
-                <div className="h-8 w-8 rounded-full bg-[#A8C300] flex items-center justify-center text-white text-[11px] font-bold cursor-default select-none">
+                <button 
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="h-8 w-8 rounded-full bg-[#A8C300] flex items-center justify-center text-white text-[11px] font-bold focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#A8C300] transition-shadow"
+                >
                   {user.initials}
-                </div>
+                </button>
               </>
             ) : (
-              <div className="h-8 w-8 rounded-full bg-[#f5f5f5] border border-[#d4d4d4] flex items-center justify-center text-[#666]">
+              <button 
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="h-8 w-8 rounded-full bg-[#f5f5f5] border border-[#d4d4d4] flex items-center justify-center text-[#666] focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#ccc] transition-shadow"
+              >
                 <User className="h-4 w-4" />
+              </button>
+            )}
+
+            {isDropdownOpen && (
+              <div className="absolute top-10 right-0 mt-2 w-56 bg-white border border-[#e5e5e5] rounded-sm shadow-lg py-1 z-50">
+                {user && (
+                  <div className="px-4 py-2 border-b border-[#f0f0f0] mb-1">
+                    <p className="text-[12px] text-gray-500 truncate" title={user.fullEmail}>
+                      {user.fullEmail}
+                    </p>
+                  </div>
+                )}
+                
+                <Link
+                  to="/settings"
+                  onClick={() => setIsDropdownOpen(false)}
+                  className="w-full flex items-center gap-2 px-4 py-2 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors focus:bg-gray-50 focus:outline-none"
+                >
+                  <Settings className="w-4 h-4 text-gray-400" />
+                  <span>Einstellungen</span>
+                </Link>
+                
+                <div className="h-px bg-[#f0f0f0] my-1" />
+                
+                <button
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    handleLogout();
+                  }}
+                  className="w-full flex items-center gap-2 px-4 py-2 text-[13px] text-red-600 hover:bg-red-50 transition-colors focus:bg-red-50 focus:outline-none"
+                >
+                  <LogOut className="w-4 h-4 text-red-500" />
+                  <span>Abmelden</span>
+                </button>
               </div>
             )}
-            <button
-              onClick={handleLogout}
-              title="Abmelden"
-              className="h-8 w-8 rounded-full flex items-center justify-center text-[#999] hover:text-[#ef4444] hover:bg-red-50 transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
           </div>
         </div>
       </div>

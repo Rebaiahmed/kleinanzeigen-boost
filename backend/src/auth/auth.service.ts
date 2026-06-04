@@ -314,6 +314,17 @@ export class AuthService {
       error: sanitizeWorkerError(workerJob.error),
     };
   }
+
+  async logout(userId: string) {
+    try {
+      if (!userId) return;
+      await this.firebaseService.firestore.collection('sessions').doc(userId).update({
+        status: 'expired'
+      });
+    } catch (e) {
+      // Ignored: session might not exist or already be deleted
+    }
+  }
 }
 
 function sanitizeWorkerError(raw?: string): string | undefined {

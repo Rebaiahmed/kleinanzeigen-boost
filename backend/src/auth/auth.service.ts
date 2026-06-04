@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, HttpException, HttpStatus } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { FirebaseService } from '../firebase/firebase.service';
 import { AutomationService } from '../automation/automation.service';
@@ -56,8 +56,9 @@ export class AuthService {
     await this.firebaseService.firestore.collection('handshakes').doc(token).set({
       encryptedCookies,
       createdAt: new Date().toISOString(),
-      expiresAt: Date.now() + 60000, // 60 seconds
-      stableUserId: stableUserId || crypto.randomUUID()
+      expiresAt: Date.now() + 120000, // 120 seconds
+      stableUserId: stableUserId || crypto.randomUUID(),
+      used: false,
     });
 
     return token;
@@ -66,22 +67,43 @@ export class AuthService {
   async exchangeHandshakeToken(token: string) {
     const docRef = this.firebaseService.firestore.collection('handshakes').doc(token);
     const doc = await docRef.get();
-    
-    if (!doc.exists) {
-      throw new UnauthorizedException('Invalid or expired handshake token');
-    }
-    
-    const data = doc.data()!;
-    // Immediately delete the token to prevent replay attacks
-    await docRef.delete();
 
-    if (Date.now() > data.expiresAt) {
-      throw new UnauthorizedException('Handshake token expired');
+    if (!doc.exists) {
+      // Document never existed or was already deleted after TTL
+      throw new HttpException(
+        { message: 'Handshake abgelaufen — bitte erneut verbinden' },
+        HttpStatus.UNAUTHORIZED,
+      );
     }
+
+    const data = doc.data()!;
+
+    // Detect double-use: mark as used before doing anything else
+    if (data.used === true) {
+      throw new HttpException(
+        { message: 'Handshake bereits verwendet' },
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    // Mark the token as used atomically (prevents replay even if delete fails)
+    await docRef.update({ used: true });
+
+    // Check TTL after the used-flag update
+    if (Date.now() > data.expiresAt) {
+      await docRef.delete();
+      throw new HttpException(
+        { message: 'Handshake abgelaufen — bitte erneut verbinden' },
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    // Delete the document now that we have the data
+    await docRef.delete();
 
     const decryptedJson = this.decryptData(data.encryptedCookies);
     const cookies = JSON.parse(decryptedJson);
-    
+
     const userId = data.stableUserId;
     const jwtToken = this.jwtService.sign({ sub: userId, type: 'marketplace_session' });
 

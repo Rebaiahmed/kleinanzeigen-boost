@@ -211,18 +211,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       
       let username = 'Kleinanzeigen_User';
-      const emailCookie = cookies.find(c => c.name.toLowerCase().includes('email') || c.name.toLowerCase().includes('user'));
-      if (emailCookie) {
-        try {
-          const val = decodeURIComponent(emailCookie.value);
-          const emailMatch = val.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-          if (emailMatch) {
-            username = emailMatch[0];
-          } else if (val && val.length < 50 && !val.includes('{')) {
-            username = val;
-          }
-        } catch (e) {}
-      } else if (sessionCookie) {
+
+      // 1. Scan all cookies for any value matching email regex
+      if (cookies && cookies.length > 0) {
+        for (const c of cookies) {
+          try {
+            const val = decodeURIComponent(c.value);
+            const emailMatch = val.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+            if (emailMatch) {
+              username = emailMatch[0];
+              break;
+            }
+          } catch (e) {}
+        }
+      }
+
+      // 2. If no email found, try decoding sessionCookie JWT payload
+      if (username === 'Kleinanzeigen_User' && sessionCookie) {
         try {
           const parts = sessionCookie.value.split('.');
           if (parts.length === 3) {
@@ -232,6 +237,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             else if (payload.sub) username = payload.sub;
           }
         } catch (e) {}
+      }
+
+      // 3. Fallback: check specifically named cookies
+      if (username === 'Kleinanzeigen_User' && cookies && cookies.length > 0) {
+        const nameCookie = cookies.find(c => 
+          c.name.toLowerCase().includes('user') || 
+          c.name.toLowerCase().includes('email') ||
+          c.name.toLowerCase().includes('name')
+        );
+        if (nameCookie) {
+          try {
+            const val = decodeURIComponent(nameCookie.value);
+            if (val && val.length < 50 && !val.includes('{') && !val.includes('[') && val.trim().length > 2) {
+              username = val.trim();
+            }
+          } catch (e) {}
+        }
       }
       
       // Request handshake token from backend

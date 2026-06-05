@@ -1,6 +1,6 @@
 export const ENDPOINTS = {
   // Backend API
-  API_BASE: 'http://localhost:3000/api',
+  API_BASE: 'http://127.0.0.1:3000/api',
   // Dashboard (local development)
   DASHBOARD_BASE: 'http://localhost:5173',
   DASHBOARD_AUTH_CALLBACK: 'http://localhost:5173/auth/callback',

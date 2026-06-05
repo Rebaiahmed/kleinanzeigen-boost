@@ -7,9 +7,13 @@ import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import * as cookieParser from 'cookie-parser';
 import { ALLOWED_ORIGINS } from './common/constants/cors.constants';
+import { WsAdapter } from '@nestjs/platform-ws';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // WebSocket adapter registration
+  app.useWebSocketAdapter(new WsAdapter(app));
 
   // Security
   app.use(helmet());

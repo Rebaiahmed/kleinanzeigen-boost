@@ -49,7 +49,7 @@ export function AuthCallback() {
           }
 
           // Redirect to the dashboard
-          navigate('/m-meine-anzeigen', { replace: true });
+          navigate('/meine-anzeigen', { replace: true });
         }
       } catch (err: any) {
         console.error('Handshake error:', err);
@@ -97,8 +97,7 @@ export function AuthCallback() {
               </p>
             ) : errorType === 'expired' ? (
               <p className="text-[14px] text-[#555555] mb-6 leading-relaxed">
-                Das Verbindungstoken ist abgelaufen (gültig für 2 Minuten). Klicke auf{' '}
-                <strong>Erneut versuchen</strong>, damit die Erweiterung eine neue Verbindung herstellt – ohne dass du zurück zu Kleinanzeigen navigieren musst.
+                Verbindung unterbrochen. Klicke auf 'Neu verbinden'.
               </p>
             ) : (
               <p className="text-[14px] text-[#555555] mb-6 leading-relaxed">
@@ -114,7 +113,7 @@ export function AuthCallback() {
                   className="w-full flex justify-center items-center gap-2 py-3 px-4 rounded-full text-[15px] font-bold text-[#333] bg-[#A8C300] hover:bg-[#96ae00] transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#A8C300]"
                 >
                   <RefreshCw className="w-4 h-4" />
-                  Erneut versuchen
+                  Neu verbinden
                 </button>
               )}
               <button

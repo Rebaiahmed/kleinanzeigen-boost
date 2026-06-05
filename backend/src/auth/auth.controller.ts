@@ -59,7 +59,7 @@ export class AuthController {
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    return { success: true };
+    return { success: true, accessToken };
   }
 
   @Post('login/cookie')
@@ -74,7 +74,7 @@ export class AuthController {
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    return { success: true };
+    return { success: true, accessToken };
   }
 
   @Post('handshake-token')

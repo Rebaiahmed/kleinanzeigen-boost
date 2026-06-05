@@ -1,5 +1,6 @@
 import React from 'react';
 import { Sparkles, Activity, CheckCircle2, XCircle } from 'lucide-react';
+import { ReplyTemplatesList } from '../components/reply-templates/ReplyTemplatesList';
 
 const MOCK_STATS = [
   { label: 'Aktive Anzeigen', value: '12', color: 'text-ka-green-dark' },
@@ -98,6 +99,9 @@ export function Dashboard() {
           </button>
         </div>
       </div>
+
+      {/* Reply Templates Section */}
+      <ReplyTemplatesList />
     </div>
   );
 }

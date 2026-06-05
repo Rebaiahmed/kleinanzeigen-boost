@@ -1,333 +1,272 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Loader2, Monitor, RefreshCw, Info } from 'lucide-react';
+import { Loader2, ShieldCheck, CheckCircle2, ChevronRight, Terminal, AlertCircle } from 'lucide-react';
 
-type LoginMode = 'standard' | 'cookie';
-type JobStatus = 'pending' | 'waiting-for-user' | 'success' | 'failed';
+// Feature Flag
+const SHOW_MANUAL_COOKIE_METHOD = false;
 
 export function Auth() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<LoginMode>('standard');
-  const [step, setStep] = useState<1 | 2>(1); // 1 = email, 2 = waiting / polling
-  const [email, setEmail] = useState('');
-  const [cookieJson, setCookieJson] = useState('');
-  const [cookieEmail, setCookieEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; cookie?: string; top?: string }>({});
+  
+  // Extension State
+  const [isExtensionChecking, setIsExtensionChecking] = useState(false);
+  const [extensionStatus, setExtensionStatus] = useState<'idle' | 'success' | 'failed'>('idle');
+  const [extensionUsername, setExtensionUsername] = useState<string | null>(null);
+  const [extensionError, setExtensionError] = useState<string | null>(null);
 
-  // Polling state
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [jobStatus, setJobStatus] = useState<JobStatus>('pending');
-  const [jobError, setJobError] = useState<string | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Manual Cookies State
+  const [manualCookiesJson, setManualCookiesJson] = useState('');
+  const [isManualSaving, setIsManualSaving] = useState(false);
+  const [isManualExpanded, setIsManualExpanded] = useState(false);
+  const [manualError, setManualError] = useState<string | null>(null);
+  const [manualSuccess, setManualSuccess] = useState(false);
 
-  // ── Cleanup polling on unmount ─────────────────────────────────────────────
+  // Helper to exchange handshake token for backend session
+  const exchangeToken = async (token: string) => {
+    try {
+      const apiBase = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
+      const res = await fetch(`${apiBase}/auth/exchange-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+      });
+      const data = await res.json();
+      if (data.success && data.accessToken) {
+        localStorage.setItem('token', data.accessToken);
+        localStorage.setItem('kb_session', data.accessToken);
+        return true;
+      }
+    } catch (err) {
+      console.error('Error exchanging token:', err);
+    }
+    return false;
+  };
+
+  // Listen for message responses from the extension content script
   useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
+    const handleMessage = async (event: MessageEvent) => {
+      // Only accept messages from same origin
+      if (event.origin !== window.location.origin) return;
+
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
+
+      if (data.type === 'PLATFORM_LOGIN_STATUS') {
+        setIsExtensionChecking(false);
+        if (data.isLoggedIn) {
+          setExtensionStatus('success');
+          setExtensionUsername(data.username || 'Kleinanzeigen_User');
+          setExtensionError(null);
+          
+          if (data.token) {
+            await exchangeToken(data.token);
+          }
+          navigate('/meine-anzeigen');
+        } else {
+          setExtensionStatus('failed');
+          setExtensionError('Bitte logge dich zuerst bei Kleinanzeigen ein');
+        }
+      }
+
+      if (data.type === 'SET_COOKIES_RESPONSE') {
+        setIsManualSaving(false);
+        if (data.success) {
+          setManualSuccess(true);
+          setManualError(null);
+          if (data.token) {
+            await exchangeToken(data.token);
+          }
+          navigate('/meine-anzeigen');
+        } else {
+          setManualError(data.error || 'Fehler beim Speichern der Cookies');
+        }
+      }
     };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  // ── Start polling when jobId is set ───────────────────────────────────────
-  useEffect(() => {
-    if (!jobId) return;
-    if (pollRef.current) clearInterval(pollRef.current);
-
-    const poll = async () => {
-      try {
-        const res = await fetch(`/api/auth/login-status/${jobId}`, {
-          credentials: 'include',
-        });
-        const data = await res.json().catch(() => ({}));
-
-        setJobStatus(data.status || 'pending');
-
-        if (data.status === 'success') {
-          if (pollRef.current) clearInterval(pollRef.current);
-          if (data.accessToken) {
-            localStorage.setItem('kb_session', data.accessToken);
-            localStorage.setItem('token', data.accessToken);
-          }
-          navigate('/m-meine-anzeigen', { replace: true });
-        } else if (data.status === 'failed') {
-          if (pollRef.current) clearInterval(pollRef.current);
-          setJobError(data.error || 'Login fehlgeschlagen. Bitte erneut versuchen.');
-        }
-      } catch {
-        // transient network error — keep polling
-      }
-    };
-
-    pollRef.current = setInterval(poll, 3000);
-    poll(); // immediate first call
-  }, [jobId, navigate]);
-
-  // ── Standard login (email → open visible browser) ─────────────────────────
-  const validateEmail = (val: string) => {
-    if (!val) return 'Bitte gib eine E-Mail-Adresse ein.';
-    if (!/\S+@\S+\.\S+/.test(val)) return 'Die E-Mail-Adresse ist ungültig.';
-    return null;
+  // Method 1: Chrome Extension Auto-Detect
+  const handleExtensionConnect = () => {
+    setIsExtensionChecking(true);
+    setExtensionError(null);
+    window.postMessage({ type: 'CHECK_PLATFORM_LOGIN' }, '*');
   };
 
-  const handleStandardSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const emailErr = validateEmail(email);
-    if (emailErr) { setErrors({ email: emailErr }); return; }
-    setErrors({});
-    setIsLoading(true);
+  // Method 2: Manual Cookies Action
+  const handleManualConnect = () => {
+    setManualError(null);
+    setManualSuccess(false);
 
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-        credentials: 'include',
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        // Backend returned an error (e.g. 503 worker unavailable)
-        throw new Error(data.message || 'Unbekannter Fehler.');
+      const parsed = JSON.parse(manualCookiesJson);
+      if (!Array.isArray(parsed)) {
+        throw new Error('JSON muss ein Array von Cookies sein');
       }
-
-      // Backend returned 202 Accepted with a jobId
-      setJobId(data.jobId);
-      setJobStatus('pending');
-      setStep(2);
+      setIsManualSaving(true);
+      window.postMessage({ type: 'SET_COOKIES', cookies: parsed }, '*');
     } catch (err: any) {
-      setErrors({ top: err.message || 'Ein Fehler ist aufgetreten.' });
-    } finally {
-      setIsLoading(false);
+      setManualError(err.message || 'Ungültiges JSON-Format');
     }
   };
 
-  const handleRetryStandard = () => {
-    if (pollRef.current) clearInterval(pollRef.current);
-    setJobId(null);
-    setJobStatus('pending');
-    setJobError(null);
-    setStep(1);
+  const handleNavigateDashboard = () => {
+    navigate('/meine-anzeigen');
   };
 
-  // ── Cookie login ──────────────────────────────────────────────────────────
-  const handleCookieLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const emailErr = validateEmail(cookieEmail);
-    if (emailErr) { setErrors({ email: emailErr }); return; }
-    if (!cookieJson) { setErrors({ cookie: 'Bitte füge deine Cookies ein.' }); return; }
-    setErrors({});
-    setIsLoading(true);
-
-    try {
-      const res = await fetch('/api/auth/login/cookie', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: cookieEmail, cookies: cookieJson }),
-        credentials: 'include',
-      });
-
-      if (!res.ok) throw new Error('Ungültiges Cookie-Format. Bitte JSON-Array einfügen.');
-
-      const data = await res.json().catch(() => ({}));
-      if (data.accessToken) {
-        localStorage.setItem('kb_session', data.accessToken);
-        localStorage.setItem('token', data.accessToken);
-      }
-      navigate('/m-meine-anzeigen');
-    } catch (err: any) {
-      setErrors({ top: err.message || 'Ein Fehler ist aufgetreten.' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#f7f7f7] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="sm:mx-auto sm:w-full sm:max-w-[440px]">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        
+        {/* Sleek Gradient Branding Card */}
+        <div className="bg-slate-900 border border-slate-800 py-10 px-8 rounded-2xl shadow-2xl relative overflow-hidden">
+          {/* Decorative glowing gradient effect */}
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-lime-500 to-emerald-400" />
+          <div className="absolute -top-20 -right-20 w-40 h-40 bg-lime-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        {errors.top && (
-          <div className="mb-4 bg-[#fff0f0] border border-red-200 text-red-600 text-[14px] px-4 py-3 rounded-md text-center">
-            {errors.top}
-          </div>
-        )}
-
-        <div className="bg-white py-10 px-8 border border-[#eaeaea] rounded-xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)]">
-          <div className="text-center mb-6">
-            <h2 className="text-[24px] font-bold text-[#222222]">Willkommen bei Kleinanzeigen!</h2>
-            <p className="text-[14px] text-[#666666] mt-2">
-              Gut für deinen Geldbeutel, gut für die Umwelt — jetzt einloggen.
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold tracking-tight text-white flex items-center justify-center gap-2">
+              <ShieldCheck className="w-7 h-7 text-lime-400 animate-pulse" />
+              <span>Mit Kleinanzeigen verbinden</span>
+            </h2>
+            <p className="text-sm text-slate-400 mt-2">
+              Verknüpfe dein Konto, um automatische Updates & Optimierungen freizuschalten.
             </p>
           </div>
 
-          {/* Tab bar — only show when not in waiting state */}
-          {step !== 2 && (
-            <div className="flex border-b border-[#eaeaea] mb-6">
-              <button
-                onClick={() => { setMode('standard'); setErrors({}); }}
-                className={`flex-1 pb-3 text-[15px] font-semibold transition-colors ${mode === 'standard' ? 'text-[#333] border-b-2 border-[#A8C300]' : 'text-[#888] hover:text-[#555]'}`}
-              >
-                Standard Login
-              </button>
-              <button
-                onClick={() => { setMode('cookie'); setErrors({}); }}
-                className={`flex-1 pb-3 text-[15px] font-semibold transition-colors ${mode === 'cookie' ? 'text-[#333] border-b-2 border-[#A8C300]' : 'text-[#888] hover:text-[#555]'}`}
-              >
-                Cookie Bypass
-              </button>
-            </div>
-          )}
+          {/* Method 1: Chrome Extension Section */}
+          <div className="p-5 bg-slate-950/60 border border-slate-800 rounded-xl mb-6">
+            <h3 className="text-sm font-bold text-slate-200 tracking-wider flex items-center gap-2 mb-4">
+              <span className="w-1.5 h-1.5 rounded-full bg-lime-400" />
+              🔌 Chrome Extension (Empfohlen)
+            </h3>
 
-          {/* ── Standard Login ── */}
-          {mode === 'standard' && step === 1 && (
-            <form className="flex flex-col gap-y-4" onSubmit={handleStandardSubmit}>
-              <div>
-                <input
-                  id="email"
-                  type="email"
-                  placeholder="E-Mail*"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={`appearance-none block w-full px-4 py-3 border ${errors.email ? 'border-red-500' : 'border-[#dcdcdc]'} rounded-md placeholder-gray-500 focus:outline-none focus:border-[#333] text-[16px] transition-colors`}
-                />
-                {errors.email && <p className="mt-1 text-[12px] text-red-500">{errors.email}</p>}
-              </div>
-
-              <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-md p-3">
-                <div className="flex items-start gap-2">
-                  <Monitor className="w-4 h-4 text-[#64748b] mt-0.5 flex-shrink-0" />
-                  <p className="text-[13px] text-[#475569] leading-relaxed">
-                    Ein sichtbares Browser-Fenster öffnet sich auf dem Server. Du kannst jedes CAPTCHA selbst lösen und dich wie gewohnt einloggen.
-                  </p>
+            {extensionStatus === 'success' ? (
+              <div className="space-y-4 py-2">
+                <div className="flex items-center gap-3 bg-emerald-950/40 border border-emerald-800/60 p-3.5 rounded-lg text-emerald-300">
+                  <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-400" />
+                  <div>
+                    <p className="text-xs font-semibold text-emerald-400">Erfolgreich verbunden</p>
+                    <p className="text-[13px] text-emerald-300 font-medium">Verbunden als: {extensionUsername}</p>
+                  </div>
                 </div>
-              </div>
-
-              <div className="mt-2">
                 <button
-                  id="standard-login-btn"
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full flex justify-center items-center py-3.5 px-4 border border-transparent rounded-full text-[16px] font-bold text-[#333] bg-[#A8C300] hover:bg-[#96ae00] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#A8C300] transition-colors disabled:opacity-70"
+                  onClick={handleNavigateDashboard}
+                  className="w-full flex items-center justify-center gap-1.5 py-2.5 px-4 bg-lime-500 hover:bg-lime-400 text-slate-950 font-bold rounded-lg text-sm transition-colors cursor-pointer"
                 >
-                  {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Browser öffnen & Anmelden'}
+                  <span>Weiter zum Dashboard</span>
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2.5 text-xs text-slate-400 font-medium pl-2">
+                  <div className="flex gap-2">
+                    <span className="text-lime-400 font-bold">1.</span>
+                    <span>Installiere unsere Chrome Extension</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-lime-400 font-bold">2.</span>
+                    <span>Logge dich bei Kleinanzeigen ein</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-lime-400 font-bold">3.</span>
+                    <span>Klicke auf &quot;Verbinden&quot;</span>
+                  </div>
+                </div>
 
-              {/* Fallback hint */}
-              <div className="flex items-start gap-1.5 mt-1">
-                <Info className="w-3.5 h-3.5 text-[#94a3b8] mt-0.5 flex-shrink-0" />
-                <p className="text-[12px] text-[#94a3b8] leading-relaxed">
-                  Falls du Probleme hast, nutze den{' '}
-                  <button
-                    type="button"
-                    onClick={() => setMode('cookie')}
-                    className="text-[#005d9e] hover:underline font-medium"
-                  >
-                    Cookie Bypass-Tab
-                  </button>
-                  {' '}— schneller und CAPTCHA-frei.
-                </p>
+                {extensionError && (
+                  <div className="flex items-start gap-2 bg-red-950/40 border border-red-900/60 p-3 rounded-lg text-red-400 text-xs">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>{extensionError}</span>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleExtensionConnect}
+                  disabled={isExtensionChecking}
+                  className="w-full flex justify-center items-center py-2.5 px-4 border border-transparent rounded-lg text-sm font-bold text-slate-950 bg-lime-400 hover:bg-lime-300 transition-colors disabled:opacity-50 cursor-pointer shadow-lg shadow-lime-500/10"
+                >
+                  {isExtensionChecking ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Prüfe Verbindung...
+                    </span>
+                  ) : (
+                    'Verbinden'
+                  )}
+                </button>
               </div>
-            </form>
-          )}
+            )}
+          </div>
 
-          {/* ── Waiting / Polling card ── */}
-          {mode === 'standard' && step === 2 && (
-            <div className="flex flex-col items-center text-center animate-in fade-in duration-300">
-              {jobStatus === 'failed' ? (
-                <>
-                  <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mb-4">
-                    <span className="text-2xl">✖</span>
+          {/* Method 2: Manual Cookie Input (Feature Flagged) */}
+          {SHOW_MANUAL_COOKIE_METHOD && (
+            <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-950/20">
+              <button
+                onClick={() => setIsManualExpanded(!isManualExpanded)}
+                className="w-full py-3.5 px-5 flex items-center justify-between text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors bg-slate-950/40 border-b border-slate-800"
+              >
+                <span className="flex items-center gap-2">
+                  <Terminal className="w-4 h-4 text-slate-500" />
+                  🔧 Manuelle Methode (für Entwickler)
+                </span>
+                <span className="text-slate-500 transform transition-transform">
+                  {isManualExpanded ? '▲' : '▼'}
+                </span>
+              </button>
+
+              {isManualExpanded && (
+                <div className="p-5 space-y-4">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                      Cookie JSON Array (EditThisCookie Format)
+                    </label>
+                    <textarea
+                      rows={6}
+                      value={manualCookiesJson}
+                      onChange={(e) => setManualCookiesJson(e.target.value)}
+                      placeholder='[ { "name": "...", "value": "..." } ]'
+                      className="w-full p-3 bg-slate-950 border border-slate-800 rounded-lg text-xs font-mono text-slate-300 focus:border-slate-700 focus:ring-1 focus:ring-slate-700 outline-none resize-none"
+                    />
                   </div>
-                  <h3 className="text-[17px] font-bold text-[#222] mb-2">Login fehlgeschlagen</h3>
-                  <p className="text-[14px] text-[#555] mb-6 leading-relaxed">{jobError}</p>
-                  <button
-                    onClick={handleRetryStandard}
-                    className="w-full flex justify-center items-center gap-2 py-3 px-4 rounded-full text-[15px] font-bold text-[#333] bg-[#A8C300] hover:bg-[#96ae00] transition-colors"
-                  >
-                    <RefreshCw className="w-4 h-4" /> Erneut versuchen
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="relative mb-5">
-                    <div className="w-16 h-16 rounded-full bg-[#f0f6e0] flex items-center justify-center">
-                      <Monitor className="w-8 h-8 text-[#A8C300]" />
+
+                  {manualError && (
+                    <div className="flex items-start gap-2 bg-red-950/40 border border-red-900/60 p-3 rounded-lg text-red-400 text-xs">
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{manualError}</span>
                     </div>
-                    <Loader2 className="absolute -bottom-1 -right-1 w-6 h-6 animate-spin text-[#A8C300]" />
-                  </div>
-                  <h3 className="text-[17px] font-bold text-[#222] mb-2">Browser-Fenster geöffnet</h3>
-                  <p className="text-[14px] text-[#555] mb-4 leading-relaxed">
-                    Bitte melde dich im erscheinenden Fenster an.
-                    <br />
-                    <span className="text-[#888]">Dieses Fenster aktualisiert sich automatisch.</span>
-                  </p>
-                  <div className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-md px-4 py-3 mb-4">
-                    <p className="text-[13px] text-[#64748b]">
-                      Status:{' '}
-                      <span className="font-semibold text-[#333]">
-                        {jobStatus === 'waiting-for-user'
-                          ? 'Warte auf Anmeldung...'
-                          : 'Browser wird gestartet...'}
-                      </span>
-                    </p>
-                  </div>
+                  )}
+
+                  {manualSuccess && (
+                    <div className="flex items-center gap-2 bg-emerald-950/40 border border-emerald-900/60 p-3 rounded-lg text-emerald-400 text-xs">
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      <span>Cookies erfolgreich importiert!</span>
+                    </div>
+                  )}
+
                   <button
-                    onClick={handleRetryStandard}
-                    className="text-[13px] text-[#888] hover:text-[#555] underline"
+                    onClick={handleManualConnect}
+                    disabled={isManualSaving || !manualCookiesJson}
+                    className="w-full flex justify-center items-center py-2.5 px-4 border border-slate-800 hover:border-slate-700 rounded-lg text-sm font-bold text-slate-300 bg-slate-900 hover:bg-slate-800 transition-colors disabled:opacity-50 cursor-pointer"
                   >
-                    Abbrechen
+                    {isManualSaving ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Verarbeite...
+                      </span>
+                    ) : (
+                      'Manuell verbinden'
+                    )}
                   </button>
-                </>
+                </div>
               )}
             </div>
           )}
 
-          {/* ── Cookie Bypass ── */}
-          {mode === 'cookie' && (
-            <form className="flex flex-col gap-y-4 animate-in fade-in duration-300" onSubmit={handleCookieLogin}>
-              <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-md p-4 mb-2">
-                <p className="text-[13px] text-[#475569] leading-relaxed">
-                  Logge dich sicher ohne Passwort ein. Nutze die Erweiterung "EditThisCookie", um deine Kleinanzeigen-Session zu exportieren und füge sie hier ein.
-                </p>
-              </div>
-
-              <div>
-                <input
-                  type="email"
-                  id="cookie-email"
-                  placeholder="E-Mail (zur Identifikation)"
-                  value={cookieEmail}
-                  onChange={(e) => setCookieEmail(e.target.value)}
-                  className={`appearance-none block w-full px-4 py-3 border ${errors.email ? 'border-red-500' : 'border-[#dcdcdc]'} rounded-md placeholder-gray-500 focus:outline-none focus:border-[#333] text-[15px] transition-colors`}
-                />
-                {errors.email && <p className="mt-1 text-[12px] text-red-500">{errors.email}</p>}
-              </div>
-
-              <div>
-                <textarea
-                  placeholder="JSON Cookies einfügen (z.B. [{...}])"
-                  value={cookieJson}
-                  onChange={(e) => setCookieJson(e.target.value)}
-                  rows={4}
-                  className={`appearance-none block w-full px-4 py-3 border ${errors.cookie ? 'border-red-500' : 'border-[#dcdcdc]'} rounded-md placeholder-gray-500 focus:outline-none focus:border-[#333] text-[13px] font-mono transition-colors resize-none`}
-                />
-                {errors.cookie && <p className="mt-1 text-[12px] text-red-500">{errors.cookie}</p>}
-              </div>
-
-              <div className="mt-2">
-                <button
-                  id="cookie-login-btn"
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full flex justify-center items-center py-3.5 px-4 border border-transparent rounded-full text-[16px] font-bold text-[#333] bg-[#A8C300] hover:bg-[#96ae00] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#A8C300] transition-colors disabled:opacity-70"
-                >
-                  {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Sicher Einloggen'}
-                </button>
-              </div>
-            </form>
-          )}
         </div>
       </div>
     </div>

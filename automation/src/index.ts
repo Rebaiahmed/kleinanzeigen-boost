@@ -3,6 +3,7 @@ import { executeRepostFlow } from './repost';
 import { executeVintedLogin } from './vinted-login';
 import { executeVintedPost } from './vinted-post';
 import { executeLoginFlow, executeVisibleLoginFlow, submit2FAFlow } from './login';
+import { executeGetAdViews } from './get-ad-views';
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -29,12 +30,13 @@ app.use((req, res, next) => {
 
 // ─── Headless / automated login ─────────────────────────────────────────────
 app.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { userId, email, password } = req.body;
+  if (!userId) return res.status(400).json({ error: 'Missing userId' });
   if (!email || !password) {
     return res.status(400).json({ error: 'Missing credentials' });
   }
   try {
-    const result = await executeLoginFlow(email, password);
+    const result = await executeLoginFlow(userId, email, password);
     if (!result.success && !result.requires_2fa) {
       return res.status(401).json({ error: result.error });
     }
@@ -105,14 +107,45 @@ app.post('/login/2fa', async (req, res) => {
   }
 });
 
+// ─── Get specific ad views ──────────────────────────────────────────────────
+app.post('/get-views', async (req, res) => {
+  const { userId, cookies, adId } = req.body;
+  if (!userId) return res.status(400).json({ error: 'Missing userId' });
+  if (!cookies || !adId) {
+    return res.status(400).json({ error: 'Missing cookies or adId' });
+  }
+  try {
+    const result = await executeGetAdViews(userId, cookies, adId);
+    return res.json(result);
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/scrape-views', async (req, res) => {
+  const { userId, cookies, adId } = req.body;
+  if (!userId) return res.status(400).json({ error: 'Missing userId' });
+  if (!cookies || !adId) {
+    return res.status(400).json({ error: 'Missing cookies or adId' });
+  }
+  try {
+    const { executeScrapeAdViews } = await import('./scrape-ad-views');
+    const result = await executeScrapeAdViews(userId, cookies, adId);
+    return res.json(result);
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 // ─── Vinted ──────────────────────────────────────────────────────────────────
 app.post('/automate/vinted-login', async (req, res) => {
-  const { email, password } = req.body;
+  const { userId, email, password } = req.body;
+  if (!userId) return res.status(400).json({ error: 'Missing userId' });
   if (!email || !password) {
     return res.status(400).json({ error: 'Missing credentials' });
   }
   try {
-    const result = await executeVintedLogin(email, password);
+    const result = await executeVintedLogin(userId, email, password);
     if (!result.success) {
       return res.status(400).json({ error: result.error });
     }
@@ -123,12 +156,13 @@ app.post('/automate/vinted-login', async (req, res) => {
 });
 
 app.post('/automate/vinted-post', async (req, res) => {
-  const { adData, cookies } = req.body;
+  const { userId, adData, cookies } = req.body;
+  if (!userId) return res.status(400).json({ error: 'Missing userId' });
   if (!adData || !cookies) {
     return res.status(400).json({ error: 'Missing adData or cookies' });
   }
   try {
-    const result = await executeVintedPost(adData, cookies);
+    const result = await executeVintedPost(userId, adData, cookies);
     if (!result.success) {
       if (result.error === 'categoryNotSupported') {
         return res.status(400).json({ error: 'categoryNotSupported' });
@@ -146,13 +180,14 @@ app.post('/automate/vinted-post', async (req, res) => {
 
 // ─── Sync & Repost ───────────────────────────────────────────────────────────
 app.post('/sync', async (req, res) => {
-  const { cookies } = req.body;
+  const { userId, cookies } = req.body;
+  if (!userId) return res.status(400).json({ error: 'Missing userId' });
   if (!cookies || !Array.isArray(cookies)) {
     return res.status(400).json({ error: 'Missing or invalid cookies' });
   }
   try {
     const { executeSyncAds } = await import('./sync');
-    const result = await executeSyncAds(cookies);
+    const result = await executeSyncAds(userId, cookies);
     if (!result.success) {
       if (result.error === 'SESSION_EXPIRED') {
         return res.status(401).json({ error: 'Session expired' });

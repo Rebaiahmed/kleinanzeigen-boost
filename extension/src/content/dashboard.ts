@@ -22,6 +22,21 @@ window.addEventListener('message', (event) => {
       }
     });
   }
+
+  if (data.type === 'CHECK_PLATFORM_LOGIN') {
+    chrome.runtime.sendMessage({ type: 'CHECK_PLATFORM_LOGIN', platform: data.platform }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.warn('[AnzeigenBoost] Check platform relay error:', chrome.runtime.lastError.message);
+      } else {
+        window.postMessage({
+          type: 'PLATFORM_LOGIN_STATUS',
+          platform: data.platform,
+          isLoggedIn: response?.isLoggedIn,
+          username: response?.username
+        }, '*');
+      }
+    });
+  }
 });
 
 console.log('[AnzeigenBoost] Dashboard content script loaded.');

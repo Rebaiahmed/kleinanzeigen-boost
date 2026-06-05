@@ -27,7 +27,7 @@ graph TD
     
     %% External Services
     Kleinanzeigen[("Kleinanzeigen.de<br>(Target Marketplace)")]
-    Gemini["Google Gemini 2.5 Flash<br>(Vision & Text AI)"]
+    Gemini["Google Gemini 2.0 Flash<br>(Vision & Text AI)"]
     Ebay["eBay REST API<br>(DE/US Marketplace)"]
     Vinted["Vinted.de<br>(Clothing Marketplace)"]
 
@@ -90,7 +90,23 @@ AnzeigenBoost uses Firebase Firestore as its persistence layer. The data models 
 │               ├── vintedStatus: string
 │               ├── ebayListingId: string
 │               ├── ebayUrl: string
-│               └── ebayLastPostedAt: string (ISO string)
+│               ├── ebayLastPostedAt: string (ISO string)
+│               ├── aiSuggestedRepostDay: number (0-6)
+│               ├── aiSuggestedRepostHour: number (0-23)
+│               ├── aiSuggestionConfidence: number
+│               └── aiSuggestionReasoning: string
+│               └── repostLogs (Sub-collection)
+│                   └── {logId} (Document)
+│                       ├── status: 'success' | 'failed'
+│                       ├── executedAt: ISO-String
+│                       ├── durationMs: number
+│                       ├── viewsBefore: number
+│                       ├── viewsAfter: number
+│                       └── viewsGained: number
+│
+├── schedulerMeta (Collection)
+│   └── schedulerMeta (Document)
+│       └── lastRunAt: ISO-String
 │
 ├── sessions (Collection)
 │   └── {userId} (Document)
@@ -125,7 +141,7 @@ sequenceDiagram
     Extension->>Extension: Get cookies for *.kleinanzeigen.de
     Extension->>Backend: POST /auth/handshake-token { cookies }
     Note over Backend: Encrypt cookies using AES-256-GCM<br>derived from INTERNAL_SECRET
-    Backend->>Firestore: Store handshake document (60s TTL)
+    Backend->>Firestore: Store handshake document (120s TTL)
     Backend-->>Extension: Return { token }
     Extension->>Extension: Open Tab to: /auth/callback?token={handshakeToken}
     Frontend->>Backend: POST /auth/exchange-token { token }
@@ -167,7 +183,40 @@ sequenceDiagram
 
 ---
 
-### 4.3 Scraping / Sync Flow
+### 4.3 Repost View Tracking Flow
+Tracks ad views before and 24 hours after an automated repost to feed into the AI suggestion engine.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Scheduler as NestJS Scheduler
+    participant Firestore as Firestore Database
+    participant Worker as Playwright Worker
+    participant Gemini as Gemini 2.5 Flash
+
+    %% Before Repost
+    Scheduler->>Scheduler: Cron fires repost
+    Scheduler->>Worker: POST /get-views (scrape viewsBefore)
+    Worker-->>Scheduler: Return viewsBefore
+    Scheduler->>Worker: Execute Repost
+    Worker-->>Scheduler: Repost Success
+    Scheduler->>Firestore: Create repostLogs doc (viewsBefore, executedAt)
+
+    %% 24 Hours Later
+    Scheduler->>Scheduler: trackRepostViews Cron fires (hourly)
+    Scheduler->>Firestore: Query repostLogs older than 24h where viewsAfter == null
+    Scheduler->>Worker: POST /get-views (scrape viewsAfter)
+    Worker-->>Scheduler: Return viewsAfter
+    Scheduler->>Firestore: Update repostLogs (viewsAfter, viewsGained)
+
+    %% AI Suggestion
+    Scheduler->>Firestore: Data is now available for /api/ai/suggest-repost-time
+    Gemini-->>Scheduler: AI uses this data to suggest best repost time
+```
+
+---
+
+### 4.4 Scraping / Sync Flow
 Imports listings from Kleinanzeigen.de to keep the AnzeigenBoost dashboard synchronized.
 
 ```mermaid
@@ -191,7 +240,7 @@ sequenceDiagram
 
 ---
 
-### 4.4 Photo-to-Prefill AI Flow
+### 4.5 Photo-to-Prefill AI Flow
 Extracts structured product data from uploaded photos to prefill new ad creation forms.
 
 ```mermaid
@@ -215,7 +264,7 @@ sequenceDiagram
 
 ---
 
-### 4.5 eBay OAuth + Listing Flow
+### 4.6 eBay OAuth + Listing Flow
 Connects user accounts and publishes listings to the official eBay marketplace.
 
 ```mermaid
@@ -266,25 +315,38 @@ The `automation` service is deployed internally. All HTTP communication from the
 - **Authorization Header**: Exposing `X-Internal-Secret` matching the backend environment variable.
 - **Access Control**: Requests with invalid secrets are immediately rejected with a `403 Forbidden` response.
 
+### 5.3 Cookie Handshake Security
+The extension-to-backend cookie handshake uses an extended **120s TTL** on handshake documents to account for slower network connections. When the backend exchanges the token, it employs an **atomic read-and-delete pattern** in Firestore to ensure the handshake token can only be consumed exactly once, preventing replay attacks.
+
 ---
 
 ## 6. LLM Cost Management
 
 To optimize operational expenses while maintaining low-latency processing:
 
-- **Gemini 2.5 Flash Free Tier:** Utilizes Google's generative free tier providing up to 1,500 requests per day at zero platform cost.
+- **Gemini 2.0 Flash Free Tier:** Utilizes Google's generative free tier providing up to 1,500 requests per day at zero platform cost.
 - **Enforced Usage Limits:** Tracks API consumption inside the `aiUsage` Firestore collection. Restricts free plans to 5 requests/month and starter plans to 30 requests/month, preventing denial-of-service bill inflation.
 - **Explicit Output Controls:** Every Gemini invocation enforces strict limits via `maxOutputTokens` configured per endpoint:
   - Photo Analysis (`analyze-photos`): Max 800 tokens
   - Ad Text Optimization (`optimize-ad`): Max 600 tokens
   - Price Check (`price-check`): Max 400 tokens
   - Reply Suggestions (`reply-suggestions`): Max 300 tokens
-- **Batched Image Analysis:** Transmits all selected product photos in a single API call (supporting up to 16 images in Gemini 2.5 Flash), avoiding multiple consecutive image calls.
+- **Batched Image Analysis:** Transmits all selected product photos in a single API call (supporting up to 16 images in Gemini 2.0 Flash), avoiding multiple consecutive image calls.
 - **Gemini Paid Tier Upgrade Path:** Provides a seamless pay-as-you-go transition path to paid Gemini API endpoints when daily free limits are exhausted. Paid tier costs are set at $0.075 per million input tokens and $0.30 per million output tokens, keeping individual listing costs fractionally small.
 
 ---
 
-## 7. Future Multi-Platform Expansion Path
+## 7. Platform Integrations
+
+AnzeigenBoost features distinct integration methodologies for the three supported marketplaces:
+
+1. **Kleinanzeigen.de**: Integrates via **Cookie Handshake (Chrome Extension)**. The extension captures an existing, active session cookie directly from the user's browser context. This prevents Cloudflare/Datadome CAPTCHAs, as the headless browser assumes an already trusted session without needing to log in programmatically.
+2. **Vinted.de**: Integrates via **Playwright Session Automation**. Users provide their Vinted credentials via an inline AES-256 secure modal. The Playwright worker spins up a headless browser, physically navigates to Vinted, fills the login form, handles CSRF tokens natively, and retains the session state for cross-posting clothing inventory.
+3. **eBay**: Integrates via the official **OAuth 2.0 Authorization Code Grant**. Users connect their accounts via the standard eBay consent screen. The backend exchanges the grant code for access and refresh tokens, handling automatic token refreshes in the background before invoking the eBay REST Sell API (Inventory, Offers, Policies) for publishing.
+
+---
+
+## 8. Future Multi-Platform Expansion Path
 
 The architecture is designed to support modular expansions to other European marketplaces.
 

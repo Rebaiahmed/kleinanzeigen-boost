@@ -1,4 +1,5 @@
-import { chromium, BrowserContext, Page, Browser } from 'playwright';
+import { BrowserContext, Page, Browser, chromium } from 'playwright';
+import { getPersistentContext } from './browser-manager';
 import axios from 'axios';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -31,6 +32,7 @@ const CATEGORY_PATHS: Record<string, string[]> = {
 };
 
 export async function executeVintedPost(
+  userId: string,
   adData: any,
   cookies: any[]
 ): Promise<{ success: boolean; vintedId?: string; vintedUrl?: string; error?: string }> {
@@ -40,27 +42,26 @@ export async function executeVintedPost(
     return { success: false, error: 'categoryNotSupported' };
   }
 
-  let browser: Browser | null = null;
-  let context: BrowserContext | null = null;
-  let page: Page | null = null;
+    let page: Page | null = null;
   const tempFiles: string[] = [];
   let tempDir = '';
 
   try {
-    const isDebug = process.env.DEBUG_BROWSER === 'true';
-    browser = await chromium.launch({ 
-      headless: !isDebug,
-      args: ['--disable-blink-features=AutomationControlled']
-    });
-    
-    context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    });
+    const context = await getPersistentContext(userId);
     
     // Inject Vinted cookies
-    await context.addCookies(cookies);
+    const sanitizedCookies = cookies.map(c => ({
+      name: c.name,
+      value: c.value,
+      domain: c.domain || '.vinted.de',
+      path: c.path || '/'
+    }));
+    await context.addCookies(sanitizedCookies);
 
-    page = await context.newPage();
+    page = context.pages().find(p => p.url() !== 'about:blank' || context.pages().length === 1) || await context.newPage();
+    if (page.url() !== 'about:blank') {
+      page = await context.newPage();
+    }
 
     // 2. Go to Vinted create page
     await page.goto('https://www.vinted.de/items/new', { waitUntil: 'domcontentloaded', timeout: 30000 });
@@ -187,7 +188,7 @@ export async function executeVintedPost(
     }
 
     const vintedId = idMatch[1];
-    await browser.close();
+    await page.close();
 
     return {
       success: true,
@@ -196,7 +197,7 @@ export async function executeVintedPost(
     };
 
   } catch (error: any) {
-    if (browser) await browser.close().catch(() => {});
+    if (page) await page.close().catch(() => {});
     return {
       success: false,
       error: error.message || 'Fehler beim Posten auf Vinted.'

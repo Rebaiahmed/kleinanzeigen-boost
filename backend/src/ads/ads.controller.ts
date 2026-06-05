@@ -12,6 +12,11 @@ export class AdsController {
     return this.adsService.getAds(req.user.userId);
   }
 
+  @Get('scheduler-status')
+  async getSchedulerStatus() {
+    return this.adsService.getSchedulerStatus();
+  }
+
   @Post('sync')
   async syncAds(@Req() req: any) {
     return this.adsService.syncAds(req.user.userId);
@@ -61,7 +66,7 @@ export class AdsController {
   async updateAd(
     @Req() req: any,
     @Param('id') adId: string,
-    @Body() body: { title?: string; description?: string }
+    @Body() body: { title?: string; description?: string; repostIntervalMinutes?: number; nextRepostAt?: string; autoRepost?: boolean }
   ) {
     return this.adsService.updateAd(req.user.userId, adId, body);
   }

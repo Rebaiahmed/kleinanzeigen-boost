@@ -13,6 +13,7 @@ interface AdGridProps {
   onConnectEbay: () => void;
   isEbayConnected?: boolean;
   isVintedConnected?: boolean;
+  onUpdateFields: (adId: string, fields: any) => Promise<boolean>;
 }
 
 export function AdGrid({
@@ -27,6 +28,7 @@ export function AdGrid({
   onConnectEbay,
   isEbayConnected,
   isVintedConnected,
+  onUpdateFields,
 }: AdGridProps) {
   return (
     <div className="space-y-3">
@@ -44,6 +46,7 @@ export function AdGrid({
           onConnectEbay={onConnectEbay}
           isEbayConnected={isEbayConnected}
           isVintedConnected={isVintedConnected}
+          onUpdateFields={onUpdateFields}
         />
       ))}
     </div>

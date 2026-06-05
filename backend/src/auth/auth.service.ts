@@ -56,7 +56,7 @@ export class AuthService {
     await this.firebaseService.firestore.collection('handshakes').doc(token).set({
       encryptedCookies,
       createdAt: new Date().toISOString(),
-      expiresAt: Date.now() + 120000, // 120 seconds
+      expiresAt: Date.now() + 1800000, // 30 minutes (1800000 milliseconds)
       stableUserId: stableUserId || crypto.randomUUID(),
       used: false,
     });
@@ -121,7 +121,9 @@ export class AuthService {
   async login(email: string, passwordHash: string) {
     try {
       // Live Verification via Playwright Worker
+      const generatedUserId = Buffer.from(email).toString('base64');
       const workerResponse = await this.automationService.callAutomationWorker('login', { 
+        userId: generatedUserId,
         email, 
         password: passwordHash 
       });
@@ -136,7 +138,7 @@ export class AuthService {
 
       // Generate JWT for the frontend session
       // Using email as sub id since we don't have a structured user id yet
-      const userId = Buffer.from(email).toString('base64');
+      const userId = generatedUserId;
       const payload = { email, sub: userId };
       const token = this.jwtService.sign(payload);
       

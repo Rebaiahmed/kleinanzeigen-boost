@@ -12,6 +12,7 @@ import { AutomationModule } from './automation/automation.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { EbayModule } from './ebay/ebay.module';
 import { VintedModule } from './vinted/vinted.module';
+import { ReplyTemplatesModule } from './reply-templates/reply-templates.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { VintedModule } from './vinted/vinted.module';
     SchedulerModule,
     EbayModule,
     VintedModule,
+    ReplyTemplatesModule,
     // TODO: Import Users Modules
   ],
   controllers: [],

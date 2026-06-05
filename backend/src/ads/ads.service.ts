@@ -3,6 +3,7 @@ import { FirebaseService } from '../firebase/firebase.service';
 import { AutomationService } from '../automation/automation.service';
 import { EbayService } from '../ebay/ebay.service';
 import { VintedService } from '../vinted/vinted.service';
+import { ExtensionGateway } from '../auth/extension.gateway';
 
 @Injectable()
 export class AdsService {
@@ -10,7 +11,8 @@ export class AdsService {
     private readonly firebaseService: FirebaseService,
     private readonly automationService: AutomationService,
     private readonly ebayService: EbayService,
-    private readonly vintedService: VintedService
+    private readonly vintedService: VintedService,
+    private readonly extensionGateway: ExtensionGateway
   ) {}
 
   async getAds(userId: string) {
@@ -20,43 +22,48 @@ export class AdsService {
     return { success: true, ads };
   }
 
+  async getSchedulerStatus() {
+    const db = this.firebaseService.firestore;
+    const doc = await db.collection('meta').doc('schedulerMeta').get();
+    return { success: true, lastRunAt: doc.data()?.lastRunAt || null };
+  }
+
   async syncAds(userId: string) {
+    console.log(`[AdsService] syncAds called for user: ${userId}`);
     const db = this.firebaseService.firestore;
     
-    // 1. Fetch user cookies
+    // Check if user session exists and is active
     const sessionDoc = await db.collection('sessions').doc(userId).get();
     if (!sessionDoc.exists || sessionDoc.data()?.status !== 'active') {
       throw new UnauthorizedException('No active session found. Please log in again.');
     }
-    
-    const cookies = sessionDoc.data()?.marketplaceCookies;
-    if (!cookies || !cookies.length) {
-      throw new UnauthorizedException('No marketplace cookies found.');
+
+    // Direct command execution to Chrome Extension WebSocket
+    if (!this.extensionGateway.isUserConnected(userId)) {
+      throw new InternalServerErrorException('Chrome Extension ist nicht verbunden. Bitte installiere & aktiviere die Erweiterung.');
     }
 
-    // 2. Call Worker to scrape ads
-    const workerResponse = await this.automationService.callAutomationWorker('sync', { cookies });
-    
-    if (!workerResponse.success) {
-      if (workerResponse.error === 'Session expired') {
-        await db.collection('sessions').doc(userId).update({ status: 'expired' });
-        throw new UnauthorizedException('Kleinanzeigen session expired. Please log in again.');
+    try {
+      // Dispatch sync command to extension and await parsed ads array response
+      const ads = await this.extensionGateway.sendCommand(userId, 'SYNC_ADS');
+      
+      if (!Array.isArray(ads)) {
+        throw new Error('Ungültiges Antwortformat von der Chrome-Erweiterung.');
       }
-      throw new InternalServerErrorException(workerResponse.error || 'Failed to sync ads');
+
+      // Upsert ads to Firestore
+      const batch = db.batch();
+      for (const ad of ads) {
+        const adRef = db.collection('users').doc(userId).collection('ads').doc(ad.id);
+        batch.set(adRef, ad, { merge: true });
+      }
+      
+      await batch.commit();
+
+      return { success: true, message: 'Sync complete', ads };
+    } catch (err: any) {
+      throw new InternalServerErrorException(err.message || 'Fehler bei der Synchronisierung über die Chrome-Erweiterung.');
     }
-
-    const ads = workerResponse.ads || [];
-
-    // 3. Upsert ads to Firestore
-    const batch = db.batch();
-    for (const ad of ads) {
-      const adRef = db.collection('users').doc(userId).collection('ads').doc(ad.id);
-      batch.set(adRef, ad, { merge: true });
-    }
-    
-    await batch.commit();
-
-    return { success: true, message: 'Sync complete', ads };
   }
 
   async addAd(userId: string, adData: any) {
@@ -178,7 +185,7 @@ export class AdsService {
     return { success: true, ad: newAd };
   }
 
-  async updateAd(userId: string, adId: string, updateData: { title?: string; description?: string }) {
+  async updateAd(userId: string, adId: string, updateData: { title?: string; description?: string; repostIntervalMinutes?: number; nextRepostAt?: string; autoRepost?: boolean }) {
     const db = this.firebaseService.firestore;
     const adRef = db.collection('users').doc(userId).collection('ads').doc(adId);
 
@@ -190,6 +197,9 @@ export class AdsService {
     const payload: any = {};
     if (updateData.title !== undefined) payload.title = updateData.title;
     if (updateData.description !== undefined) payload.description = updateData.description;
+    if (updateData.repostIntervalMinutes !== undefined) payload.repostIntervalMinutes = updateData.repostIntervalMinutes;
+    if (updateData.nextRepostAt !== undefined) payload.nextRepostAt = updateData.nextRepostAt;
+    if (updateData.autoRepost !== undefined) payload.autoRepost = updateData.autoRepost;
 
     if (Object.keys(payload).length > 0) {
       await adRef.update(payload);

@@ -17,6 +17,12 @@ export class AiController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('usage')
+  async getAiUsage(@Req() req: any) {
+    return this.aiService.getUserUsage(req.user.userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post('optimize')
   async optimize(
     @Req() req: any,
@@ -59,6 +65,15 @@ export class AiController {
   @Post('schedule')
   async calculateSchedule(@Body() body: { interval: 'Täglich' | 'Alle 3 Tage' | 'Wöchentlich' }) {
     return this.aiService.calculateScheduleInterval(body.interval);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('suggest-repost-time')
+  async suggestRepostTime(
+    @Req() req: any,
+    @Body() body: { adId: string }
+  ) {
+    return this.aiService.suggestRepostTime(req.user.userId, body.adId);
   }
 
   @UseGuards(JwtAuthGuard)

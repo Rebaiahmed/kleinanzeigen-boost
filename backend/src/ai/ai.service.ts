@@ -3,6 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { FirebaseService } from '../firebase/firebase.service';
 import * as fs from 'fs';
 import * as path from 'path';
+import axios from 'axios';
 
 @Injectable()
 export class AiService {
@@ -32,6 +33,179 @@ export class AiService {
     this.replySuggestionsPrompt = fs.readFileSync(
       path.join(__dirname, 'prompts/reply-suggestions.system.txt'),
       'utf-8',
+    );
+  }
+
+  private async executeWithFallback(contents: any[], systemInstruction: string, generationConfig: any): Promise<{ responseText: string, promptTokenCount: number, candidatesTokenCount: number }> {
+    const modelChain = [
+      { type: 'google', name: 'gemini-1.5-pro' },
+      { type: 'openrouter', name: 'openai/gpt-3.5-turbo' }
+    ];
+
+    // Append JSON instruction if JSON response is requested
+    let finalSystemInstruction = systemInstruction;
+    if (generationConfig?.responseMimeType === 'application/json') {
+      const jsonClause = 'You MUST return ONLY valid JSON. No explanation before or after. Start with { and end with }.';
+      finalSystemInstruction = finalSystemInstruction
+        ? `${finalSystemInstruction}\n${jsonClause}`
+        : jsonClause;
+    }
+
+    let lastError: any = null;
+
+    for (const modelInfo of modelChain) {
+      try {
+        if (modelInfo.type === 'google') {
+          // Google Native API call
+          const geminiKey = process.env.GEMINI_API_KEY;
+          if (!geminiKey || geminiKey === 'dummy_key' || geminiKey.trim() === '') {
+            throw new Error('GEMINI_API_KEY is not configured or empty');
+          }
+          
+          const model = this.genAI.getGenerativeModel({
+            model: modelInfo.name,
+            systemInstruction: finalSystemInstruction,
+            generationConfig,
+          });
+
+          let result = await model.generateContent(contents);
+          let response = await result.response;
+          let responseText = response.text();
+          let promptTokenCount = response.usageMetadata?.promptTokenCount || 0;
+          let candidatesTokenCount = response.usageMetadata?.candidatesTokenCount || 0;
+
+          // Validate JSON if required
+          if (generationConfig?.responseMimeType === 'application/json') {
+            try {
+              JSON.parse(cleanAndExtractJson(responseText));
+            } catch (jsonErr: any) {
+              console.warn(`[AI Service] Gemini JSON parse failed. Retrying... Error: ${jsonErr.message}`);
+              const retryPrompt = `Your previous response was not valid JSON. Error: ${jsonErr.message}. You MUST return ONLY valid JSON. No explanation before or after. Start with { and end with }. Original request: ${JSON.stringify(contents.filter(c => typeof c === 'string'))}`;
+              result = await model.generateContent([...contents, retryPrompt]);
+              response = await result.response;
+              responseText = response.text();
+              promptTokenCount += response.usageMetadata?.promptTokenCount || 0;
+              candidatesTokenCount += response.usageMetadata?.candidatesTokenCount || 0;
+              // Verify again
+              JSON.parse(cleanAndExtractJson(responseText));
+            }
+          }
+          
+          return {
+            responseText,
+            promptTokenCount,
+            candidatesTokenCount
+          };
+        } else {
+          // OpenRouter API call
+          const openRouterKey = process.env.OPENROUTER_API_KEY || '';
+          if (!openRouterKey || openRouterKey.trim() === '') {
+            throw new Error('OPENROUTER_API_KEY is not configured or empty');
+          }
+          
+          // Prepare messages: system prompt + user text contents
+          const messages: any[] = [];
+          if (finalSystemInstruction) {
+            messages.push({ role: 'system', content: finalSystemInstruction });
+          }
+
+          // OpenRouter fallback models are text-only, so extract text parts only
+          const textParts: string[] = [];
+          for (const item of contents) {
+            if (typeof item === 'string') {
+              textParts.push(item);
+            }
+          }
+          
+          if (textParts.length > 0) {
+            messages.push({ role: 'user', content: textParts.join('\n') });
+          }
+
+          const requestBody: any = {
+            model: modelInfo.name,
+            messages,
+            temperature: 0.7,
+            max_tokens: generationConfig.maxOutputTokens || 400,
+          };
+
+          console.log(`[AI Service] Attempting fallback with OpenRouter model: ${modelInfo.name}`);
+          let response = await axios.post(
+            'https://openrouter.ai/api/v1/chat/completions',
+            requestBody,
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${openRouterKey}`,
+                'HTTP-Referer': 'https://anzeigenboost.de',
+                'X-Title': 'AnzeigenBoost',
+              },
+              timeout: 15000,
+            }
+          );
+
+          if (!response.data || !response.data.choices || response.data.choices.length === 0) {
+            throw new Error(`Invalid response from OpenRouter: ${JSON.stringify(response.data)}`);
+          }
+
+          let responseText = response.data.choices[0].message.content;
+          let promptTokenCount = response.data.usage?.prompt_tokens || 0;
+          let candidatesTokenCount = response.data.usage?.completion_tokens || 0;
+
+          // Validate JSON if required
+          if (generationConfig?.responseMimeType === 'application/json') {
+            try {
+              JSON.parse(cleanAndExtractJson(responseText));
+            } catch (jsonErr: any) {
+              console.warn(`[AI Service] OpenRouter JSON parse failed. Retrying... Error: ${jsonErr.message}`);
+              messages.push({ role: 'assistant', content: responseText });
+              messages.push({
+                role: 'user',
+                content: `Your previous response was not valid JSON. Error: ${jsonErr.message}. You MUST return ONLY valid JSON. No explanation before or after. Start with { and end with }.`
+              });
+              
+              response = await axios.post(
+                'https://openrouter.ai/api/v1/chat/completions',
+                { ...requestBody, messages },
+                {
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${openRouterKey}`,
+                    'HTTP-Referer': 'https://anzeigenboost.de',
+                    'X-Title': 'AnzeigenBoost',
+                  },
+                  timeout: 15000,
+                }
+              );
+
+              if (!response.data || !response.data.choices || response.data.choices.length === 0) {
+                throw new Error(`Invalid response from OpenRouter during retry: ${JSON.stringify(response.data)}`);
+              }
+
+              responseText = response.data.choices[0].message.content;
+              promptTokenCount += response.data.usage?.prompt_tokens || 0;
+              candidatesTokenCount += response.data.usage?.completion_tokens || 0;
+              // Verify again
+              JSON.parse(cleanAndExtractJson(responseText));
+            }
+          }
+
+          return {
+            responseText,
+            promptTokenCount,
+            candidatesTokenCount,
+          };
+        }
+      } catch (error: any) {
+        console.warn(`[AI Service] ${modelInfo.name} failed: ${error.message}. Falling back...`);
+        lastError = error;
+        continue;
+      }
+    }
+
+    console.error('[AI Service] All models in the fallback chain are exhausted.', lastError);
+    throw new HttpException(
+      'Der Server ist ausgelastet. Bitte klicke auf \'Erneut versuchen\' oder passe deine Beschreibung an.',
+      HttpStatus.TOO_MANY_REQUESTS
     );
   }
 
@@ -148,15 +322,6 @@ export class AiService {
       );
     }
 
-    const model = this.genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash', // 1500 RPD free tier vs 20 RPD for 2.5-flash
-      systemInstruction: this.analyzePhotosPrompt,
-      generationConfig: {
-        responseMimeType: 'application/json',
-        maxOutputTokens: 800, // Rule One
-      },
-    });
-
     const imageParts = files.map((file) => ({
       inlineData: {
         data: file.buffer.toString('base64'),
@@ -171,11 +336,17 @@ export class AiService {
     let candidatesTokenCount = 0;
 
     try {
-      const result = await model.generateContent([userPrompt, ...imageParts]);
-      const response = await result.response;
-      responseText = response.text();
-      promptTokenCount = response.usageMetadata?.promptTokenCount || 0;
-      candidatesTokenCount = response.usageMetadata?.candidatesTokenCount || 0;
+      const fallbackResult = await this.executeWithFallback(
+        [userPrompt, ...imageParts],
+        this.analyzePhotosPrompt,
+        {
+          responseMimeType: 'application/json',
+          maxOutputTokens: 800,
+        }
+      );
+      responseText = fallbackResult.responseText;
+      promptTokenCount = fallbackResult.promptTokenCount;
+      candidatesTokenCount = fallbackResult.candidatesTokenCount;
     } catch (error: any) {
       const errMsg = error.message || '';
       if (errMsg.includes('API key not valid') || errMsg.includes('API_KEY_INVALID')) {
@@ -195,13 +366,19 @@ export class AiService {
     } catch (parseError) {
       console.error('Failed to parse Gemini response on first attempt. Raw response:', responseText);
       console.error('Parse error:', parseError);
+      const retryPrompt = 'Deine vorherige Antwort war kein valides JSON. Bitte generiere ein striktes, valides JSON.';
       try {
-        const retryPrompt = `${userPrompt}\nReturn ONLY a valid JSON object matching the requested schema. Do not include markdown code fences, do not include surrounding text.`;
-        const result = await model.generateContent([retryPrompt, ...imageParts]);
-        const response = await result.response;
-        responseText = response.text();
-        promptTokenCount += response.usageMetadata?.promptTokenCount || 0;
-        candidatesTokenCount += response.usageMetadata?.candidatesTokenCount || 0;
+        const fallbackResult = await this.executeWithFallback(
+          [retryPrompt, ...imageParts],
+          this.analyzePhotosPrompt,
+          {
+            responseMimeType: 'application/json',
+            maxOutputTokens: 800,
+          }
+        );
+        responseText = fallbackResult.responseText;
+        promptTokenCount += fallbackResult.promptTokenCount;
+        candidatesTokenCount += fallbackResult.candidatesTokenCount;
         const cleanedRetry = cleanAndExtractJson(responseText);
         parsedJson = JSON.parse(cleanedRetry);
       } catch (retryError) {
@@ -240,14 +417,7 @@ export class AiService {
       );
     }
 
-    const model = this.genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash', // 1500 RPD free tier vs 20 RPD for 2.5-flash
-      systemInstruction: this.optimizeAdPrompt,
-      generationConfig: {
-        responseMimeType: 'application/json',
-        maxOutputTokens: 400, // 60-word desc ≈ 80 tokens + JSON overhead ≈ 150 total; 400 gives 2.5× buffer
-      },
-    });
+    
 
     // Extract only needed fields (Rule Four) — truncate description to 300 chars to keep prompt small
     const descSlice = (description || '').slice(0, 300);
@@ -261,12 +431,17 @@ export class AiService {
 
     try {
       console.log('[KI-Opt] Calling Gemini API (attempt 1)...');
-      const result = await model.generateContent([userPrompt]);
-      const response = await result.response;
-      responseText = response.text();
-      console.log(`[KI-Opt] Gemini responded (attempt 1), raw length: ${responseText.length}, finish: ${response.candidates?.[0]?.finishReason}`);
-      promptTokenCount = response.usageMetadata?.promptTokenCount || 0;
-      candidatesTokenCount = response.usageMetadata?.candidatesTokenCount || 0;
+      const fallbackResult = await this.executeWithFallback(
+        [userPrompt],
+        this.optimizeAdPrompt,
+        {
+          responseMimeType: 'application/json',
+          maxOutputTokens: 400,
+        }
+      );
+      responseText = fallbackResult.responseText;
+      promptTokenCount = fallbackResult.promptTokenCount;
+      candidatesTokenCount = fallbackResult.candidatesTokenCount;
 
       if (!isJsonComplete(responseText)) {
         throw new Error(`TRUNCATED: response ends at char ${responseText.length}`);
@@ -290,12 +465,17 @@ export class AiService {
 
       try {
         console.log('[KI-Opt] Calling Gemini API (retry attempt 2)...');
-        const result = await model.generateContent([retryPrompt]);
-        const response = await result.response;
-        responseText = response.text();
-        console.log(`[KI-Opt] Gemini responded (attempt 2), raw length: ${responseText.length}, finish: ${response.candidates?.[0]?.finishReason}`);
-        promptTokenCount += response.usageMetadata?.promptTokenCount || 0;
-        candidatesTokenCount += response.usageMetadata?.candidatesTokenCount || 0;
+        const fallbackResult = await this.executeWithFallback(
+          [retryPrompt],
+          this.optimizeAdPrompt,
+          {
+            responseMimeType: 'application/json',
+            maxOutputTokens: 400,
+          }
+        );
+        responseText = fallbackResult.responseText;
+        promptTokenCount += fallbackResult.promptTokenCount;
+        candidatesTokenCount += fallbackResult.candidatesTokenCount;
 
         if (!isJsonComplete(responseText)) {
           throw new Error(`TRUNCATED on retry: response ends at char ${responseText.length}`);
@@ -332,14 +512,7 @@ export class AiService {
       );
     }
 
-    const model = this.genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash', // 1500 RPD free tier vs 20 RPD for 2.5-flash
-      systemInstruction: this.priceCheckPrompt,
-      generationConfig: {
-        responseMimeType: 'application/json',
-        maxOutputTokens: 400, // Rule One
-      },
-    });
+    
 
     const userPrompt = `Valuate this item title: ${title}`;
 
@@ -349,11 +522,17 @@ export class AiService {
     let parsedJson: any = null;
 
     try {
-      const result = await model.generateContent([userPrompt]);
-      const response = await result.response;
-      responseText = response.text();
-      promptTokenCount = response.usageMetadata?.promptTokenCount || 0;
-      candidatesTokenCount = response.usageMetadata?.candidatesTokenCount || 0;
+      const fallbackResult = await this.executeWithFallback(
+        [userPrompt],
+        this.priceCheckPrompt,
+        {
+          responseMimeType: 'application/json',
+          maxOutputTokens: 400,
+        }
+      );
+      responseText = fallbackResult.responseText;
+      promptTokenCount = fallbackResult.promptTokenCount;
+      candidatesTokenCount = fallbackResult.candidatesTokenCount;
       const cleaned = cleanAndExtractJson(responseText);
       parsedJson = JSON.parse(cleaned);
     } catch (error: any) {
@@ -361,11 +540,17 @@ export class AiService {
       console.error('Parse error:', error);
       try {
         const retryPrompt = `${userPrompt}\nReturn ONLY a valid JSON object matching the requested schema. Do not include markdown code fences, do not include surrounding text.`;
-        const result = await model.generateContent([retryPrompt]);
-        const response = await result.response;
-        responseText = response.text();
-        promptTokenCount += response.usageMetadata?.promptTokenCount || 0;
-        candidatesTokenCount += response.usageMetadata?.candidatesTokenCount || 0;
+        const fallbackResult = await this.executeWithFallback(
+          [retryPrompt],
+          this.priceCheckPrompt,
+          {
+            responseMimeType: 'application/json',
+            maxOutputTokens: 400,
+          }
+        );
+        responseText = fallbackResult.responseText;
+        promptTokenCount += fallbackResult.promptTokenCount;
+        candidatesTokenCount += fallbackResult.candidatesTokenCount;
         const cleaned = cleanAndExtractJson(responseText);
         parsedJson = JSON.parse(cleaned);
       } catch (retryError: any) {
@@ -393,14 +578,6 @@ export class AiService {
       );
     }
 
-    const model = this.genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash', // 1500 RPD free tier vs 20 RPD for 2.5-flash
-      systemInstruction: this.replySuggestionsPrompt,
-      generationConfig: {
-        responseMimeType: 'application/json',
-        maxOutputTokens: 300, // Rule One
-      },
-    });
 
     const userPrompt = `
 Message history (latest messages at the end):
@@ -413,11 +590,17 @@ ${messageHistory.map((m, idx) => `[Message ${idx + 1}]: ${m}`).join('\n')}
     let parsedJson: any = null;
 
     try {
-      const result = await model.generateContent([userPrompt]);
-      const response = await result.response;
-      responseText = response.text();
-      promptTokenCount = response.usageMetadata?.promptTokenCount || 0;
-      candidatesTokenCount = response.usageMetadata?.candidatesTokenCount || 0;
+      const fallbackResult = await this.executeWithFallback(
+        [userPrompt],
+        this.replySuggestionsPrompt,
+        {
+          responseMimeType: 'application/json',
+          maxOutputTokens: 300,
+        }
+      );
+      responseText = fallbackResult.responseText;
+      promptTokenCount = fallbackResult.promptTokenCount;
+      candidatesTokenCount = fallbackResult.candidatesTokenCount;
       const cleaned = cleanAndExtractJson(responseText);
       parsedJson = JSON.parse(cleaned);
     } catch (error: any) {
@@ -425,11 +608,17 @@ ${messageHistory.map((m, idx) => `[Message ${idx + 1}]: ${m}`).join('\n')}
       console.error('Parse error:', error);
       try {
         const retryPrompt = `${userPrompt}\nReturn ONLY a valid JSON object matching the requested schema. Do not include markdown code fences, do not include surrounding text.`;
-        const result = await model.generateContent([retryPrompt]);
-        const response = await result.response;
-        responseText = response.text();
-        promptTokenCount += response.usageMetadata?.promptTokenCount || 0;
-        candidatesTokenCount += response.usageMetadata?.candidatesTokenCount || 0;
+        const fallbackResult = await this.executeWithFallback(
+          [retryPrompt],
+          this.replySuggestionsPrompt,
+          {
+            responseMimeType: 'application/json',
+            maxOutputTokens: 300,
+          }
+        );
+        responseText = fallbackResult.responseText;
+        promptTokenCount += fallbackResult.promptTokenCount;
+        candidatesTokenCount += fallbackResult.candidatesTokenCount;
         const cleaned = cleanAndExtractJson(responseText);
         parsedJson = JSON.parse(cleaned);
       } catch (retryError: any) {
@@ -447,6 +636,112 @@ ${messageHistory.map((m, idx) => `[Message ${idx + 1}]: ${m}`).join('\n')}
 
     return parsedJson;
   }
+  async suggestRepostTime(userId: string, adId: string) {
+    const db = this.firebaseService.firestore;
+    
+    // Fetch all logs and filter in-memory
+    const logsSnapshot = await db.collection('users').doc(userId).collection('ads').doc(adId).collection('repostLogs').get();
+    
+    const allLogs = logsSnapshot.docs.map(doc => doc.data());
+    
+    // Filter only logs where both viewsBefore and viewsAfter are populated
+    const trackedLogs = allLogs.filter(log => 
+      log.viewsBefore !== null && log.viewsBefore !== undefined && 
+      log.viewsAfter !== null && log.viewsAfter !== undefined
+    );
+    
+    // Sort descending by execution date
+    trackedLogs.sort((a, b) => new Date(b.executedAt).getTime() - new Date(a.executedAt).getTime());
+    
+    // Take the last 30
+    const recentLogs = trackedLogs.slice(0, 30);
+    
+    if (recentLogs.length < 5) {
+      throw new HttpException(
+        'Noch nicht genug Daten — mindestens 5 Reposts mit Aufruf-Tracking werden benötigt.', 
+        HttpStatus.UNPROCESSABLE_ENTITY
+      );
+    }
+    
+    const dataset = recentLogs.map(log => {
+      const d = new Date(log.executedAt);
+      return {
+        dayOfWeek: d.getDay(),
+        hourOfDay: d.getHours(),
+        viewsGained: log.viewsGained || 0
+      };
+    });
+
+    const prompt = `Here is the dataset showing views gained for reposts at different days of week and hours of day:
+${JSON.stringify(dataset)}`;
+
+    const systemInstruction = `You are analyzing repost timing data for a German classified ad. Given the data showing how many views were gained for reposts at different days and hours, identify the best day of week and hour to repost this ad to maximize views. Return only a JSON object with fields bestDayOfWeek as a number 0 to 6 where 0 is Sunday, bestHour as a number 0 to 23, confidence as low medium or high, reasoning as a German string under 30 words, improvementPercent as a number (estimated percentage increase in views, e.g., 47), and secondBestOption as an object with the same dayOfWeek and hour fields for an alternative slot.`;
+
+    try {
+      const fallbackResult = await this.executeWithFallback(
+        [prompt],
+        systemInstruction,
+        {
+          responseMimeType: 'application/json',
+          maxOutputTokens: 300,
+        }
+      );
+      const text = fallbackResult.responseText;
+      const parsed = JSON.parse(cleanAndExtractJson(text));
+
+      // Save suggestion in Firestore
+      await db.collection('users').doc(userId).collection('ads').doc(adId).update({
+        aiSuggestedRepostDay: parsed.bestDayOfWeek,
+        aiSuggestedRepostHour: parsed.bestHour,
+        aiSuggestionConfidence: parsed.confidence,
+        aiSuggestionReasoning: parsed.reasoning,
+        aiSuggestedImprovementPercent: parsed.improvementPercent || 0,
+        aiSecondBestOption: parsed.secondBestOption || null
+      });
+
+      return parsed;
+    } catch (error: any) {
+      if (error instanceof HttpException) throw error;
+      throw new HttpException('Fehler bei der KI-Analyse: ' + error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async getUserUsage(userId: string): Promise<{ plan: string; callsCount: number; limit: number }> {
+    const db = this.firebaseService.firestore;
+
+    // 1. Fetch user tier/plan
+    const userDoc = await db.collection('users').doc(userId).get();
+    const plan = userDoc.data()?.tier || userDoc.data()?.plan || 'free';
+
+    // 2. Fetch current month usage count
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const usageDoc = await db.collection('aiUsage').doc(userId).get();
+
+    let callsCount = 0;
+    if (usageDoc.exists) {
+      const data = usageDoc.data()!;
+      if (data.month === currentMonth) {
+        callsCount = data.callsCount || 0;
+      }
+    }
+
+    // 3. Define limits based on plan
+    let limit = 50; // default for free
+    const normalizedPlan = plan.toLowerCase();
+    if (normalizedPlan === 'starter') {
+      limit = 1000;
+    } else if (normalizedPlan === 'pro' || normalizedPlan === 'unlimited') {
+      limit = Infinity;
+    }
+
+    return {
+      plan,
+      callsCount,
+      limit,
+    };
+  }
+
 
   /**
    * Health check — does NOT call Gemini (would burn quota).
@@ -511,6 +806,10 @@ function isJsonComplete(text: string): boolean {
 function cleanAndExtractJson(text: string): string {
   if (!text) return '';
   let cleaned = text.trim();
+
+  // Safely strip out any background reasoning text or system thinking logs
+  cleaned = cleaned.replace(/<think>[\s\S]*?<\/think>/gi, '');
+  cleaned = cleaned.trim();
   
   // Remove markdown code blocks if any
   cleaned = cleaned.replace(/^```(?:json)?\s*/i, '');

@@ -57,7 +57,7 @@ export class VintedService {
 
   async connectVinted(userId: string, email: string, password: string) {
     try {
-      const result = await this.callWorker('automate/vinted-login', { email, password });
+      const result = await this.callWorker('automate/vinted-login', { userId, email, password });
       if (!result.success) {
         throw new HttpException(result.error || 'Fehler bei der Vinted-Anmeldung.', HttpStatus.BAD_REQUEST);
       }
@@ -188,7 +188,7 @@ export class VintedService {
     };
 
     try {
-      const result = await this.callWorker('automate/vinted-post', { adData, cookies });
+      const result = await this.callWorker('automate/vinted-post', { userId, adData, cookies });
       if (!result.success) {
         if (result.error === 'sessionExpired') {
           await this.disconnect(userId);

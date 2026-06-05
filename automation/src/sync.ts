@@ -1,4 +1,5 @@
-import { chromium, BrowserContext, Page, Browser } from 'playwright';
+import { BrowserContext, Page } from 'playwright';
+import { getPersistentContext } from './browser-manager';
 import { randomDelay } from './repost';
 
 export interface ScrapedAd {
@@ -14,16 +15,9 @@ export interface ScrapedAd {
   image: string;
 }
 
-export async function executeSyncAds(cookies: any[]): Promise<{ success: boolean; ads?: ScrapedAd[]; error?: string }> {
-  let context: BrowserContext | null = null;
-  let browser: Browser | null = null;
-
-  try {
-    const isDebug = process.env.DEBUG_BROWSER === 'true';
-    browser = await chromium.launch({ headless: !isDebug });
-    context = await browser.newContext();
-    
-    // Sanitize cookies: Playwright only accepts sameSite of Strict | Lax | None
+export async function executeSyncAds(userId: string, cookies: any[]): Promise<{ success: boolean; ads?: ScrapedAd[]; error?: string }> {
+    try {
+    const context = await getPersistentContext(userId);
     const sanitizedCookies = cookies.map((c: any) => {
       const validSameSite = ['Strict', 'Lax', 'None'];
       return {
@@ -35,8 +29,11 @@ export async function executeSyncAds(cookies: any[]): Promise<{ success: boolean
     // Inject session cookies
     await context.addCookies(sanitizedCookies);
     
-    // Use a real page to bypass Cloudflare/Datadome
-    const page = await context.newPage();
+    let page = context.pages().find(p => p.url() !== 'about:blank' || context.pages().length === 1) || await context.newPage();
+    if (page.url() !== 'about:blank') {
+      page = await context.newPage();
+    }
+    
     await page.goto('https://www.kleinanzeigen.de/m-meine-anzeigen.html', { waitUntil: 'domcontentloaded' });
     
     if (page.url().includes('login.kleinanzeigen.de') || page.url().includes('m-einloggen')) {
@@ -47,8 +44,7 @@ export async function executeSyncAds(cookies: any[]): Promise<{ success: boolean
     const data = await page.evaluate(async () => {
       const res = await fetch('https://www.kleinanzeigen.de/m-meine-anzeigen-verwalten.json?sort=DEFAULT');
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`FETCH_FAILED_STATUS_${res.status}_BODY_${text.substring(0, 100)}`);
+        throw new Error(`Verbindung zu Kleinanzeigen fehlgeschlagen (HTTP ${res.status}). Bitte lade die Seite neu oder logge dich erneut ein.`);
       }
       return res.json();
     });
@@ -81,11 +77,10 @@ export async function executeSyncAds(cookies: any[]): Promise<{ success: boolean
       };
     });
 
-    await browser.close();
+    await page.close();
     return { success: true, ads: scrapedAds };
 
   } catch (error: any) {
-    if (browser) await browser.close().catch(() => {});
     return { 
       success: false, 
       error: error.message || 'Unknown error during sync automation' 

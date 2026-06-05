@@ -4,13 +4,61 @@ import { Calendar, X, RefreshCw, Sparkles, Check, Loader2, AlertCircle, Lock } f
 import { useAdsActions } from '../hooks/useAdsActions';
 import { AdGrid } from '../components/AdGrid';
 import { Toast } from '../components/Toast';
+import { useExtension } from '../hooks/useExtension';
+
+const VintedLogo = () => (
+  <svg 
+    viewBox="0 0 100 100" 
+    className="w-3.5 h-3.5 shrink-0" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path 
+      d="M20 15 L45 80 L55 80 L80 15" 
+      stroke="#09B0BA" 
+      strokeWidth="14" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const EbayLogo = () => (
+  <svg 
+    viewBox="0 0 42 16" 
+    className="h-3.5 shrink-0 flex items-center" 
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <text 
+      x="50%" 
+      y="50%" 
+      dominantBaseline="middle" 
+      textAnchor="middle" 
+      fontWeight="bold" 
+      fontSize="14" 
+      fontFamily="Arial, Helvetica, sans-serif"
+      letterSpacing="-0.5"
+    >
+      <tspan fill="#e53238">e</tspan>
+      <tspan fill="#0064d2">b</tspan>
+      <tspan fill="#f5af02">a</tspan>
+      <tspan fill="#86b817">y</tspan>
+    </text>
+  </svg>
+);
+
+let adsCache: any[] | null = null;
+let hasLoadedOnceCache = false;
 
 export function Ads() {
+  const { isConnected, triggerHandshake } = useExtension();
   const navigate = useNavigate();
-  const [ads, setAds] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [ads, setAds] = useState<any[]>(adsCache || []);
+  const [sortBy, setSortBy] = useState<'views-desc' | 'views-asc'>('views-desc');
+  const [isLoading, setIsLoading] = useState(!hasLoadedOnceCache && (adsCache || []).length === 0);
+  const [isBackgroundLoading, setIsBackgroundLoading] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(hasLoadedOnceCache);
   const [scheduleModalAd, setScheduleModalAd] = useState<string | null>(null);
-
   // Panel State for KI-Optimierung
   const [optimizePanelAdId, setOptimizePanelAdId] = useState<string | null>(null);
   const [panelAd, setPanelAd] = useState<any | null>(null);
@@ -21,6 +69,8 @@ export function Ads() {
     improvementSummary: string;
   } | null>(null);
   const [panelError, setPanelError] = useState<{ status: number; message: string } | null>(null);
+  const [optimizationCache, setOptimizationCache] = useState<Record<string, any>>({});
+  const [loadedFromCache, setLoadedFromCache] = useState(false);
   const [geminiHealth, setGeminiHealth] = useState<'unknown' | 'ok' | 'error'>('unknown');
   const healthPollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [appliedTitle, setAppliedTitle] = useState(false);
@@ -44,6 +94,8 @@ export function Ads() {
     localStorage.getItem('platform_banner_dismissed') === 'true'
   );
 
+  const [schedulerStatus, setSchedulerStatus] = useState<string | null>(null);
+
   const {
     fetchAds,
     syncAds,
@@ -53,15 +105,27 @@ export function Ads() {
     handleEbayCrossPost,
     optimizeExistingAd,
     updateAdFields,
+    fetchSchedulerStatus,
     isSyncing,
     toastMessage,
     toastType,
   } = useAdsActions();
 
   useEffect(() => {
+    setIsBackgroundLoading(true);
     fetchAds().then((result) => {
-      if (result !== undefined) setAds(result);
+      if (result !== undefined) {
+        setAds(result);
+        adsCache = result;
+        hasLoadedOnceCache = true;
+        setHasLoadedOnce(true);
+      }
       setIsLoading(false);
+      setIsBackgroundLoading(false);
+    });
+
+    fetchSchedulerStatus().then((status) => {
+      if (status) setSchedulerStatus(status);
     });
 
     const token = localStorage.getItem('kb_session') || localStorage.getItem('token');
@@ -85,7 +149,27 @@ export function Ads() {
         })
         .catch(() => {});
     }
-  }, [fetchAds]);
+
+    // Live poll the scheduler status every 30 seconds
+    const intervalId = setInterval(() => {
+      fetchSchedulerStatus().then((status) => {
+        if (status) setSchedulerStatus(status);
+      });
+    }, 30000);
+
+    return () => clearInterval(intervalId);
+  }, [fetchAds, fetchSchedulerStatus]);
+
+  // Keep module-level cache in sync with local state updates
+  useEffect(() => {
+    if (ads) {
+      adsCache = ads;
+      if (ads.length > 0) {
+        hasLoadedOnceCache = true;
+        setHasLoadedOnce(true);
+      }
+    }
+  }, [ads]);
 
   // Listen for eBay connected message from popup
   useEffect(() => {
@@ -113,6 +197,20 @@ export function Ads() {
     return () => { if (healthPollRef.current) clearInterval(healthPollRef.current); };
   }, [optimizePanelAdId]);
 
+  if (!isConnected) {
+    return (
+      <div className="p-8 text-center bg-white rounded border border-[#ccc] shadow-sm max-w-md mx-auto my-12 text-[#666]">
+        <p className="mb-4">Chrome Extension wird geladen...</p>
+        <button 
+          onClick={triggerHandshake}
+          className="px-4 py-2 bg-[#A8C300] hover:bg-[#96ae00] text-white rounded font-medium transition-colors cursor-pointer"
+        >
+          Erneut verbinden
+        </button>
+      </div>
+    );
+  }
+
   const handleSaveSchedule = (e: React.FormEvent) => {
     e.preventDefault();
     setScheduleModalAd(null);
@@ -120,23 +218,38 @@ export function Ads() {
 
   const refreshAds = () =>
     fetchAds().then((result) => {
-      if (result !== undefined) setAds(result);
+      if (result !== undefined) {
+        setAds(result);
+        adsCache = result;
+      }
     });
 
-  const handleStartOptimization = async (ad: any) => {
-    setPanelAd(ad);
-    setOptimizePanelAdId(ad.id);
-    setIsPanelLoading(true);
-    setPanelData(null);
-    setPanelError(null);
+  const handleStartOptimization = async (ad: any, forceRefresh = false) => {
+    const latestAd = ads.find((a: any) => a.id === ad.id) || ad;
+    setPanelAd(latestAd);
+    setOptimizePanelAdId(latestAd.id);
     setAppliedTitle(false);
     setAppliedDescription(false);
 
+    // If cache exists and we are not forcing refresh, load from cache
+    if (!forceRefresh && optimizationCache[latestAd.id]) {
+      setPanelData(optimizationCache[latestAd.id]);
+      setPanelError(null);
+      setLoadedFromCache(true);
+      setIsPanelLoading(false);
+      return;
+    }
+
+    setIsPanelLoading(true);
+    setPanelData(null);
+    setPanelError(null);
+    setLoadedFromCache(false);
+
     const result = await optimizeExistingAd(
-      ad.title,
-      ad.description || '',
-      ad.category || '',
-      ad.price || ''
+      latestAd.title,
+      latestAd.description || '',
+      latestAd.category || '',
+      latestAd.price || ''
     );
 
     if (result?.__error) {
@@ -144,6 +257,11 @@ export function Ads() {
       setPanelError({ status: result.status, message: result.message });
     } else if (result) {
       setPanelData(result);
+      // Save to cache
+      setOptimizationCache(prev => ({
+        ...prev,
+        [latestAd.id]: result
+      }));
     } else {
       // null result means 401 redirect already happened
       setOptimizePanelAdId(null);
@@ -250,6 +368,17 @@ export function Ads() {
 
   const showBanner = !isBannerDismissed && (!isEbayConnected || !isVintedConnected) && !isLoading;
 
+  const sortedAds = [...ads].sort((a, b) => {
+    const viewsA = typeof a.views === 'number' ? a.views : parseInt(a.views) || 0;
+    const viewsB = typeof b.views === 'number' ? b.views : parseInt(b.views) || 0;
+    
+    if (sortBy === 'views-desc') {
+      return viewsB - viewsA;
+    } else {
+      return viewsA - viewsB;
+    }
+  });
+
   return (
     <div className="w-full relative">
       {isPostingVinted && (
@@ -267,6 +396,8 @@ export function Ads() {
           </div>
         </div>
       )}
+
+
 
       {/* Vinted Connection Modal */}
       {isVintedModalOpen && (
@@ -363,17 +494,19 @@ export function Ads() {
                 {!isVintedConnected && (
                   <button
                     onClick={handleConnectVinted}
-                    className="flex items-center gap-1.5 bg-pink-50 hover:bg-pink-100 border border-pink-200 text-pink-700 font-medium py-1.5 px-3 rounded-sm transition-colors text-[13px]"
+                    className="border border-[#ccc] rounded-sm py-1.5 px-3 font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-all text-gray-700 bg-white hover:border-pink-500 hover:text-pink-600 hover:bg-pink-50/50 cursor-pointer shadow-sm hover:shadow-md"
                   >
-                    Vinted verbinden
+                    <VintedLogo />
+                    <span>Vinted verbinden</span>
                   </button>
                 )}
                 {!isEbayConnected && (
                   <button
                     onClick={handleConnectEbay}
-                    className="flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-medium py-1.5 px-3 rounded-sm transition-colors text-[13px]"
+                    className="border border-[#ccc] rounded-sm py-1.5 px-3 font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-all text-gray-700 bg-white hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50/50 cursor-pointer shadow-sm hover:shadow-md"
                   >
-                    eBay verbinden
+                    <EbayLogo />
+                    <span>eBay verbinden</span>
                   </button>
                 )}
               </div>
@@ -389,11 +522,35 @@ export function Ads() {
       )}
 
       {/* Top bar */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold text-[#333]">Meine Anzeigen</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Sorting Dropdown */}
+          <div className="flex items-center gap-1.5 border border-[#ccc] bg-white rounded-sm px-2.5 py-1.5 text-[13px] text-[#333] shadow-sm">
+            <span className="text-[#666] font-medium hidden sm:inline">Sortieren nach:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="bg-transparent focus:outline-none font-semibold text-[#333] cursor-pointer"
+            >
+              <option value="views-desc">Meiste Aufrufe</option>
+              <option value="views-asc">Wenigste Aufrufe</option>
+            </select>
+          </div>
+
+          {isBackgroundLoading && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-500 py-1.5 px-1 animate-pulse shrink-0">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />
+              <span className="hidden md:inline">Datenbank-Check...</span>
+            </div>
+          )}
           <button
-            onClick={() => syncAds(setAds)}
+            onClick={() => {
+              setIsBackgroundLoading(true);
+              syncAds(setAds).finally(() => {
+                setIsBackgroundLoading(false);
+              });
+            }}
             disabled={isSyncing}
             className="flex items-center gap-1.5 bg-[#f2f2f2] hover:bg-[#e6e6e6] border border-[#ccc] text-[#333] font-medium py-1.5 px-3 rounded-sm transition-colors text-[13px] disabled:opacity-50"
           >
@@ -401,14 +558,11 @@ export function Ads() {
             <span className="hidden sm:inline">Synchronisieren</span>
           </button>
           <button
-            onClick={() => navigate('/create-with-ai')}
+            onClick={() => navigate('/neue-anzeige-mit-ki-erstellen')}
             className="bg-[#A8C300] hover:bg-[#96ae00] text-white font-medium py-1.5 px-3 rounded-sm transition-colors text-[13px] flex items-center gap-1"
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span>Neue Anzeige mit KI erstellen</span>
-          </button>
-          <button className="bg-[#A8C300] hover:bg-[#96ae00] text-white font-medium py-1.5 px-3 rounded-sm transition-colors text-[13px]">
-            Anzeige aufgeben
           </button>
         </div>
       </div>
@@ -422,7 +576,7 @@ export function Ads() {
         </div>
       ) : (
         <AdGrid
-          ads={ads}
+          ads={sortedAds}
           onAction={(action, adId, successMsg) => {
             handleAction(action, adId, successMsg, refreshAds);
           }}
@@ -459,7 +613,20 @@ export function Ads() {
           onConnectEbay={handleConnectEbay}
           isEbayConnected={isEbayConnected}
           isVintedConnected={isVintedConnected}
+          onUpdateFields={updateAdFields}
         />
+      )}
+
+      {/* Scheduler Footer Indicator */}
+      {schedulerStatus && (
+        <div className="mt-8 text-center text-[12px] text-gray-500">
+          Scheduler aktiv — letzte Prüfung: {(() => {
+            const diffMinutes = Math.floor((Date.now() - new Date(schedulerStatus).getTime()) / 60000);
+            if (diffMinutes <= 0) return 'vor weniger als einer Minute';
+            if (diffMinutes === 1) return 'vor 1 Minute';
+            return `vor ${diffMinutes} Minuten`;
+          })()}
+        </div>
       )}
 
       {/* Schedule Modal */}
@@ -513,7 +680,7 @@ export function Ads() {
 
       {/* Slide-in Panel */}
       <div
-        className={`fixed top-0 right-0 h-full bg-white shadow-2xl z-40 transition-transform duration-300 ease-in-out border-l border-[#e5e5e5] flex flex-col ${
+        className={`fixed top-0 right-0 h-full bg-white shadow-2xl z-[60] transition-transform duration-300 ease-in-out border-l border-[#e5e5e5] flex flex-col ${
           optimizePanelAdId ? 'translate-x-0' : 'translate-x-full'
         } w-full md:w-[380px]`}
       >
@@ -534,14 +701,29 @@ export function Ads() {
           </div>
           <button
             onClick={() => setOptimizePanelAdId(null)}
-            className="text-gray-500 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100 transition-colors"
+            className="text-gray-500 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-full transition-all duration-200 cursor-pointer flex items-center justify-center border border-transparent hover:border-red-200"
+            aria-label="Schließen"
+            title="Schließen"
           >
-            <X className="w-5 h-5" />
+            <X className="w-[20px] h-[20px]" />
           </button>
         </div>
 
         {/* Panel Content (Scrollable) */}
         <div className="flex-1 overflow-y-auto p-5 space-y-6">
+          {loadedFromCache && panelData && !isPanelLoading && (
+            <div className="bg-blue-50 border border-blue-200 text-blue-850 text-[12px] p-2.5 rounded-sm flex items-center justify-between gap-2 shadow-xxs">
+              <span>KI-Vorschlag aus Cache geladen.</span>
+              <button
+                onClick={() => panelAd && handleStartOptimization(panelAd, true)}
+                className="text-blue-700 hover:text-blue-900 font-bold hover:underline shrink-0 flex items-center gap-1 cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Neu generieren</span>
+              </button>
+            </div>
+          )}
+
           {/* Ad Context (Thumbnail + Title) */}
           {panelAd && (
             <div className="flex gap-3 p-3 bg-gray-50 border border-gray-200 rounded-sm">
@@ -608,15 +790,12 @@ export function Ads() {
               <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
                 <AlertCircle className="w-6 h-6 text-red-500" />
               </div>
-              <div>
+              <div className="px-4">
                 <p className="text-[14px] font-semibold text-gray-800 mb-1">
                   KI-Optimierung fehlgeschlagen
                 </p>
                 <p className="text-[12px] text-gray-500 leading-relaxed">
-                  {panelError.message}
-                  {panelError.status > 0 && (
-                    <span className="block mt-1 text-[11px] text-gray-400">HTTP {panelError.status}</span>
-                  )}
+                  Der Server ist ausgelastet. Bitte klicke auf 'Erneut versuchen' oder passe deine Beschreibung an.
                 </p>
               </div>
               <button
@@ -733,14 +912,21 @@ export function Ads() {
 
         {/* Footer Actions (Sticky) */}
         {panelData && !isPanelLoading && (
-          <div className="p-4 border-t border-[#e5e5e5] bg-gray-50 flex gap-2">
+          <div className="p-4 border-t border-[#e5e5e5] bg-gray-50 flex flex-col gap-2">
             <button
               onClick={handleApplyAll}
               disabled={isApplyingAll}
-              className="flex-1 bg-[#A8C300] hover:bg-[#96ae00] text-white font-bold py-2 rounded-sm text-[13px] transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+              className="w-full bg-[#A8C300] hover:bg-[#96ae00] text-white font-bold py-2 rounded-sm text-[13px] transition-colors flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
             >
               {isApplyingAll && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               <span>Alle übernehmen</span>
+            </button>
+            <button
+              onClick={() => panelAd && handleStartOptimization(panelAd, true)}
+              className="w-full bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 font-semibold py-2 rounded-sm text-[13px] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-gray-500" />
+              <span>Neu generieren</span>
             </button>
           </div>
         )}

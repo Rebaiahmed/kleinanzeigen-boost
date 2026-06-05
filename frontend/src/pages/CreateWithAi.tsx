@@ -6,7 +6,6 @@ import {
   X,
   Check,
   Plus,
-  ArrowLeft,
   AlertCircle,
   Loader2
 } from 'lucide-react';
@@ -242,7 +241,7 @@ export function CreateWithAi() {
 
       if (res.status === 429) {
         setErrorMessage(data.message || 'Dein monatliches KI-Limit wurde erreicht.');
-        setUpgradeLink(data.upgradeLink || '/settings');
+        setUpgradeLink(data.upgradeLink || '/einstellungen');
         setIsLoading(false);
         return;
       }
@@ -303,7 +302,7 @@ export function CreateWithAi() {
     setIsSaving(false);
     
     if (draftResult && draftResult.success) {
-      navigate('/m-meine-anzeigen');
+      navigate('/meine-anzeigen');
     }
   };
 
@@ -342,7 +341,7 @@ export function CreateWithAi() {
 
       const crossPostResult = await handleVintedCrossPost(adId);
       if (crossPostResult.success) {
-        navigate('/m-meine-anzeigen');
+        navigate('/meine-anzeigen');
       } else {
         setErrorMessage(crossPostResult.error || "Fehler beim Posten auf Vinted.");
       }
@@ -388,7 +387,7 @@ export function CreateWithAi() {
 
       const crossPostResult = await handleEbayCrossPost(adId);
       if (crossPostResult.success) {
-        navigate('/m-meine-anzeigen');
+        navigate('/meine-anzeigen');
       } else {
         setErrorMessage(crossPostResult.error || "Fehler beim Posten auf eBay.");
       }
@@ -439,18 +438,20 @@ export function CreateWithAi() {
         </div>
       )}
       
-      {/* Title Header with Back Arrow */}
-      <div className="flex items-center gap-3 mb-6">
+      {/* Return Navigation Button */}
+      <div className="mb-4">
         <button 
-          onClick={() => step === 'result' ? resetFlow() : navigate('/m-meine-anzeigen')}
-          className="p-2 rounded-full hover:bg-white border border-transparent hover:border-gray-200 transition-colors text-gray-600"
+          onClick={() => step === 'result' ? resetFlow() : navigate('/meine-anzeigen')}
+          className="inline-flex items-center text-[13px] font-semibold text-gray-600 hover:text-[#A8C300] transition-colors focus:outline-none"
         >
-          <ArrowLeft className="w-5 h-5" />
+          &larr; Zurück zu Meine Anzeigen
         </button>
-        <div>
-          <h1 className="text-2xl font-bold text-[#333]">Neue Anzeige mit KI erstellen</h1>
-          <p className="text-[13px] text-gray-500">Analysiere deine Produktfotos vollautomatisch</p>
-        </div>
+      </div>
+      
+      {/* Title Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-[#333]">Neue Anzeige mit KI erstellen</h1>
+        <p className="text-[13px] text-gray-500">Analysiere deine Produktfotos vollautomatisch</p>
       </div>
 
       {errorMessage && (

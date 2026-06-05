@@ -1,19 +1,20 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import webExtension from "vite-plugin-web-extension";
-import path from "path";
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import { resolve } from 'path'
 
 export default defineConfig({
-  plugins: [
-    react(),
-    webExtension({
-      manifest: "manifest.json",
-      disableAutoLaunch: true,
-    }),
-  ],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+  plugins: [react()],
+  build: {
+    rollupOptions: {
+      input: {
+        background: resolve(__dirname, 'src/background/index.ts'),
+        content: resolve(__dirname, 'src/content/index.ts'),
+        dashboard: resolve(__dirname, 'src/content/dashboard.ts'), // ← keep .ts
+        popup: resolve(__dirname, 'src/popup/index.html'),
+      },
+      output: {
+        entryFileNames: '[name].js', // This converts .ts to .js in output
+      },
     },
   },
-});
+})

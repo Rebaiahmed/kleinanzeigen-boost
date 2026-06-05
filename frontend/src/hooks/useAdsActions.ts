@@ -29,7 +29,8 @@ export interface AdsActionsReturn {
   handleEbayCrossPost: (adId: string) => Promise<{ success: boolean; url?: string; error?: string }>;
   saveDraft: (adData: any) => Promise<any>;
   optimizeExistingAd: (title: string, description: string, category: string, price: string | number) => Promise<any>;
-  updateAdFields: (adId: string, fields: { title?: string; description?: string }) => Promise<boolean>;
+  updateAdFields: (adId: string, fields: { title?: string; description?: string; repostIntervalMinutes?: number; nextRepostAt?: string; autoRepost?: boolean }) => Promise<boolean>;
+  fetchSchedulerStatus: () => Promise<string | null>;
   isSyncing: boolean;
   toastMessage: string | null;
   toastType: ToastType;
@@ -78,9 +79,42 @@ export function useAdsActions(): AdsActionsReturn {
     return undefined;
   }, [showToast]);
 
+  const fetchSchedulerStatus = useCallback(async (): Promise<string | null> => {
+    try {
+      const res = await fetch(`${API_URL}/ads/scheduler-status`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.lastRunAt || null;
+      }
+    } catch (e) {
+      // fail silently
+    }
+    return null;
+  }, []);
+
   const syncAds = useCallback(
     async (setAds: React.Dispatch<React.SetStateAction<any[]>>) => {
+      // 1. Immediately fetch and display saved ads from the local database (if any exist)
+      try {
+        const localRes = await fetch(`${API_URL}/ads`, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        });
+        if (localRes.ok) {
+          const localData = await localRes.json();
+          if (localData.success && localData.ads && localData.ads.length > 0) {
+            setAds(localData.ads);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load local ads before sync:', e);
+      }
+
+      // 2. Show loading/sync indicator that a background refresh is happening
       setIsSyncing(true);
+
+      // 3. Run background synchronization task asynchronously
       try {
         const res = await fetch(`${API_URL}/ads/sync`, {
           method: 'POST',
@@ -92,6 +126,7 @@ export function useAdsActions(): AdsActionsReturn {
         }
         const data = await res.json();
         if (data.success) {
+          // 4. Update the UI with any changes (new ads, updated views, etc.)
           setAds(data.ads || []);
           showToast('Anzeigen wurden erfolgreich synchronisiert', 'success');
         } else {
@@ -306,7 +341,7 @@ export function useAdsActions(): AdsActionsReturn {
 
 
   const updateAdFields = useCallback(
-    async (adId: string, fields: { title?: string; description?: string }): Promise<boolean> => {
+    async (adId: string, fields: { title?: string; description?: string; repostIntervalMinutes?: number; nextRepostAt?: string; autoRepost?: boolean }): Promise<boolean> => {
       try {
         const res = await fetch(`${API_URL}/ads/${adId}`, {
           method: 'PATCH',
@@ -347,6 +382,7 @@ export function useAdsActions(): AdsActionsReturn {
     saveDraft,
     optimizeExistingAd,
     updateAdFields,
+    fetchSchedulerStatus,
     isSyncing,
     toastMessage,
     toastType,

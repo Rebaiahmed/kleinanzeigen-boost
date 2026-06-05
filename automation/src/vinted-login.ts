@@ -1,22 +1,16 @@
-import { chromium, BrowserContext, Page, Browser } from 'playwright';
+import { BrowserContext, Page, Browser, chromium } from 'playwright';
+import { getPersistentContext } from './browser-manager';
 
-export async function executeVintedLogin(email: string, password: string): Promise<{ success: boolean; cookies?: any; username?: string; error?: string }> {
+export async function executeVintedLogin(userId: string, email: string, password: string): Promise<{ success: boolean; cookies?: any; username?: string; error?: string }> {
   let context: BrowserContext | null = null;
   let page: Page | null = null;
-  let browser: Browser | null = null;
-
+  
   try {
-    const isDebug = process.env.DEBUG_BROWSER === 'true';
-    browser = await chromium.launch({ 
-      headless: !isDebug,
-      args: ['--disable-blink-features=AutomationControlled']
-    });
-    
-    context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    });
-    
-    page = await context.newPage();
+    const context = await getPersistentContext(userId);
+    page = context.pages().find(p => p.url() !== 'about:blank' || context.pages().length === 1) || await context.newPage();
+    if (page.url() !== 'about:blank') {
+      page = await context.newPage();
+    }
 
     // 1. Go to Vinted login page
     await page.goto('https://www.vinted.de/member/login', { waitUntil: 'domcontentloaded', timeout: 30000 });
@@ -79,17 +73,13 @@ export async function executeVintedLogin(email: string, password: string): Promi
     }
 
     // 7. Get cookies
-    const storageState = await context.storageState();
+    const cookies = await context.cookies();
     
-    await browser.close();
-    return { 
-      success: true, 
-      cookies: storageState.cookies,
-      username 
-    };
+    await page.close();
+    return { success: true, cookies, username };
 
   } catch (error: any) {
-    if (browser) await browser.close().catch(() => {});
+    if (page) await page.close().catch(() => {});
     return { 
       success: false, 
       error: error.message || 'Fehler bei der Vinted-Anmeldung.' 

@@ -1,4 +1,5 @@
-import { chromium, BrowserContext, Page } from 'playwright';
+import { BrowserContext, Page } from 'playwright';
+import { getPersistentContext } from './browser-manager';
 
 const MY_ADS_URL = process.env.MARKETPLACE_MY_ADS_URL || 'https://www.kleinanzeigen.de/m-meine-anzeigen.html';
 const MARKETPLACE_GATEWAY = process.env.MARKETPLACE_GATEWAY_URL || 'https://gateway.kleinanzeigen.de';
@@ -10,17 +11,15 @@ export const randomDelay = async (min = 1000, max = 5000) => {
 };
 
 export async function executeRepostFlow(userId: string, adId: string, adData: any): Promise<{ success: boolean; step: string; error?: string }> {
-  let context: BrowserContext | null = null;
   let page: Page | null = null;
   let currentStep = 'init';
 
   try {
-    const browser = await chromium.launch({ headless: true });
-    
-    // In a real scenario, you'd load the specific user's session cookies here.
-    // context = await browser.newContext({ storageState: `sessions/${userId}.json` });
-    context = await browser.newContext();
-    page = await context.newPage();
+    const context = await getPersistentContext(userId);
+    page = context.pages().find(p => p.url() !== 'about:blank' || context.pages().length === 1) || await context.newPage();
+    if (page.url() !== 'about:blank') {
+      page = await context.newPage();
+    }
 
     // Session Trap Check (PO Note: Always hit /m-meine-anzeigen first)
     currentStep = 'session_check';
@@ -89,13 +88,13 @@ export async function executeRepostFlow(userId: string, adId: string, adData: an
     if (await page.isVisible('iframe[src*="captcha"]')) {
       throw new Error('CAPTCHA_DETECTED');
     }
+    // Close the page, not the context, to keep browser alive
+    await page.close();
 
-    await browser.close();
-    return { success: true, step: 'completed' };
+    return { success: true, step: currentStep };
 
   } catch (error: any) {
-    if (context) await context.browser()?.close();
-    return { 
+    if (page) await page.close().catch(() => {});  return { 
       success: false, 
       step: currentStep, 
       error: error.message || 'Unknown error during automation' 

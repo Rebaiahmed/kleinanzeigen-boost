@@ -26,8 +26,16 @@ export function TopBar() {
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [extensionUsername, setExtensionUsername] = useState<string | null>(
+    localStorage.getItem('kb_username')
+  );
 
   useEffect(() => {
+    const handleUsernameChange = () => {
+      setExtensionUsername(localStorage.getItem('kb_username'));
+    };
+    window.addEventListener('kb_username_changed', handleUsernameChange);
+    
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
@@ -44,6 +52,7 @@ export function TopBar() {
       document.addEventListener('keydown', handleKeyDown);
     }
     return () => {
+      window.removeEventListener('kb_username_changed', handleUsernameChange);
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
@@ -62,6 +71,7 @@ export function TopBar() {
     } finally {
       localStorage.removeItem('kb_session');
       localStorage.removeItem('token');
+      localStorage.removeItem('kb_username');
       sessionStorage.clear();
       navigate('/auth');
     }
@@ -73,7 +83,7 @@ export function TopBar() {
         <div className="flex justify-between items-center h-14">
           {/* Left: Logo */}
           <div className="flex">
-            <Link to="/m-meine-anzeigen" className="flex-shrink-0 flex items-center text-[22px] tracking-tight">
+            <Link to="/meine-anzeigen" className="flex-shrink-0 flex items-center text-[22px] tracking-tight">
               <span className="font-bold text-[#86b817]">kleinanzeigen</span>
               <span className="font-normal text-[#666] ml-1">Boost</span>
             </Link>
@@ -82,10 +92,24 @@ export function TopBar() {
           {/* Right: Profile & Logout */}
           <div className="flex items-center gap-3 border-l border-[#d4d4d4] pl-4 relative" ref={dropdownRef}>
             {user ? (
+              <span className="text-[13px] font-medium text-gray-600 flex items-center gap-1">
+                👤 {user.email} ({user.fullEmail})
+              </span>
+            ) : extensionUsername ? (
+              <span className="text-[13px] font-medium text-gray-600 flex items-center gap-1">
+                👤 {extensionUsername}
+              </span>
+            ) : null}
+            {(user || extensionUsername) && <span className="text-[#d4d4d4] hidden sm:inline">|</span>}
+            <button
+              onClick={handleLogout}
+              className="text-[13px] text-red-600 hover:text-red-700 transition-colors hidden sm:inline"
+            >
+              Logout
+            </button>
+            <span className="text-[#d4d4d4] hidden sm:inline">|</span>
+            {user ? (
               <>
-                <div className="hidden sm:flex flex-col items-end">
-                  <span className="text-[13px] font-bold text-[#333] leading-tight">{user.email}</span>
-                </div>
                 <button 
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className="h-8 w-8 rounded-full bg-[#A8C300] flex items-center justify-center text-white text-[11px] font-bold focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#A8C300] transition-shadow"
@@ -113,7 +137,7 @@ export function TopBar() {
                 )}
                 
                 <Link
-                  to="/settings"
+                  to="/einstellungen"
                   onClick={() => setIsDropdownOpen(false)}
                   className="w-full flex items-center gap-2 px-4 py-2 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors focus:bg-gray-50 focus:outline-none"
                 >

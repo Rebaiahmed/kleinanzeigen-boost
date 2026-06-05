@@ -24,9 +24,10 @@ export interface AdCardProps {
   onConnectEbay: () => void;
   isEbayConnected?: boolean;
   isVintedConnected?: boolean;
+  onUpdateFields?: (adId: string, fields: any) => Promise<boolean>;
 }
 
-// Inline Vinted Logo (pink, 14px size)
+// Inline Vinted Logo (green, 14px size)
 const VintedLogo = () => (
   <svg 
     viewBox="0 0 100 100" 
@@ -36,7 +37,7 @@ const VintedLogo = () => (
   >
     <path 
       d="M20 15 L45 80 L55 80 L80 15" 
-      stroke="#EB6B9D" 
+      stroke="#09B0BA" 
       strokeWidth="14" 
       strokeLinecap="round" 
       strokeLinejoin="round"
@@ -48,14 +49,16 @@ const VintedLogo = () => (
 const EbayLogo = () => (
   <svg 
     viewBox="0 0 42 16" 
-    className="h-3.5 shrink-0" 
+    className="h-3.5 shrink-0 flex items-center" 
     xmlns="http://www.w3.org/2000/svg"
   >
     <text 
-      x="0" 
-      y="13" 
+      x="50%" 
+      y="50%" 
+      dominantBaseline="middle" 
+      textAnchor="middle" 
       fontWeight="bold" 
-      fontSize="15" 
+      fontSize="14" 
       fontFamily="Arial, Helvetica, sans-serif"
       letterSpacing="-0.5"
     >
@@ -66,6 +69,63 @@ const EbayLogo = () => (
     </text>
   </svg>
 );
+
+const DE_DAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+
+const INTERVAL_OPTIONS = [
+  { label: '12h', value: 720 },
+  { label: '24h', value: 1440 },
+  { label: '2 Tage', value: 2880 },
+  { label: '3 Tage', value: 4320 },
+  { label: '7 Tage', value: 10080 }
+];
+
+function calculateNextOccurrence(dayOfWeek: number, hour: number): string {
+  const now = new Date();
+  const target = new Date(now);
+  target.setHours(hour, 0, 0, 0);
+  
+  const currentDay = now.getDay();
+  let daysToAdd = (dayOfWeek - currentDay + 7) % 7;
+  
+  if (daysToAdd === 0 && now.getHours() >= hour) {
+    daysToAdd = 7;
+  }
+  
+  target.setDate(now.getDate() + daysToAdd);
+  return target.toISOString();
+}
+
+function formatNextRepostGerman(nextRepostAt: string | null, autoRepost: boolean): string {
+  if (!autoRepost || !nextRepostAt) return 'Nicht konfiguriert';
+  const date = new Date(nextRepostAt);
+  const now = new Date();
+  
+  const isToday = date.toDateString() === now.toDateString();
+  
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+  const isTomorrow = date.toDateString() === tomorrow.toDateString();
+  
+  const timeStr = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  
+  if (isToday) {
+    return `Heute ${timeStr}`;
+  } else if (isTomorrow) {
+    return `Morgen ${timeStr}`;
+  } else {
+    const diffMs = date.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays > 0) {
+      return `In ${diffDays} Tag${diffDays > 1 ? 'en' : ''}`;
+    }
+    return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  }
+}
+
+function getSessionToken(): string | null {
+  return localStorage.getItem('kb_session') || localStorage.getItem('token');
+}
 
 export function AdCard({
   ad,
@@ -79,6 +139,7 @@ export function AdCard({
   onConnectEbay,
   isEbayConnected,
   isVintedConnected,
+  onUpdateFields,
 }: AdCardProps) {
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [showEbayConfirm, setShowEbayConfirm] = useState(false);
@@ -90,6 +151,104 @@ export function AdCard({
   const [isPostingVinted, setIsPostingVinted] = useState(false);
   const [vintedError, setVintedError] = useState<string | null>(null);
   const [reserveAfterPost, setReserveAfterPost] = useState(true);
+
+  // Popover & AI timing states
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [selectedInterval, setSelectedInterval] = useState(ad.repostIntervalMinutes || 1440);
+  const [isSavingInterval, setIsSavingInterval] = useState(false);
+  const [showAiSection, setShowAiSection] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState<any | null>(null);
+  const [isLoadingAiSuggestion, setIsLoadingAiSuggestion] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  const handleCheckboxChange = () => {
+    if (ad.autoRepost) {
+      if (onUpdateFields) {
+        onUpdateFields(ad.id, { autoRepost: false });
+      } else {
+        onAction('toggle-repost', ad.id, 'Auto-Repost Status aktualisiert');
+      }
+      setIsPopoverOpen(false);
+      setShowAiSection(false);
+    } else {
+      setIsPopoverOpen(true);
+      setShowAiSection(false);
+    }
+  };
+
+  const handleAiSuggestClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsPopoverOpen(true);
+    setShowAiSection(true);
+    if (!aiSuggestion && !isLoadingAiSuggestion) {
+      handleFetchAiSuggestion();
+    }
+  };
+
+  const handleFetchAiSuggestion = async () => {
+    setIsLoadingAiSuggestion(true);
+    setAiError(null);
+    try {
+      const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
+      const token = getSessionToken();
+      const res = await fetch(`${API_URL}/ai/suggest-repost-time`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ adId: ad.id }),
+      });
+      
+      const data = await res.json();
+      if (res.ok) {
+        setAiSuggestion(data);
+      } else {
+        setAiError(data.message || 'Fehler beim Laden der Vorschläge');
+      }
+    } catch (err) {
+      setAiError('Netzwerkfehler');
+    } finally {
+      setIsLoadingAiSuggestion(false);
+    }
+  };
+
+  const handleApplyAiSuggestion = async () => {
+    if (!aiSuggestion || !onUpdateFields) return;
+    setIsSavingInterval(true);
+    try {
+      const nextRepostAt = calculateNextOccurrence(aiSuggestion.bestDayOfWeek, aiSuggestion.bestHour);
+      await onUpdateFields(ad.id, {
+        autoRepost: true,
+        repostIntervalMinutes: 10080, // 7 Tage
+        nextRepostAt,
+      });
+      setIsPopoverOpen(false);
+    } catch (err) {
+      console.error('Failed to apply AI suggestion:', err);
+    } finally {
+      setIsSavingInterval(false);
+    }
+  };
+
+  const handleSaveInterval = async () => {
+    if (!onUpdateFields) return;
+    setIsSavingInterval(true);
+    try {
+      const nextRepostAt = new Date(Date.now() + selectedInterval * 60 * 1000).toISOString();
+      await onUpdateFields(ad.id, {
+        autoRepost: true,
+        repostIntervalMinutes: selectedInterval,
+        nextRepostAt,
+      });
+      setIsPopoverOpen(false);
+    } catch (err) {
+      console.error('Failed to save interval:', err);
+    } finally {
+      setIsSavingInterval(false);
+    }
+  };
 
   const vintedConnected = isVintedConnected ?? false;
   const isVintedPosted = !!ad.vintedId || !!ad.vintedUrl;
@@ -224,20 +383,236 @@ export function AdCard({
           </div>
         </div>
 
-        {/* Middle: Auto-Repost Switcher */}
-        <div className="mb-4">
-          <label className="flex items-start gap-2 cursor-pointer group">
-            <input
-              type="checkbox"
-              className="mt-0.5 h-3.5 w-3.5 text-ka-green border-[#ccc] rounded-sm focus:ring-ka-green cursor-pointer"
-              checked={ad.autoRepost || false}
-              onChange={() => onAction('toggle-repost', ad.id, 'Auto-Repost Status aktualisiert')}
-            />
-            <div className="text-[13px]">
-              <span className="block font-semibold text-[#333] group-hover:text-ka-green transition-colors">Auto-Repost</span>
-              <span className="text-[12px] text-[#666] block">Nächster: {nextFormatted}</span>
+        {/* Middle: Auto-Repost Switcher with Popover and AI Timing recommendation */}
+        <div className="relative mb-4">
+          <div className="flex items-start justify-between">
+            <label className="flex items-start gap-2 cursor-pointer group">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-3.5 w-3.5 text-ka-green border-[#ccc] rounded-sm focus:ring-ka-green cursor-pointer"
+                checked={ad.autoRepost || false}
+                onChange={handleCheckboxChange}
+              />
+              <div className="text-[13px]">
+                <span className="block font-semibold text-[#333] group-hover:text-ka-green transition-colors">Auto-Repost</span>
+                <span 
+                  onClick={() => ad.autoRepost && setIsPopoverOpen(true)}
+                  className={`text-[12px] block ${ad.autoRepost ? 'text-[#666] hover:text-[#A8C300] hover:underline cursor-pointer' : 'text-[#888]'}`}
+                >
+                  Nächster: {formatNextRepostGerman(ad.nextRepostAt, ad.autoRepost)}
+                </span>
+                
+                {/* Tiered statistics information */}
+                <div className="mt-1 space-y-0.5 text-[11px] text-gray-550">
+                  {(() => {
+                    const count = ad.trackedRepostsCount || 0;
+                    if (count === 0) {
+                      return <div className="text-gray-400 italic">Führe deinen ersten Repost durch</div>;
+                    } else if (count === 1) {
+                      const viewsGained = ad.lastRepostViewsGained !== undefined ? ad.lastRepostViewsGained : 0;
+                      return (
+                        <>
+                          <div className="font-medium text-gray-700">📊 Letzter Repost: +{viewsGained} Aufrufe in 24h</div>
+                          <div className="text-gray-400 text-[10px]">Noch 4 weitere Reposts für KI-Empfehlung</div>
+                        </>
+                      );
+                    } else if (count >= 2 && count < 5) {
+                      const bestDay = ad.bestDayBisher || 'Donnerstag';
+                      const bestHour = ad.bestHourBisher !== undefined && ad.bestHourBisher !== null ? ad.bestHourBisher : 19;
+                      const formattedHour = String(bestHour).padStart(2, '0');
+                      const handleApplyQuickSuggestion = async (e: React.MouseEvent) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (!onUpdateFields) return;
+                        try {
+                          const nextRepostAt = calculateNextOccurrence(
+                            DE_DAYS.indexOf(bestDay) === -1 ? 4 : DE_DAYS.indexOf(bestDay),
+                            bestHour
+                          );
+                          await onUpdateFields(ad.id, {
+                            autoRepost: true,
+                            repostIntervalMinutes: 10080, // 7 Tage
+                            nextRepostAt,
+                          });
+                        } catch (err) {
+                          console.error(err);
+                        }
+                      };
+                      return (
+                        <>
+                          <div className="font-medium text-gray-700">📈 Beste Zeit: {bestDay}, {formattedHour}:00 Uhr ({count} Reposts)</div>
+                          <button
+                            type="button"
+                            onClick={handleApplyQuickSuggestion}
+                            className="text-[#A8C300] hover:underline font-bold text-[10px] block mt-0.5"
+                          >
+                            [Empfohlene Zeit übernehmen]
+                          </button>
+                        </>
+                      );
+                    } else {
+                      // 5+ Reposts
+                      const suggestedDay = ad.aiSuggestedRepostDay !== undefined && ad.aiSuggestedRepostDay !== null ? ad.aiSuggestedRepostDay : 4;
+                      const suggestedHour = ad.aiSuggestedRepostHour !== undefined && ad.aiSuggestedRepostHour !== null ? ad.aiSuggestedRepostHour : 19;
+                      const improvement = ad.aiSuggestedImprovementPercent || 47;
+                      const formattedHour = String(suggestedHour).padStart(2, '0');
+                      const dayName = DE_DAYS[suggestedDay] || 'Donnerstag';
+                      const handleApplyAiSuggestionDirect = async (e: React.MouseEvent) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (!onUpdateFields) return;
+                        try {
+                          const nextRepostAt = calculateNextOccurrence(suggestedDay, suggestedHour);
+                          await onUpdateFields(ad.id, {
+                            autoRepost: true,
+                            repostIntervalMinutes: 10080, // 7 Tage
+                            nextRepostAt,
+                          });
+                        } catch (err) {
+                          console.error(err);
+                        }
+                      };
+                      return (
+                        <>
+                          <div className="font-semibold text-green-700">🎯 KI-Empfehlung: {dayName}, {formattedHour}:00 Uhr (+{improvement}% mehr Aufrufe erwartet)</div>
+                          <button
+                            type="button"
+                            onClick={handleApplyAiSuggestionDirect}
+                            className="text-[#A8C300] hover:underline font-bold text-[10px] block mt-0.5"
+                          >
+                            [Empfohlene Zeit übernehmen]
+                          </button>
+                        </>
+                      );
+                    }
+                  })()}
+                </div>
+              </div>
+            </label>
+
+            {/* KI-Zeitvorschlag Button */}
+            {ad.autoRepost && (
+              <button
+                type="button"
+                disabled={(ad.trackedRepostsCount || 0) < 5}
+                onClick={handleAiSuggestClick}
+                title={(ad.trackedRepostsCount || 0) < 5 ? "Wird verfügbar nach 5 Reposts" : "KI-Zeitvorschläge basierend auf Aufrufen erhalten"}
+                className={`ml-2 text-[10px] font-semibold px-2 py-0.5 border rounded-sm transition-all whitespace-nowrap shrink-0 ${
+                  (ad.trackedRepostsCount || 0) >= 5
+                    ? 'border-[#A8C300] text-[#A8C300] bg-white hover:bg-green-50'
+                    : 'border-gray-200 text-gray-400 bg-gray-50/50 cursor-not-allowed hidden'
+                }`}
+              >
+                KI-Vorschlag
+              </button>
+            )}
+          </div>
+
+          {/* Popover scheduler options */}
+          {isPopoverOpen && (
+            <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-[#d4d4d4] shadow-lg rounded-sm p-4 z-40 animate-in fade-in slide-in-from-top-2 duration-150 text-left">
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wide">Repost-Intervall</span>
+                <button 
+                  type="button"
+                  onClick={() => setIsPopoverOpen(false)} 
+                  className="text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Segmented Button control */}
+              <div className="grid grid-cols-5 gap-1 bg-gray-100 p-0.5 rounded-sm mb-4">
+                {INTERVAL_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setSelectedInterval(opt.value)}
+                    className={`py-1 text-[10px] font-semibold rounded-sm transition-colors text-center ${
+                      selectedInterval === opt.value
+                        ? 'bg-white text-gray-800 shadow-xs'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Buttons */}
+              <div className="flex justify-end gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={() => setIsPopoverOpen(false)}
+                  className="px-3 py-1.5 border border-gray-300 rounded-sm text-gray-700 font-semibold text-[11px] hover:bg-gray-50 transition-colors"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveInterval}
+                  disabled={isSavingInterval}
+                  className="px-3 py-1.5 bg-[#A8C300] hover:bg-[#96ae00] disabled:bg-gray-300 text-white font-bold rounded-sm text-[11px] transition-colors"
+                >
+                  {isSavingInterval ? 'Speichern...' : 'Speichern'}
+                </button>
+              </div>
+
+              {/* AI suggestion recommendations */}
+              {showAiSection && (
+                <div className="border-t border-gray-150 pt-3 mt-3">
+                  <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">KI-Empfehlung</h4>
+                  
+                  {isLoadingAiSuggestion ? (
+                    <div className="flex items-center justify-center gap-1.5 text-[11px] text-gray-500 py-3">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Analysiere Repost-Muster...</span>
+                    </div>
+                  ) : aiError ? (
+                    <div className="text-[11px] text-red-500 bg-red-50 p-2 rounded border border-red-150">
+                      {aiError}
+                    </div>
+                  ) : aiSuggestion ? (
+                    <div className="bg-gray-50 p-2.5 rounded border border-gray-200 text-left space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="inline-block bg-green-100 text-green-800 text-[10px] font-bold px-2 py-0.5 rounded-sm">
+                          {DE_DAYS[aiSuggestion.bestDayOfWeek]} {String(aiSuggestion.bestHour).padStart(2, '0')}:00 Uhr
+                        </span>
+                        <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-full border ${
+                          aiSuggestion.confidence === 'high'
+                            ? 'bg-green-50 text-green-700 border-green-200'
+                            : aiSuggestion.confidence === 'medium'
+                              ? 'bg-amber-50 text-amber-700 border-amber-200'
+                              : 'bg-gray-50 text-gray-600 border-gray-200'
+                        }`}>
+                          {aiSuggestion.confidence === 'high' ? 'Hoch' : aiSuggestion.confidence === 'medium' ? 'Mittel' : 'Niedrig'}
+                        </span>
+                      </div>
+                      
+                      <p className="text-[11px] text-gray-600 italic">
+                        "{aiSuggestion.reasoning}"
+                      </p>
+
+                      {aiSuggestion.secondBestOption && (
+                        <div className="text-[10px] text-gray-400">
+                          Alternative: {DE_DAYS[aiSuggestion.secondBestOption.dayOfWeek]} {String(aiSuggestion.secondBestOption.hour).padStart(2, '0')}:00 Uhr
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={handleApplyAiSuggestion}
+                        className="w-full mt-1.5 py-1 bg-green-600 hover:bg-green-700 text-white font-bold rounded-sm text-[10px] transition-colors"
+                      >
+                        Jetzt anwenden
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              )}
             </div>
-          </label>
+          )}
         </div>
 
         {/* Bottom: Desktop Action Buttons Row */}
@@ -257,7 +632,7 @@ export function AdCard({
             <button
               onClick={handleVintedClick}
               disabled={isPostingVinted}
-              title={!vintedConnected ? "Vinted verbinden um zu aktivieren" : isVintedPosted ? "Auf Vinted ansehen →" : "Auf Vinted posten"}
+              title={!vintedConnected ? "Verwende die Schaltfläche oben, um dieses Portal zu verbinden." : isVintedPosted ? "Auf Vinted ansehen →" : "Klicken, um diese Anzeige sofort auf dieses Portal zu spiegeln."}
               className={`w-full border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors relative ${
                 !vintedConnected
                   ? "border-gray-200 text-gray-400 bg-gray-50 hover:bg-gray-100 cursor-pointer"
@@ -304,7 +679,7 @@ export function AdCard({
             <button
               onClick={handleEbayClick}
               disabled={isPostingEbay}
-              title={!ebayConnected ? "eBay verbinden" : isEbayPosted ? "Auf eBay ansehen →" : "Auf eBay posten"}
+              title={!ebayConnected ? "Verwende die Schaltfläche oben, um dieses Portal zu verbinden." : isEbayPosted ? "Auf eBay ansehen →" : "Klicken, um diese Anzeige sofort auf dieses Portal zu spiegeln."}
               className={`w-full border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors relative ${
                 !ebayConnected
                   ? "border-gray-200 text-gray-400 bg-gray-50 hover:bg-gray-100 cursor-pointer"

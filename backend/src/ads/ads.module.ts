@@ -5,9 +5,10 @@ import { FirebaseModule } from '../firebase/firebase.module';
 import { AutomationModule } from '../automation/automation.module';
 import { EbayModule } from '../ebay/ebay.module';
 import { VintedModule } from '../vinted/vinted.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [FirebaseModule, AutomationModule, EbayModule, VintedModule],
+  imports: [FirebaseModule, AutomationModule, EbayModule, VintedModule, AuthModule],
   controllers: [AdsController],
   providers: [AdsService],
   exports: [AdsService]

@@ -1,4 +1,5 @@
-import { chromium, BrowserContext, Page, Browser } from 'playwright';
+import { BrowserContext, Page, Browser, chromium } from 'playwright';
+import { getPersistentContext } from './browser-manager';
 import crypto from 'crypto';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -15,19 +16,17 @@ export const activeSessions = new Map<string, AutomationSession>();
 // ─── Headless / automated login (existing behaviour) ───────────────────────
 
 export async function executeLoginFlow(
+  userId: string,
   email: string,
   password: string,
 ): Promise<{ success: boolean; cookies?: any; error?: string; requires_2fa?: boolean; sessionId?: string }> {
-  let context: BrowserContext | null = null;
-  let page: Page | null = null;
-  let browser: Browser | null = null;
+  const context = await getPersistentContext(userId);
+  let page: Page = context.pages().find(p => p.url() !== 'about:blank' || context.pages().length === 1) || await context.newPage();
+  if (page.url() !== 'about:blank') {
+    page = await context.newPage();
+  }
 
   try {
-    const isDebug = process.env.DEBUG_BROWSER === 'true';
-    browser = await chromium.launch({ headless: !isDebug });
-    context = await browser.newContext();
-    page = await context.newPage();
-
     // Go to login page (which redirects to Auth0)
     await page.goto('https://www.kleinanzeigen.de/m-einloggen.html', { waitUntil: 'domcontentloaded' });
     await randomDelay(1500, 3000);
@@ -87,6 +86,7 @@ export async function executeLoginFlow(
         }
       }, 5 * 60 * 1000);
 
+      const browser = context.browser()!;
       activeSessions.set(sessionId, { browser, context, page, timeoutId });
 
       return { success: false, requires_2fa: true, sessionId };
@@ -105,12 +105,12 @@ export async function executeLoginFlow(
 
     // Extract state
     const storageState = await context.storageState();
+    const cookies = storageState.cookies;
 
-    await browser.close();
-    return { success: true, cookies: storageState.cookies };
-
+    await page.close();
+    return { success: true, cookies };
   } catch (error: any) {
-    if (browser) await browser.close().catch(() => {});
+    await page.close().catch(() => {});
     return {
       success: false,
       error: error.message || 'Unknown error during login automation'
@@ -139,18 +139,16 @@ export async function executeVisibleLoginFlow(
   email: string,
   onStatusUpdate: (status: 'waiting-for-user' | 'success' | 'failed', cookies?: any, error?: string) => Promise<void>,
 ): Promise<void> {
-  let browser: Browser | null = null;
+  const browser = await chromium.launch({
+    headless: false, // Non-headless so user sees the browser
+    args: [
+      '--disable-blink-features=AutomationControlled',
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+    ],
+  });
 
   try {
-    browser = await chromium.launch({
-      headless: false, // Non-headless so user sees the browser
-      args: [
-        '--disable-blink-features=AutomationControlled',
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-      ],
-    });
-
     const context = await browser.newContext({
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
     });

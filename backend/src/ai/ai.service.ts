@@ -1,6 +1,7 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { FirebaseService } from '../firebase/firebase.service';
+import { getEffectiveLimit, estimateCostUsd } from '../config/ai-limits.constants';
 import * as fs from 'fs';
 import * as path from 'path';
 import axios from 'axios';
@@ -36,20 +37,20 @@ export class AiService {
     );
   }
 
-  private async executeWithFallback(contents: any[], systemInstruction: string, generationConfig: any): Promise<{ responseText: string, promptTokenCount: number, candidatesTokenCount: number }> {
+  private async executeWithFallback(contents: any[], systemInstruction: string, generationConfig: any): Promise<{ responseText: string, promptTokenCount: number, candidatesTokenCount: number, modelName: string }> {
+    // Free-first: $0 models are tried before any paid model. Free tiers have tight
+    // rate limits, so under load we fall through to paid — that reduces cost, not
+    // eliminates it. Text-only free models simply fail on image input and fall through.
     const modelChain = [
-      // 1. Gemini 2.0 Flash — cheapest capable vision model, primary for token savings
-      { type: 'google', name: 'gemini-2.0-flash' },
-      // 2. Gemini 2.5 Flash — higher quality fallback if 2.0 fails or is rate-limited
+      // ── Free ($0) ──
+      { type: 'google', name: 'gemini-2.0-flash' },                       // Gemini free tier, handles vision
+      { type: 'openrouter', name: 'google/gemma-4-31b-it:free' },         // free text
+      { type: 'openrouter', name: 'meta-llama/llama-3.3-70b-instruct:free' }, // free text
+      // ── Paid fallback ──
       { type: 'google', name: 'gemini-2.5-flash' },
-      // 3. Grok 3 Mini — xAI key configured in GROQ_API_KEY env var, excellent & cheap
       { type: 'openrouter', name: 'x-ai/grok-3-mini' },
-      // 4. GPT-4o Mini — best German quality among OpenAI models
       { type: 'openrouter', name: 'openai/gpt-4o-mini' },
-      // 5. DeepSeek V3 — very cheap, surprisingly capable
       { type: 'openrouter', name: 'deepseek/deepseek-chat' },
-      // 6. Llama 3.3 70B — free tier, solid open-source fallback
-      { type: 'openrouter', name: 'meta-llama/llama-3.3-70b-instruct' },
     ];
 
     // Append JSON instruction if JSON response is requested
@@ -104,7 +105,8 @@ export class AiService {
           return {
             responseText,
             promptTokenCount,
-            candidatesTokenCount
+            candidatesTokenCount,
+            modelName: modelInfo.name,
           };
         } else {
           // OpenRouter API call
@@ -211,6 +213,7 @@ export class AiService {
             responseText,
             promptTokenCount,
             candidatesTokenCount,
+            modelName: modelInfo.name,
           };
         }
       } catch (error: any) {
@@ -230,7 +233,19 @@ export class AiService {
     );
   }
 
-  private async logUsage(userId: string, promptTokens: number, candidatesTokens: number) {
+  /**
+   * Records one AI call's usage. `metered` controls whether it counts toward the
+   * plan limit — only photo analysis is metered today; cheap text ops are tracked
+   * (tokens/model/cost/lastActive) for the admin view but don't consume the limit.
+   * Resets the monthly fields when the stored month rolls over.
+   */
+  private async logUsage(
+    userId: string,
+    modelName: string,
+    promptTokens: number,
+    candidatesTokens: number,
+    metered: boolean,
+  ) {
     try {
       const db = this.firebaseService.firestore;
       const now = new Date();
@@ -238,28 +253,26 @@ export class AiService {
       const usageRef = db.collection('aiUsage').doc(userId);
       const usageDoc = await usageRef.get();
 
-      let usageData = {
-        callsCount: 0,
-        promptTokens: 0,
-        candidatesTokens: 0,
+      const stored = usageDoc.exists ? usageDoc.data()! : {};
+      const sameMonth = stored.month === currentMonth;
+
+      const base = sameMonth ? stored : {};
+      const byModel = { ...(base.byModel || {}) };
+      const m = byModel[modelName] || { calls: 0, promptTokens: 0, candidatesTokens: 0 };
+      m.calls += 1;
+      m.promptTokens += promptTokens;
+      m.candidatesTokens += candidatesTokens;
+      byModel[modelName] = m;
+
+      const usageData = {
         month: currentMonth,
+        callsCount: (sameMonth ? base.callsCount || 0 : 0) + (metered ? 1 : 0),
+        promptTokens: (sameMonth ? base.promptTokens || 0 : 0) + promptTokens,
+        candidatesTokens: (sameMonth ? base.candidatesTokens || 0 : 0) + candidatesTokens,
+        estimatedCostUsd: (sameMonth ? base.estimatedCostUsd || 0 : 0) + estimateCostUsd(modelName, promptTokens, candidatesTokens),
+        byModel,
+        lastCallAt: now.toISOString(),
       };
-
-      if (usageDoc.exists) {
-        const data = usageDoc.data()!;
-        if (data.month === currentMonth) {
-          usageData = {
-            callsCount: data.callsCount || 0,
-            promptTokens: data.promptTokens || 0,
-            candidatesTokens: data.candidatesTokens || 0,
-            month: currentMonth,
-          };
-        }
-      }
-
-      usageData.callsCount += 1;
-      usageData.promptTokens += promptTokens;
-      usageData.candidatesTokens += candidatesTokens;
 
       await usageRef.set(usageData, { merge: true });
     } catch (err: any) {
@@ -288,46 +301,28 @@ export class AiService {
   async analyzePhotos(userId: string, files: any[], hint?: string, language?: string) {
     const db = this.firebaseService.firestore;
 
-    // 1. Fetch user tier from their user document
+    // 1. Fetch user tier + per-user bonus from their user document
     const userDoc = await db.collection('users').doc(userId).get();
     const plan = userDoc.data()?.tier || userDoc.data()?.plan || 'free';
+    const bonus = userDoc.data()?.aiLimitBonus || 0;
 
-    // 2. Fetch current month usage
+    // 2. Fetch current month's metered call count
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
     const usageRef = db.collection('aiUsage').doc(userId);
     const usageDoc = await usageRef.get();
 
-    let usageData = {
-      callsCount: 0,
-      promptTokens: 0,
-      candidatesTokens: 0,
-      month: currentMonth,
-    };
-
+    let callsCount = 0;
     if (usageDoc.exists) {
       const data = usageDoc.data()!;
-      if (data.month === currentMonth) {
-        usageData = {
-          callsCount: data.callsCount || 0,
-          promptTokens: data.promptTokens || 0,
-          candidatesTokens: data.candidatesTokens || 0,
-          month: currentMonth,
-        };
-      }
+      if (data.month === currentMonth) callsCount = data.callsCount || 0;
     }
 
-    // 3. Enforce plan rate limit
-    let limit = 5;
-    const normalizedPlan = plan.toLowerCase();
-    if (normalizedPlan === 'starter') {
-      limit = 30;
-    } else if (normalizedPlan === 'pro' || normalizedPlan === 'unlimited') {
-      limit = Infinity;
-    }
+    // 3. Enforce effective limit (plan + per-user bonus). Only photo analysis is metered.
+    const limit = getEffectiveLimit(plan, bonus);
 
-    if (usageData.callsCount >= limit) {
+    if (callsCount >= limit) {
       throw new HttpException(
         {
           message: 'Du hast dein monatliches Limit für KI-Analysen erreicht. Bitte führe ein Upgrade auf ein höheres Paket unter /settings durch.',
@@ -360,6 +355,7 @@ export class AiService {
     const userPrompt = `${langInstruction}\n${hint ? `Optionaler Hinweis vom Verkäufer: ${hint}` : 'Analysiere das Produkt auf den Fotos.'}`;
 
     let responseText = '';
+    let modelUsed = '';
     let promptTokenCount = 0;
     let candidatesTokenCount = 0;
 
@@ -373,6 +369,7 @@ export class AiService {
         }
       );
       responseText = fallbackResult.responseText;
+      modelUsed = fallbackResult.modelName;
       promptTokenCount = fallbackResult.promptTokenCount;
       candidatesTokenCount = fallbackResult.candidatesTokenCount;
     } catch (error: any) {
@@ -420,14 +417,10 @@ export class AiService {
       }
     }
 
-    // 6. Update usage in Firestore and increment monthly count (Rule Six)
-    usageData.callsCount += 1;
-    usageData.promptTokens += promptTokenCount;
-    usageData.candidatesTokens += candidatesTokenCount;
+    // 6. Record usage — metered (counts toward the limit) + model/cost/lastActive tracking
+    await this.logUsage(userId, modelUsed, promptTokenCount, candidatesTokenCount, true);
 
-    await usageRef.set(usageData);
-
-    const remainingCallsThisMonth = limit === Infinity ? -1 : Math.max(0, limit - usageData.callsCount);
+    const remainingCallsThisMonth = limit === Infinity ? -1 : Math.max(0, limit - (callsCount + 1));
 
     return {
       ...parsedJson,
@@ -454,6 +447,7 @@ export class AiService {
       `Title: ${title}\nDescription: ${descSlice}\nCategory: ${category}`;
 
     let responseText = '';
+    let modelUsed = '';
     let promptTokenCount = 0;
     let candidatesTokenCount = 0;
     let parsedJson: any = null;
@@ -469,6 +463,7 @@ export class AiService {
         }
       );
       responseText = fallbackResult.responseText;
+      modelUsed = fallbackResult.modelName;
       promptTokenCount = fallbackResult.promptTokenCount;
       candidatesTokenCount = fallbackResult.candidatesTokenCount;
 
@@ -527,7 +522,7 @@ export class AiService {
     }
 
     // Log Usage to Firestore (Rule Six)
-    await this.logUsage(userId, promptTokenCount, candidatesTokenCount);
+    await this.logUsage(userId, modelUsed, promptTokenCount, candidatesTokenCount, false);
 
     return parsedJson;
   }
@@ -546,6 +541,7 @@ export class AiService {
     const userPrompt = `Valuate this item title: ${title}`;
 
     let responseText = '';
+    let modelUsed = '';
     let promptTokenCount = 0;
     let candidatesTokenCount = 0;
     let parsedJson: any = null;
@@ -560,6 +556,7 @@ export class AiService {
         }
       );
       responseText = fallbackResult.responseText;
+      modelUsed = fallbackResult.modelName;
       promptTokenCount = fallbackResult.promptTokenCount;
       candidatesTokenCount = fallbackResult.candidatesTokenCount;
       const cleaned = cleanAndExtractJson(responseText);
@@ -593,7 +590,7 @@ export class AiService {
     }
 
     // Log Usage to Firestore (Rule Six)
-    await this.logUsage(userId, promptTokenCount, candidatesTokenCount);
+    await this.logUsage(userId, modelUsed, promptTokenCount, candidatesTokenCount, false);
 
     return { suggestedPrice: parsedJson.suggestedPrice, reasoning: parsedJson.reasoning };
   }
@@ -614,6 +611,7 @@ ${messageHistory.map((m, idx) => `[Message ${idx + 1}]: ${m}`).join('\n')}
 `;
 
     let responseText = '';
+    let modelUsed = '';
     let promptTokenCount = 0;
     let candidatesTokenCount = 0;
     let parsedJson: any = null;
@@ -628,6 +626,7 @@ ${messageHistory.map((m, idx) => `[Message ${idx + 1}]: ${m}`).join('\n')}
         }
       );
       responseText = fallbackResult.responseText;
+      modelUsed = fallbackResult.modelName;
       promptTokenCount = fallbackResult.promptTokenCount;
       candidatesTokenCount = fallbackResult.candidatesTokenCount;
       const cleaned = cleanAndExtractJson(responseText);
@@ -661,7 +660,7 @@ ${messageHistory.map((m, idx) => `[Message ${idx + 1}]: ${m}`).join('\n')}
     }
 
     // Log Usage to Firestore (Rule Six)
-    await this.logUsage(userId, promptTokenCount, candidatesTokenCount);
+    await this.logUsage(userId, modelUsed, promptTokenCount, candidatesTokenCount, false);
 
     return parsedJson;
   }
@@ -738,9 +737,10 @@ ${JSON.stringify(dataset)}`;
   async getUserUsage(userId: string): Promise<{ plan: string; callsCount: number; limit: number }> {
     const db = this.firebaseService.firestore;
 
-    // 1. Fetch user tier/plan
+    // 1. Fetch user tier/plan + per-user bonus
     const userDoc = await db.collection('users').doc(userId).get();
     const plan = userDoc.data()?.tier || userDoc.data()?.plan || 'free';
+    const bonus = userDoc.data()?.aiLimitBonus || 0;
 
     // 2. Fetch current month usage count
     const now = new Date();
@@ -755,14 +755,8 @@ ${JSON.stringify(dataset)}`;
       }
     }
 
-    // 3. Define limits based on plan
-    let limit = 50; // default for free
-    const normalizedPlan = plan.toLowerCase();
-    if (normalizedPlan === 'starter') {
-      limit = 1000;
-    } else if (normalizedPlan === 'pro' || normalizedPlan === 'unlimited') {
-      limit = Infinity;
-    }
+    // 3. Effective limit = plan limit + per-user bonus (single source of truth)
+    const limit = getEffectiveLimit(plan, bonus);
 
     return {
       plan,

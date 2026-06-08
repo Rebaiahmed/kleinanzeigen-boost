@@ -12,6 +12,7 @@ import { AutomationModule } from './automation/automation.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { EbayModule } from './ebay/ebay.module';
 import { ReplyTemplatesModule } from './reply-templates/reply-templates.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { ReplyTemplatesModule } from './reply-templates/reply-templates.module';
     SchedulerModule,
     EbayModule,
     ReplyTemplatesModule,
+    AdminModule,
     // TODO: Import Users Modules
   ],
   controllers: [],

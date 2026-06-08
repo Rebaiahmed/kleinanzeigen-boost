@@ -2,7 +2,11 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { TopBar } from './TopBar';
 import { useExtension } from '../../hooks/useExtension';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, MessageSquare } from 'lucide-react';
+
+const FEEDBACK_FORM_URL =
+  (import.meta as any).env.VITE_FEEDBACK_FORM_URL ||
+  'https://docs.google.com/forms/d/e/1FAIpQLScNP_PSe3pRAKCwS8vIMd2GVB_trsRKwi3XTb8CRSmqUwprkA/viewform';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { isConnected, isChecking } = useExtension();
@@ -70,6 +74,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           KleinanzeigenBoost — Deine Anzeigen immer ganz oben <span className="mx-2">|</span> Made with <span className="text-red-500">♥</span> in Germany
         </div>
       </footer>
+
+      {/* Floating feedback button */}
+      <a
+        href={FEEDBACK_FORM_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] text-white font-semibold text-[13px] py-2.5 px-4 rounded-full shadow-lg transition-colors"
+        title="Feedback geben"
+      >
+        <MessageSquare className="w-4 h-4" />
+        Feedback
+      </a>
     </div>
   );
 }

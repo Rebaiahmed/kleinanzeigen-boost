@@ -38,10 +38,10 @@ export class AiService {
 
   private async executeWithFallback(contents: any[], systemInstruction: string, generationConfig: any): Promise<{ responseText: string, promptTokenCount: number, candidatesTokenCount: number }> {
     const modelChain = [
-      // 1. Gemini 2.5 Flash — best quality/price, great German (Google key)
-      { type: 'google', name: 'gemini-2.5-flash' },
-      // 2. Gemini 2.0 Flash — fast cheap fallback
+      // 1. Gemini 2.0 Flash — cheapest capable vision model, primary for token savings
       { type: 'google', name: 'gemini-2.0-flash' },
+      // 2. Gemini 2.5 Flash — higher quality fallback if 2.0 fails or is rate-limited
+      { type: 'google', name: 'gemini-2.5-flash' },
       // 3. Grok 3 Mini — xAI key configured in GROQ_API_KEY env var, excellent & cheap
       { type: 'openrouter', name: 'x-ai/grok-3-mini' },
       // 4. GPT-4o Mini — best German quality among OpenAI models
@@ -285,7 +285,7 @@ export class AiService {
     return { nextRepostAt: now.toISOString() };
   }
 
-  async analyzePhotos(userId: string, files: any[], hint?: string) {
+  async analyzePhotos(userId: string, files: any[], hint?: string, language?: string) {
     const db = this.firebaseService.firestore;
 
     // 1. Fetch user tier from their user document
@@ -353,7 +353,11 @@ export class AiService {
       },
     }));
 
-    const userPrompt = hint ? `Optionaler Hinweis vom Verkäufer: ${hint}` : 'Analysiere das Produkt auf den Fotos.';
+    const langInstruction = (language || 'de').toLowerCase().startsWith('en')
+      ? 'IMPORTANT: Write the title, description, keyFeatures AND the vinted.title, vinted.description fields in ENGLISH. Keep the "category" value as the exact German Kleinanzeigen category name from the allowed list, and keep both condition fields as the exact allowed enum values (do not translate category or condition).'
+      : 'Schreibe alle Textfelder auf Deutsch.';
+
+    const userPrompt = `${langInstruction}\n${hint ? `Optionaler Hinweis vom Verkäufer: ${hint}` : 'Analysiere das Produkt auf den Fotos.'}`;
 
     let responseText = '';
     let promptTokenCount = 0;
@@ -365,7 +369,7 @@ export class AiService {
         this.analyzePhotosPrompt,
         {
           responseMimeType: 'application/json',
-          maxOutputTokens: 800,
+          maxOutputTokens: 1100,
         }
       );
       responseText = fallbackResult.responseText;
@@ -391,7 +395,7 @@ export class AiService {
     } catch (parseError) {
       console.error('Failed to parse Gemini response on first attempt. Raw response:', responseText);
       console.error('Parse error:', parseError);
-      const retryPrompt = 'Deine vorherige Antwort war kein valides JSON. Bitte generiere ein striktes, valides JSON.';
+      const retryPrompt = `${langInstruction}\nDeine vorherige Antwort war kein valides JSON. Bitte generiere ein striktes, valides JSON.`;
       try {
         const fallbackResult = await this.executeWithFallback(
           [retryPrompt, ...imageParts],

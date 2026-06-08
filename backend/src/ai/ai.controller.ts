@@ -84,12 +84,13 @@ export class AiController {
   async analyzePhotos(
     @UploadedFiles() files: any[],
     @Body('hint') hint: string,
+    @Body('language') language: string,
     @Req() req: any
   ) {
     if (!files || files.length === 0) {
       throw new HttpException('Mindestens ein Foto muss hochgeladen werden.', HttpStatus.BAD_REQUEST);
     }
-    return this.aiService.analyzePhotos(req.user.userId, files, hint);
+    return this.aiService.analyzePhotos(req.user.userId, files, hint, language);
   }
 
   @UseGuards(JwtAuthGuard)

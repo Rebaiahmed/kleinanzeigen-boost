@@ -370,12 +370,21 @@ export function AdCard({
               />
               <div className="text-[13px]">
                 <span className="block font-semibold text-[#333] group-hover:text-ka-green transition-colors">Auto-Repost</span>
-                <span 
-                  onClick={() => autoRepostChecked && setIsPopoverOpen(true)}
-                  className={`text-[12px] block ${autoRepostChecked ? 'text-[#666] hover:text-[#A8C300] hover:underline cursor-pointer' : 'text-[#888]'}`}
-                >
-                  Nächster: {formatNextRepostGerman(localNextRepostAt, autoRepostChecked)}
-                </span>
+                {!autoRepostChecked && ad.repostDisabledReason ? (
+                  <span
+                    title={ad.repostDisabledReason}
+                    className="text-[12px] block text-red-600 font-medium"
+                  >
+                    ⚠️ Nach mehreren Fehlversuchen deaktiviert
+                  </span>
+                ) : (
+                  <span
+                    onClick={() => autoRepostChecked && setIsPopoverOpen(true)}
+                    className={`text-[12px] block ${autoRepostChecked ? 'text-[#666] hover:text-[#A8C300] hover:underline cursor-pointer' : 'text-[#888]'}`}
+                  >
+                    Nächster: {formatNextRepostGerman(localNextRepostAt, autoRepostChecked)}
+                  </span>
+                )}
                 
                 {/* Tiered statistics information */}
                 <div className="mt-1 space-y-0.5 text-[11px] text-gray-550">
@@ -383,15 +392,16 @@ export function AdCard({
                     const count = ad.trackedRepostsCount || 0;
                     if (count === 0) {
                       return <div className="text-gray-400 italic">Führe deinen ersten Repost durch</div>;
-                    } else if (count === 1) {
+                    } else if (count < 3) {
                       const viewsGained = ad.lastRepostViewsGained !== undefined ? ad.lastRepostViewsGained : 0;
+                      const left = 3 - count;
                       return (
                         <>
                           <div className="font-medium text-gray-700">📊 Letzter Repost: +{viewsGained} Aufrufe in 24h</div>
-                          <div className="text-gray-400 text-[10px]">Noch 4 weitere Reposts für KI-Empfehlung</div>
+                          <div className="text-gray-400 text-[10px]">Noch {left} weitere{left === 1 ? 'r' : ''} Repost{left === 1 ? '' : 's'} für KI-Empfehlung</div>
                         </>
                       );
-                    } else if (count >= 2 && count < 5) {
+                    } else if (count >= 3 && count < 5) {
                       const bestDay = ad.bestDayBisher || 'Donnerstag';
                       const bestHour = ad.bestHourBisher !== undefined && ad.bestHourBisher !== null ? ad.bestHourBisher : 19;
                       const formattedHour = String(bestHour).padStart(2, '0');

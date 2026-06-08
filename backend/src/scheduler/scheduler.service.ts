@@ -148,6 +148,8 @@ export class SchedulerService {
             lastPostedAt: new Date().toISOString(),
             nextRepostAt,
             pendingRepostSince: null,
+            repostFailureCount: 0,        // reset on success
+            repostDisabledReason: null,
           });
 
           await db.collection('users').doc(userId).collection('ads').doc(adId).collection('repostLogs').add({
@@ -163,12 +165,51 @@ export class SchedulerService {
       } catch (error: any) {
         this.logger.error(`Repost failed for ${adId}: ${error.message}`);
 
+        const adRef = db.collection('users').doc(userId).collection('ads').doc(adId);
+
         if (error.message === 'SESSION_EXPIRED') {
           await db.collection('users').doc(userId).update({ accountStatus: 'expired' });
-          await db.collection('users').doc(userId).collection('ads').doc(adId).update({ status: AdStatus.ACTIVE, pendingRepostSince: null });
+          await adRef.update({ status: AdStatus.ACTIVE, pendingRepostSince: null });
           break; // Stop processing this user — session is gone
+        }
+
+        // Track consecutive failures per ad. After 3, disable auto-repost and notify.
+        const MAX_REPOST_FAILURES = 3;
+        const failureCount = (adData.repostFailureCount || 0) + 1;
+
+        if (failureCount >= MAX_REPOST_FAILURES) {
+          await adRef.update({
+            status: AdStatus.ACTIVE,
+            pendingRepostSince: null,
+            autoRepost: false,
+            repostFailureCount: failureCount,
+            repostDisabledReason: `Auto-Repost nach ${MAX_REPOST_FAILURES} Fehlversuchen automatisch deaktiviert. Letzter Fehler: ${error.message}`,
+            repostDisabledAt: new Date().toISOString(),
+            nextRepostAt: null,
+          });
+
+          // Write a notification the dashboard can surface
+          try {
+            await db.collection('users').doc(userId).collection('notifications').add({
+              type: 'repost_disabled',
+              adId,
+              adTitle: adData.title || 'Anzeige',
+              message: `Auto-Repost für "${adData.title || 'deine Anzeige'}" wurde nach ${MAX_REPOST_FAILURES} fehlgeschlagenen Versuchen deaktiviert. Bitte prüfe die Anzeige und aktiviere sie erneut.`,
+              read: false,
+              createdAt: new Date().toISOString(),
+            });
+          } catch (notifyErr: any) {
+            this.logger.warn(`Failed to write notification for ${adId}: ${notifyErr.message}`);
+          }
+
+          this.logger.warn(`Auto-Repost disabled for ${adId} after ${MAX_REPOST_FAILURES} failures`);
         } else {
-          await db.collection('users').doc(userId).collection('ads').doc(adId).update({ status: AdStatus.ACTIVE, pendingRepostSince: null });
+          await adRef.update({
+            status: AdStatus.ACTIVE,
+            pendingRepostSince: null,
+            repostFailureCount: failureCount,
+          });
+          this.logger.warn(`Repost failure ${failureCount}/${MAX_REPOST_FAILURES} for ${adId}`);
         }
       }
     }

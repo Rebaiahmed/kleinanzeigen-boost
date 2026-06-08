@@ -27,6 +27,9 @@ async function fetchAdsFromServer(): Promise<any[]> {
     return data.ads || [];
   } catch (err: any) {
     if (err.name === 'AbortError') throw new Error('Zeitüberschreitung — bitte erneut versuchen.');
+    if (err?.message?.includes('Failed to fetch') || err?.name === 'TypeError') {
+      throw new Error('Service momentan nicht verfügbar. Bitte versuche es in Kürze erneut.');
+    }
     throw err;
   } finally {
     clearTimeout(timer);

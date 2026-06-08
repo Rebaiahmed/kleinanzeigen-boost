@@ -73,7 +73,7 @@ export function useAdsActions(): AdsActionsReturn {
       }
     } catch (e: any) {
       if (e?.message?.includes('Failed to fetch') || e?.name === 'TypeError') {
-        showToast('Backend nicht erreichbar — starte den Backend-Server auf Port 3000', 'error');
+        showToast('Service momentan nicht verfügbar. Bitte versuche es in Kürze erneut.', 'error');
       } else {
         console.error('Failed to fetch ads', e);
       }

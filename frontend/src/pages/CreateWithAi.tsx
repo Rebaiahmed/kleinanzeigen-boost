@@ -7,7 +7,8 @@ import {
   Check,
   Plus,
   AlertCircle,
-  Loader2
+  Loader2,
+  Copy
 } from 'lucide-react';
 import { useAdsActions } from '../hooks/useAdsActions';
 import { useAiUsage } from '../hooks/useAiUsage';
@@ -38,7 +39,9 @@ const CATEGORIES = [
 
 const CONDITIONS = ["Neu", "Wie neu", "Gut", "In Ordnung", "Defekt"];
 
-// Inline Vinted Logo (pink, 14px size)
+const VINTED_CONDITIONS = ["Neu mit Preisschild", "Neu ohne Preisschild", "Sehr gut", "Gut", "Zufriedenstellend"];
+
+// Inline Vinted Logo (teal/green brand color, 14px size)
 const VintedLogo = () => (
   <svg 
     viewBox="0 0 100 100" 
@@ -46,11 +49,11 @@ const VintedLogo = () => (
     fill="none" 
     xmlns="http://www.w3.org/2000/svg"
   >
-    <path 
-      d="M20 15 L45 80 L55 80 L80 15" 
-      stroke="#EB6B9D" 
-      strokeWidth="14" 
-      strokeLinecap="round" 
+    <path
+      d="M20 15 L45 80 L55 80 L80 15"
+      stroke="#09B1BA"
+      strokeWidth="14"
+      strokeLinecap="round"
       strokeLinejoin="round"
     />
   </svg>
@@ -95,6 +98,7 @@ export function CreateWithAi() {
   // Step 1: Upload States
   const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
   const [hint, setHint] = useState('');
+  const [language, setLanguage] = useState<'de' | 'en'>('de');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [upgradeLink, setUpgradeLink] = useState<string | null>(null);
@@ -125,6 +129,39 @@ export function CreateWithAi() {
   const [ebayPrompt, setEbayPrompt] = useState(false);
   const [ebayConnected, setEbayConnected] = useState(false);
   const [isPostingEbay, setIsPostingEbay] = useState(false);
+
+  // Result tab + Vinted template states
+  const [activeTab, setActiveTab] = useState<'kleinanzeigen' | 'vinted'>('kleinanzeigen');
+  const [vintedTitle, setVintedTitle] = useState('');
+  const [vintedDescription, setVintedDescription] = useState('');
+  const [vintedPrice, setVintedPrice] = useState<number>(0);
+  const [vintedCondition, setVintedCondition] = useState('Gut');
+  const [vintedSize, setVintedSize] = useState<string | null>(null);
+  const [isVintedCopied, setIsVintedCopied] = useState(false);
+
+  // Per-field copy feedback
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const copyField = (key: string, value: string | number) => {
+    navigator.clipboard.writeText(String(value)).then(() => {
+      setCopiedField(key);
+      setTimeout(() => setCopiedField(null), 1500);
+    });
+  };
+  const renderCopyBtn = (key: string, value: string | number, accent = '#A8C300') => (
+    <button
+      type="button"
+      onClick={() => copyField(key, value)}
+      title="Feld kopieren"
+      className="text-gray-400 transition-colors"
+      style={{ ['--tw' as any]: accent }}
+      onMouseEnter={(e) => (e.currentTarget.style.color = accent)}
+      onMouseLeave={(e) => (e.currentTarget.style.color = '')}
+    >
+      {copiedField === key
+        ? <Check className="w-3.5 h-3.5 text-emerald-600" />
+        : <Copy className="w-3.5 h-3.5" />}
+    </button>
+  );
 
   // Load platform connection status on mount
   useEffect(() => {
@@ -221,6 +258,7 @@ export function CreateWithAi() {
     if (hint) {
       formData.append('hint', hint);
     }
+    formData.append('language', language);
 
     try {
       const token = localStorage.getItem('kb_session') || localStorage.getItem('token');
@@ -262,6 +300,15 @@ export function CreateWithAi() {
       setKeyFeatures(data.keyFeatures || []);
       setRemainingCalls(data.remainingCallsThisMonth !== undefined ? data.remainingCallsThisMonth : null);
 
+      // Vinted template (same single AI call — no extra cost)
+      const v = data.vinted || {};
+      setVintedTitle(v.title || data.title || '');
+      setVintedDescription(v.description || data.description || '');
+      setVintedPrice(v.price || data.price || 0);
+      setVintedCondition(VINTED_CONDITIONS.includes(v.condition) ? v.condition : 'Gut');
+      setVintedSize(v.size || null);
+      setActiveTab('kleinanzeigen');
+
       incrementUsage(); // update usage counter immediately
       setStep('result');
     } catch (err: any) {
@@ -277,6 +324,21 @@ export function CreateWithAi() {
     navigator.clipboard.writeText(text).then(() => {
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
+    });
+  };
+
+  // Copy Vinted fields
+  const copyVintedToClipboard = () => {
+    const lines = [
+      `Titel: ${vintedTitle}`,
+      `Beschreibung: ${vintedDescription}`,
+      `Preis: ${vintedPrice} €`,
+      `Zustand: ${vintedCondition}`,
+    ];
+    if (vintedSize) lines.push(`Größe: ${vintedSize}`);
+    navigator.clipboard.writeText(lines.join('\n')).then(() => {
+      setIsVintedCopied(true);
+      setTimeout(() => setIsVintedCopied(false), 2000);
     });
   };
 
@@ -496,6 +558,29 @@ export function CreateWithAi() {
             </div>
           </div>
 
+          {/* Language selector */}
+          <div className="mt-5">
+            <label className="block text-[13px] font-semibold text-gray-800 mb-1.5">
+              Sprache für Titel & Beschreibung
+            </label>
+            <div className="inline-flex border border-gray-200 rounded overflow-hidden">
+              {([['de', '🇩🇪 Deutsch'], ['en', '🇬🇧 English']] as const).map(([code, label]) => (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() => setLanguage(code)}
+                  className={`px-4 py-2 text-[13px] font-semibold transition-colors ${
+                    language === code
+                      ? 'bg-[#A8C300] text-white'
+                      : 'bg-white text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* AI Usage indicator */}
           <div className={`mt-4 rounded-lg px-4 py-2.5 flex items-center gap-3 text-[13px] ${
             isBlocked ? 'bg-red-50 border border-red-200' :
@@ -550,7 +635,35 @@ export function CreateWithAi() {
             )}
           </div>
 
+          {/* Platform tabs */}
+          <div className="flex border-b border-gray-200 bg-gray-50/50 px-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab('kleinanzeigen')}
+              className={`px-4 py-3 text-[13px] font-semibold border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${
+                activeTab === 'kleinanzeigen'
+                  ? 'border-[#A8C300] text-[#86b817]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <span className="font-bold">kleinanzeigen</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('vinted')}
+              className={`px-4 py-3 text-[13px] font-semibold border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${
+                activeTab === 'vinted'
+                  ? 'border-[#09B1BA] text-[#09B1BA]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <VintedLogo />
+              <span>Vinted</span>
+            </button>
+          </div>
+
           {/* Form wrapper */}
+          {activeTab === 'kleinanzeigen' && (
           <div className="p-6 space-y-6">
 
             {/* Horizontal photo strip */}
@@ -569,7 +682,7 @@ export function CreateWithAi() {
             <div>
               <div className="flex justify-between items-center mb-1.5">
                 <label className="text-[13px] font-semibold text-gray-800">Titel</label>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   <span className={`text-[11px] ${title.length <= 60 ? 'text-gray-400' : 'text-red-500 font-semibold'}`}>
                     {title.length} / 60
                   </span>
@@ -578,6 +691,7 @@ export function CreateWithAi() {
                   ) : title.length > 60 ? (
                     <X className="w-3.5 h-3.5 text-red-500" />
                   ) : null}
+                  {renderCopyBtn('ka-title', title)}
                 </div>
               </div>
               <input
@@ -596,7 +710,10 @@ export function CreateWithAi() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Category */}
               <div>
-                <label className="block text-[13px] font-semibold text-gray-800 mb-1.5">Kategorie</label>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="text-[13px] font-semibold text-gray-800">Kategorie</label>
+                  {renderCopyBtn('ka-category', category)}
+                </div>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
@@ -610,7 +727,10 @@ export function CreateWithAi() {
 
               {/* Price */}
               <div>
-                <label className="block text-[13px] font-semibold text-gray-800 mb-1.5">Preis (€)</label>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="text-[13px] font-semibold text-gray-800">Preis (€)</label>
+                  {renderCopyBtn('ka-price', price)}
+                </div>
                 <input
                   type="number"
                   value={price}
@@ -634,7 +754,10 @@ export function CreateWithAi() {
 
             {/* Condition segmented control */}
             <div>
-              <label className="block text-[13px] font-semibold text-gray-800 mb-2">Zustand</label>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-[13px] font-semibold text-gray-800">Zustand</label>
+                {renderCopyBtn('ka-condition', condition)}
+              </div>
               <div className="grid grid-cols-5 border border-gray-200 rounded overflow-hidden">
                 {CONDITIONS.map((cond, idx) => (
                   <button
@@ -660,9 +783,12 @@ export function CreateWithAi() {
             <div>
               <div className="flex justify-between items-center mb-1.5">
                 <label className="text-[13px] font-semibold text-gray-800">Beschreibung</label>
-                <span className={`text-[11px] ${description.length >= 80 ? 'text-emerald-600 font-semibold' : 'text-red-500 font-semibold'}`}>
-                  {description.length} Zeichen (Min. 80 erforderlich)
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-[11px] ${description.length >= 80 ? 'text-emerald-600 font-semibold' : 'text-red-500 font-semibold'}`}>
+                    {description.length} Zeichen (Min. 80 erforderlich)
+                  </span>
+                  {renderCopyBtn('ka-desc', description)}
+                </div>
               </div>
               <textarea
                 value={description}
@@ -822,6 +948,132 @@ export function CreateWithAi() {
             </div>
 
           </div>
+          )}
+
+          {/* VINTED PANEL */}
+          {activeTab === 'vinted' && (
+          <div className="p-6 space-y-5">
+            <div className="flex items-start gap-2 bg-[#e6f7f8] border border-[#b8e8ea] rounded-lg p-3 text-[12px] text-[#0a7a80]">
+              <VintedLogo />
+              <span>
+                Diese Vorlage ist für Vinted optimiert (kürzer, lockerer Stil). Kopiere die Felder und füge sie beim Erstellen deiner Vinted-Anzeige ein — Vinted füllt Kategorie & weitere Felder automatisch aus deinen Fotos aus.
+              </span>
+            </div>
+
+            {/* Vinted Title */}
+            <div>
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="text-[13px] font-semibold text-gray-800">Titel</label>
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-[11px] ${vintedTitle.length <= 50 ? 'text-gray-400' : 'text-red-500 font-semibold'}`}>
+                    {vintedTitle.length} / 50
+                  </span>
+                  {renderCopyBtn('v-title', vintedTitle, '#09B1BA')}
+                </div>
+              </div>
+              <input
+                type="text"
+                value={vintedTitle}
+                onChange={(e) => setVintedTitle(e.target.value)}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#09B1BA]"
+              />
+            </div>
+
+            {/* Vinted price & size */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="text-[13px] font-semibold text-gray-800">Preis (€)</label>
+                  {renderCopyBtn('v-price', vintedPrice, '#09B1BA')}
+                </div>
+                <input
+                  type="number"
+                  value={vintedPrice}
+                  onChange={(e) => setVintedPrice(parseFloat(e.target.value) || 0)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#09B1BA]"
+                />
+                <span className="block text-[11px] text-gray-400 italic mt-1">* Vinted-Käufer erwarten oft etwas niedrigere Preise.</span>
+              </div>
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="text-[13px] font-semibold text-gray-800">Größe (nur Mode)</label>
+                  {vintedSize && renderCopyBtn('v-size', vintedSize, '#09B1BA')}
+                </div>
+                <input
+                  type="text"
+                  value={vintedSize || ''}
+                  onChange={(e) => setVintedSize(e.target.value || null)}
+                  placeholder="z.B. M, 42, EU 38 — leer lassen wenn nicht relevant"
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#09B1BA]"
+                />
+              </div>
+            </div>
+
+            {/* Vinted Condition */}
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-[13px] font-semibold text-gray-800">Zustand</label>
+                {renderCopyBtn('v-condition', vintedCondition, '#09B1BA')}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {VINTED_CONDITIONS.map((cond) => (
+                  <button
+                    key={cond}
+                    type="button"
+                    onClick={() => setVintedCondition(cond)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                      vintedCondition === cond
+                        ? 'bg-[#e6f7f8] border-[#09B1BA] text-[#09B1BA]'
+                        : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+                    }`}
+                  >
+                    {cond}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Vinted Description */}
+            <div>
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="text-[13px] font-semibold text-gray-800">Beschreibung</label>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-gray-400">{vintedDescription.length} Zeichen</span>
+                  {renderCopyBtn('v-desc', vintedDescription, '#09B1BA')}
+                </div>
+              </div>
+              <textarea
+                value={vintedDescription}
+                onChange={(e) => setVintedDescription(e.target.value)}
+                rows={4}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#09B1BA] resize-none"
+              />
+            </div>
+
+            {/* Copy all */}
+            <div className="border border-gray-200 rounded-lg p-4 bg-gray-50/50">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={copyVintedToClipboard}
+                  className="bg-[#09B1BA] hover:bg-[#079aa2] text-white font-semibold py-2 px-4 rounded text-xs transition-colors flex items-center gap-1.5 shadow-sm"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Alle Felder für Vinted kopieren</span>
+                </button>
+                {isVintedCopied && (
+                  <span className="text-[12px] text-[#09B1BA] font-bold animate-in fade-in duration-200">Kopiert!</span>
+                )}
+              </div>
+            </div>
+
+            <button
+              onClick={resetFlow}
+              className="text-xs text-gray-500 hover:text-gray-800 hover:underline font-semibold block mx-auto"
+            >
+              Zurück zum Foto-Upload
+            </button>
+          </div>
+          )}
         </div>
       )}
 

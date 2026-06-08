@@ -9,7 +9,9 @@ export function SupportMe() {
   const [config, setConfig] = useState<SupportConfig | null>(null);
 
   useEffect(() => {
-    fetch('http://localhost:3000/support/config')
+    const apiBase = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
+    const origin = apiBase.replace(/\/api\/?$/, ''); // support route has no /api prefix
+    fetch(`${origin}/support/config`)
       .then((res) => res.json())
       .then((data) => setConfig(data))
       .catch((err) => console.error('Failed to fetch support config', err));

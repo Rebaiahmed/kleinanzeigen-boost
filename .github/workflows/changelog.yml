@@ -1,0 +1,155 @@
+name: Generate Changelog
+
+on:
+  push:
+    branches:
+      - main
+
+# Never run on the bot commits this workflow pushes back
+jobs:
+  changelog:
+    name: Update CHANGELOG.md
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate and prepend changelog entry
+        run: |
+          python3 << 'EOF'
+          import subprocess, re, os
+          from datetime import datetime, timezone
+
+          # ── Version: read from extension manifest ────────────────────────
+          import json
+          with open("extension/public/manifest.json") as f:
+              version = json.load(f)["version"]
+
+          today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+          # ── Commit range: since the last changelog-v* tag ────────────────
+          tags = subprocess.run(
+              ["git", "tag", "--list", "changelog-v*", "--sort=-version:refname"],
+              capture_output=True, text=True
+          ).stdout.strip().split("\n")
+          last_tag = next((t for t in tags if t), None)
+
+          log_range = f"{last_tag}..HEAD" if last_tag else "HEAD"
+          raw = subprocess.run(
+              ["git", "log", log_range, "--pretty=format:%s"],
+              capture_output=True, text=True
+          ).stdout.strip()
+
+          if not raw:
+              print("No new commits since last changelog — skipping.")
+              open("/tmp/skip_changelog", "w").close()
+              exit(0)
+
+          commits = [line for line in raw.split("\n") if line.strip()]
+
+          # ── Skip-list: noise that doesn't belong in a changelog ───────────
+          SKIP = re.compile(
+              r"(bump version|^\[skip ci\]|\[skip ci\]$|^chore.*:.*bump|"
+              r"^ci:|merge pull request|merge branch)",
+              re.IGNORECASE
+          )
+
+          # ── Conventional-commit prefix → category ─────────────────────────
+          RULES = [
+              (re.compile(r"^feat(\(.+\))?!?:\s*",  re.I), "Added"),
+              (re.compile(r"^fix(\(.+\))?:\s*",      re.I), "Fixed"),
+              (re.compile(r"^remove(\(.+\))?:\s*",   re.I), "Removed"),
+              (re.compile(r"^revert(\(.+\))?:\s*",   re.I), "Removed"),
+              (re.compile(r"^(refactor|perf|style|chore|build|docs|test)(\(.+\))?:\s*", re.I), "Changed"),
+          ]
+
+          buckets = {"Added": [], "Fixed": [], "Changed": [], "Removed": []}
+
+          for subject in commits:
+              if SKIP.search(subject):
+                  continue
+              matched = False
+              for pattern, category in RULES:
+                  m = pattern.match(subject)
+                  if m:
+                      msg = subject[m.end():]
+                      # Strip scope parentheses that bled through
+                      msg = re.sub(r"^\(.*?\)\s*", "", msg)
+                      buckets[category].append(msg.strip())
+                      matched = True
+                      break
+              if not matched and subject.strip():
+                  buckets["Changed"].append(subject.strip())
+
+          # ── Build the new section ─────────────────────────────────────────
+          lines = [f"## [{version}] - {today}", ""]
+          for category in ("Added", "Fixed", "Changed", "Removed"):
+              entries = buckets[category]
+              if entries:
+                  lines.append(f"### {category}")
+                  for e in entries:
+                      lines.append(f"- {e}")
+                  lines.append("")
+
+          new_section = "\n".join(lines) + "\n"
+
+          # ── Prepend to CHANGELOG.md ───────────────────────────────────────
+          existing = ""
+          if os.path.exists("CHANGELOG.md"):
+              with open("CHANGELOG.md") as f:
+                  existing = f.read()
+
+          header = "# Changelog\n\nAll notable changes to this project are documented here.\n\n"
+
+          if existing.startswith("# Changelog"):
+              # Replace the header line and keep the rest
+              body = re.sub(r"^# Changelog\n+.*?\n\n", "", existing, count=1, flags=re.DOTALL)
+              body = re.sub(r"^[^\n]*\n\n", "", existing.split("\n\n", 2)[-1] if "\n\n" in existing else existing)
+              # Simpler: strip up to the first ## section
+              idx = existing.find("\n## ")
+              body = existing[idx + 1:] if idx != -1 else ""
+              with open("CHANGELOG.md", "w") as f:
+                  f.write(header + new_section + body)
+          else:
+              with open("CHANGELOG.md", "w") as f:
+                  f.write(header + new_section + existing)
+
+          print(f"Changelog updated: v{version} ({today})")
+          EOF
+
+      - name: Skip if nothing changed
+        id: check
+        run: |
+          if [ -f /tmp/skip_changelog ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit changelog
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add CHANGELOG.md
+
+          # Only commit if CHANGELOG.md actually changed
+          if git diff --cached --quiet; then
+            echo "CHANGELOG.md unchanged — nothing to commit."
+            exit 0
+          fi
+
+          VERSION=$(jq -r '.version' extension/public/manifest.json)
+          git commit -m "docs: update CHANGELOG.md for v${VERSION} [skip ci]"
+
+          # Tag the changelog snapshot so next run knows the range
+          git tag "changelog-v${VERSION}" HEAD --force
+          git push origin main --tags

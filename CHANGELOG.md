@@ -1,0 +1,29 @@
+# Changelog
+
+All notable changes to this project are documented here.
+
+## [1.0.0] - 2026-06-08
+
+### Added
+- disable Vinted integration for MVP — replace with coming-soon state
+- extract real username/email from cookies instead of mock
+- implement extension token sync, manual copy template, navbar real username display, and upgrade AI models
+- vinted and ebay connection UX enhancements with inline modal and popup
+- AI optimization actions, photo-to-prefill page, Vinted/eBay cross-post stubs, and Gemini response parser fixes
+
+### Fixed
+- pass structured HttpException through analyzePhotos catch block and discriminate 429 error types in UI
+- extract username from URL-encoded 'up' cookie for navbar display
+- profile icon dropdown and complete logout flow
+- switch to gemini-2.0-flash (1500 RPD free), healthCheck no-op, extractQuotaError with retry wait time
+- fix truncated JSON — lower maxOutputTokens to 400, tighten prompt limits, add isJsonComplete() guard
+- 30s timeout, [KI-Opt] logging, error panel with retry, Gemini health dot, GET /ai/health
+- visible login 404 - fail fast on worker unavailable, sanitize errors, add callAutomationWorkerFast
+- handshake TTL 120s, distinct error codes, German error card, retry postMessage bridge
+
+### Changed
+- remove unused AiAssistant component
+- Implement backend architecture (Auth, Ads, AI, Scheduler) and native Login UI
+- UI refinements and rebranding to KleinanzeigenBoost
+- Add dashboard UI, ads UI, and layout with mock data
+- Initial scaffold

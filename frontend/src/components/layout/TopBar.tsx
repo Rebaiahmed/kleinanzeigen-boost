@@ -15,13 +15,6 @@ function getUserFromToken(): { email: string; initials: string; fullEmail: strin
       return { email: display, initials: prefix.slice(0, 2).toUpperCase(), fullEmail: payload.email };
     }
 
-    // Priority 2: username extracted from Kleinanzeigen cookies during handshake
-    if (payload.username) {
-      const name = decodeURIComponent(payload.username);
-      const initials = name.slice(0, 2).toUpperCase();
-      return { email: name, initials, fullEmail: name };
-    }
-
     return null;
   } catch {
     return null;

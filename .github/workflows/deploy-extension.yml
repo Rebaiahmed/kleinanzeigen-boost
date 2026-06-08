@@ -1,0 +1,191 @@
+name: Build & Deploy Chrome Extension
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'extension/**'
+      - '.github/workflows/deploy-extension.yml'
+
+# Prevent concurrent runs — only one deploy at a time
+concurrency:
+  group: extension-deploy
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    name: Version, Build & Upload to Chrome Web Store
+    runs-on: ubuntu-latest
+    # Don't re-run on the version-bump commit this workflow pushes back
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+
+    permissions:
+      contents: write   # needed to push version bump commit + create release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history needed for changelog and tags
+
+      # ── 1. Determine version bump ─────────────────────────────────────────
+      - name: Determine bump type
+        id: bump
+        run: |
+          MSG="${{ github.event.head_commit.message }}"
+          if echo "$MSG" | grep -q '#major'; then
+            echo "type=major" >> $GITHUB_OUTPUT
+          elif echo "$MSG" | grep -q '#minor'; then
+            echo "type=minor" >> $GITHUB_OUTPUT
+          else
+            echo "type=patch" >> $GITHUB_OUTPUT
+          fi
+
+      # ── 2. Bump version in manifest.json ─────────────────────────────────
+      - name: Bump manifest version
+        id: version
+        run: |
+          MANIFEST="extension/public/manifest.json"
+          CURRENT=$(jq -r '.version' "$MANIFEST")
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+
+          TYPE="${{ steps.bump.outputs.type }}"
+          if [ "$TYPE" = "major" ]; then
+            NEW="$((MAJOR + 1)).0.0"
+          elif [ "$TYPE" = "minor" ]; then
+            NEW="${MAJOR}.$((MINOR + 1)).0"
+          else
+            NEW="${MAJOR}.${MINOR}.$((PATCH + 1))"
+          fi
+
+          jq --arg v "$NEW" '.version = $v' "$MANIFEST" > /tmp/manifest.json
+          mv /tmp/manifest.json "$MANIFEST"
+
+          echo "old=$CURRENT" >> $GITHUB_OUTPUT
+          echo "new=$NEW"     >> $GITHUB_OUTPUT
+          echo "tag=extension-v${NEW}" >> $GITHUB_OUTPUT
+
+      # ── 3. Build extension ────────────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: extension/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: extension
+
+      - name: Build
+        run: npm run build
+        working-directory: extension
+
+      # ── 4. Package as zip ────────────────────────────────────────────────
+      - name: Create extension zip
+        run: |
+          cd extension/dist
+          zip -r "../../anzeigenboost-extension-v${{ steps.version.outputs.new }}.zip" .
+          cd ../..
+          echo "ZIP_PATH=anzeigenboost-extension-v${{ steps.version.outputs.new }}.zip" >> $GITHUB_ENV
+
+      # ── 5. Generate changelog ─────────────────────────────────────────────
+      - name: Generate changelog
+        id: changelog
+        run: |
+          LAST_TAG=$(git tag --list 'extension-v*' --sort=-version:refname | head -1)
+          if [ -z "$LAST_TAG" ]; then
+            RANGE="HEAD"
+          else
+            RANGE="${LAST_TAG}..HEAD"
+          fi
+
+          # Commits that touched the extension directory
+          LOG=$(git log "$RANGE" --pretty=format:"- %s (%h)" -- extension/ | head -50)
+          if [ -z "$LOG" ]; then
+            LOG="- Internal build bump"
+          fi
+
+          # Write to file to preserve newlines across steps
+          {
+            echo "## What's changed in v${{ steps.version.outputs.new }}"
+            echo ""
+            echo "$LOG"
+          } > /tmp/changelog.md
+
+          echo "path=/tmp/changelog.md" >> $GITHUB_OUTPUT
+
+      # ── 6. Commit version bump & push ─────────────────────────────────────
+      - name: Commit & tag version bump
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add extension/public/manifest.json
+          git commit -m "chore(extension): bump version ${{ steps.version.outputs.old }} → ${{ steps.version.outputs.new }} [skip ci]"
+          git tag "${{ steps.version.outputs.tag }}"
+          git push origin main --tags
+
+      # ── 7. Create GitHub Release ──────────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "Extension v${{ steps.version.outputs.new }}"
+          body_path: ${{ steps.changelog.outputs.path }}
+          files: ${{ env.ZIP_PATH }}
+          draft: false
+          prerelease: false
+
+      # ── 8. Upload to Chrome Web Store ────────────────────────────────────
+      - name: Get Chrome Web Store access token
+        id: cws_token
+        run: |
+          RESPONSE=$(curl -s -X POST https://oauth2.googleapis.com/token \
+            -d "client_id=${{ secrets.CHROME_CLIENT_ID }}" \
+            -d "client_secret=${{ secrets.CHROME_CLIENT_SECRET }}" \
+            -d "refresh_token=${{ secrets.CHROME_REFRESH_TOKEN }}" \
+            -d "grant_type=refresh_token")
+          TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "Failed to get access token: $RESPONSE"
+            exit 1
+          fi
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+
+      - name: Upload zip to Chrome Web Store
+        id: cws_upload
+        run: |
+          RESPONSE=$(curl -s \
+            -H "Authorization: Bearer ${{ steps.cws_token.outputs.token }}" \
+            -H "x-goog-api-version: 2" \
+            -X PUT \
+            -T "${{ env.ZIP_PATH }}" \
+            "https://www.googleapis.com/upload/chromewebstore/v1.1/items/${{ secrets.CHROME_EXTENSION_ID }}")
+          echo "$RESPONSE"
+          STATUS=$(echo "$RESPONSE" | jq -r '.uploadState')
+          if [ "$STATUS" != "SUCCESS" ]; then
+            echo "Upload failed with status: $STATUS"
+            exit 1
+          fi
+
+      - name: Publish to Chrome Web Store
+        run: |
+          RESPONSE=$(curl -s \
+            -H "Authorization: Bearer ${{ steps.cws_token.outputs.token }}" \
+            -H "x-goog-api-version: 2" \
+            -H "Content-Length: 0" \
+            -X POST \
+            "https://www.googleapis.com/chromewebstore/v1.1/items/${{ secrets.CHROME_EXTENSION_ID }}/publish")
+          echo "$RESPONSE"
+          STATUS=$(echo "$RESPONSE" | jq -r '.status[0]')
+          if [ "$STATUS" != "OK" ] && [ "$STATUS" != "PUBLISHED_WITH_FRICTION" ]; then
+            echo "Publish failed with status: $STATUS"
+            exit 1
+          fi
+
+      - name: Summary
+        run: |
+          echo "### ✅ Extension v${{ steps.version.outputs.new }} deployed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat /tmp/changelog.md >> $GITHUB_STEP_SUMMARY

@@ -45,14 +45,6 @@ export function Settings() {
   const [isLoadingEbay, setIsLoadingEbay] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
 
-  // Vinted Connection State
-  const [vintedConnected, setVintedConnected] = useState(false);
-  const [vintedUsername, setVintedUsername] = useState('');
-  const [vintedLastVerifiedAt, setVintedLastVerifiedAt] = useState<string | null>(null);
-  const [isLoadingVinted, setIsLoadingVinted] = useState(false);
-  const [isCheckingVintedStatus, setIsCheckingVintedStatus] = useState(false);
-
-
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<'success' | 'error' | null>(null);
 
@@ -67,42 +59,6 @@ export function Settings() {
       setToastMessage(null);
       setToastType(null);
     }, 3000);
-  };
-
-    const checkVintedStatus = (silent = false) => {
-    if (!silent) setIsCheckingVintedStatus(true);
-
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'PLATFORM_LOGIN_STATUS' && event.data?.platform === 'vinted') {
-        window.removeEventListener('message', handleMessage);
-        if (!silent) setIsCheckingVintedStatus(false);
-        
-        if (event.data.isLoggedIn) {
-          setVintedConnected(true);
-          setVintedUsername(event.data.username || 'Benutzer');
-        } else {
-          setVintedConnected(false);
-          setVintedUsername('');
-          if (!silent) showToast('Bitte logge dich zuerst in Vinted ein', 'error');
-        }
-      }
-    };
-    
-    window.addEventListener('message', handleMessage);
-    window.postMessage({ type: 'CHECK_PLATFORM_LOGIN', platform: 'vinted' }, '*');
-    
-    if (!silent) {
-      setTimeout(() => {
-        window.removeEventListener('message', handleMessage);
-        setIsCheckingVintedStatus(false);
-      }, 5000);
-    }
-  };
-
-  const handleDisconnectVinted = () => {
-    setVintedConnected(false);
-    setVintedUsername('');
-    setVintedLastVerifiedAt(null);
   };
 
   const checkEbayStatus = (silent = false) => {
@@ -160,7 +116,6 @@ export function Settings() {
   useEffect(() => {
     // 1. Initial status fetch
     checkEbayStatus(true);
-    checkVintedStatus(true);
     fetchUsage();
 
     // 2. Read success param from URL redirect
@@ -192,51 +147,32 @@ export function Settings() {
         <h2 className="text-xl font-semibold mb-6 text-ka-gray-900">Plattform-Verbindungen</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
-          {/* Vinted Platform Card */}
-          <div className="border border-gray-200 rounded-lg p-5 flex flex-col justify-between bg-gray-50/50 hover:shadow-md transition-shadow">
+          {/* Vinted Platform Card — coming soon */}
+          <div className="border border-gray-200 rounded-lg p-5 flex flex-col justify-between bg-gray-50/30 opacity-70">
             <div className="flex items-start gap-4">
-              <div className="w-16 h-16 bg-white border border-gray-150 rounded-lg flex items-center justify-center shrink-0">
+              <div className="w-16 h-16 bg-white border border-gray-200 rounded-lg flex items-center justify-center shrink-0">
                 <VintedLogo />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-bold text-gray-800 flex flex-wrap items-center gap-1.5">
+                <h3 className="text-lg font-bold text-gray-700 flex flex-wrap items-center gap-1.5">
                   Vinted
-                  {vintedConnected ? (
-                    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-green-50 text-green-700 px-2 py-0.5 rounded-full border border-green-200">
-                      <span className="w-1 h-1 rounded-full bg-green-500" /> Verbunden
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-gray-150 text-gray-600 px-2 py-0.5 rounded-full border border-gray-200">
-                      Nicht verbunden
-                    </span>
-                  )}
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded-full border border-yellow-200">
+                    🚧 In Entwicklung
+                  </span>
                 </h3>
                 <p className="text-sm text-gray-500 mt-1 mb-2">
-                  Synchronisiere deine Kleidung und Accessoires direkt mit deinem Vinted-Account.
+                  Das direkte Posting auf Vinted wird in einem zukünftigen Update verfügbar sein.
                 </p>
-                <div className="text-sm font-semibold text-gray-800">
-                  Status: {vintedConnected ? `🟢 Verbunden als: ${vintedUsername}` : '🔴 Nicht verbunden'}
-                </div>
               </div>
             </div>
-            
+
             <div className="mt-6">
-              {vintedConnected ? (
-                <button
-                  onClick={handleDisconnectVinted}
-                  className="w-full bg-white border border-gray-300 hover:border-gray-400 text-gray-700 font-bold py-2 px-4 rounded-sm text-[13px] transition-colors text-center"
-                >
-                  Getrennt
-                </button>
-              ) : (
-                <button
-                  onClick={() => checkVintedStatus(false)}
-                  disabled={isCheckingVintedStatus}
-                  className="w-full bg-[#A8C300] hover:bg-[#96ae00] disabled:bg-[#c4d65e] text-white font-bold py-2 px-4 rounded-sm text-[13px] transition-colors text-center"
-                >
-                  {isCheckingVintedStatus ? 'Wird geprüft...' : 'Verbinden'}
-                </button>
-              )}
+              <button
+                disabled
+                className="w-full bg-gray-100 border border-gray-200 text-gray-400 font-bold py-2 px-4 rounded-sm text-[13px] cursor-not-allowed text-center"
+              >
+                Kommt bald
+              </button>
             </div>
           </div>
 

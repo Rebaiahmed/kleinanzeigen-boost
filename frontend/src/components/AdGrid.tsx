@@ -7,12 +7,9 @@ interface AdGridProps {
   onAIOptimize: (adId: string) => void;
   onPriceCheck: (adId: string, title: string) => Promise<{ suggestedPrice: number; reasoning: string } | null>;
   onSchedule: (adId: string) => void;
-  onVintedCrossPost: (adId: string, reserveAfterPost: boolean) => Promise<any>;
   onEbayCrossPost: (adId: string) => Promise<any>;
-  onConnectVinted: () => void;
   onConnectEbay: () => void;
   isEbayConnected?: boolean;
-  isVintedConnected?: boolean;
   onUpdateFields: (adId: string, fields: any) => Promise<boolean>;
   aiBlocked?: boolean;
   aiWarning?: boolean;
@@ -24,12 +21,9 @@ export function AdGrid({
   onAIOptimize,
   onPriceCheck,
   onSchedule,
-  onVintedCrossPost,
   onEbayCrossPost,
-  onConnectVinted,
   onConnectEbay,
   isEbayConnected,
-  isVintedConnected,
   onUpdateFields,
   aiBlocked = false,
   aiWarning = false,
@@ -44,12 +38,9 @@ export function AdGrid({
           onAIOptimize={onAIOptimize}
           onPriceCheck={onPriceCheck}
           onSchedule={onSchedule}
-          onVintedCrossPost={onVintedCrossPost}
           onEbayCrossPost={onEbayCrossPost}
-          onConnectVinted={onConnectVinted}
           onConnectEbay={onConnectEbay}
           isEbayConnected={isEbayConnected}
-          isVintedConnected={isVintedConnected}
           onUpdateFields={onUpdateFields}
           aiBlocked={aiBlocked}
           aiWarning={aiWarning}

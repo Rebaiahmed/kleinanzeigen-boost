@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, RefreshCw, Sparkles, Loader2, AlertCircle, Lock } from 'lucide-react';
+import { X, RefreshCw, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 import { useAdsActions } from '../hooks/useAdsActions';
 import { useAds } from '../hooks/useAds';
 import { useAiUsage } from '../hooks/useAiUsage';
@@ -10,12 +10,6 @@ import { Toast } from '../components/Toast';
 import { useExtension } from '../hooks/useExtension';
 import { KiPanel } from '../components/ads/KiPanel';
 import { ScheduleModal } from '../components/ads/ScheduleModal';
-
-const VintedLogo = () => (
-  <svg viewBox="0 0 100 100" className="w-3.5 h-3.5 shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M20 15 L45 80 L55 80 L80 15" stroke="#09B0BA" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
 
 const EbayLogo = () => (
   <svg viewBox="0 0 42 16" className="h-3.5 shrink-0 flex items-center" xmlns="http://www.w3.org/2000/svg">
@@ -29,31 +23,16 @@ const EbayLogo = () => (
 );
 
 export function Ads() {
-  const { isConnected } = useExtension();
+  const { isConnected, contextInvalidated } = useExtension();
   const { callsCount, limit, remaining, pct, isWarning, isBlocked, incrementUsage } = useAiUsage();
   const navigate = useNavigate();
-  const adsCacheRef = useRef<any[] | null>(null);
-  const hasLoadedOnceCacheRef = useRef(false);
-
-  const { ads: cachedAds, invalidateAds, isLoading: cacheLoading } = useAds();
-  const [ads, setAds] = useState<any[]>([]);
-  const displayAds = ads.length > 0 ? ads : cachedAds;
+  const { ads, invalidateAds, isLoading, isFetching, isError, error } = useAds();
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'views-desc' | 'views-asc'>('views-desc');
-  const [isLoading, setIsLoading] = useState(true);
-  const [isBackgroundLoading, setIsBackgroundLoading] = useState(false);
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [isBackgroundSyncing, setIsBackgroundSyncing] = useState(false);
   const [scheduleModalAd, setScheduleModalAd] = useState<string | null>(null);
   const [isEbayConnected, setIsEbayConnected] = useState(false);
-  const [isVintedConnected, setIsVintedConnected] = useState(false);
-  const [isPostingVinted, setIsPostingVinted] = useState(false);
   const [schedulerStatus, setSchedulerStatus] = useState<string | null>(null);
-
-  // Vinted Connection Modal State
-  const [isVintedModalOpen, setIsVintedModalOpen] = useState(false);
-  const [vintedEmail, setVintedEmail] = useState('');
-  const [vintedPassword, setVintedPassword] = useState('');
-  const [isConnectingVinted, setIsConnectingVinted] = useState(false);
-  const [vintedConnectError, setVintedConnectError] = useState<string | null>(null);
 
   // Banner State
   const [isBannerDismissed, setIsBannerDismissed] = useState(
@@ -61,11 +40,9 @@ export function Ads() {
   );
 
   const {
-    fetchAds,
     syncAds,
     handleAction,
     handlePriceCheck,
-    handleVintedCrossPost,
     handleEbayCrossPost,
     optimizeExistingAd,
     updateAdFields,
@@ -75,87 +52,25 @@ export function Ads() {
     toastType,
   } = useAdsActions();
 
-  const kiOpt = useKiOptimization(displayAds, optimizeExistingAd, incrementUsage, isBlocked, callsCount, limit);
+  const kiOpt = useKiOptimization(ads, optimizeExistingAd, incrementUsage, isBlocked, callsCount, limit);
 
-  // When React Query cache resolves, stop loading
+  // Platform connection status
   useEffect(() => {
-    if (!cacheLoading) {
-      setIsLoading(false);
-      if (cachedAds.length > 0) setHasLoadedOnce(true);
-    }
-  }, [cacheLoading, cachedAds.length]);
-
-  // Auto-sync only if connected AND no ads loaded yet
-  const hasSyncedOnConnect = useRef(false);
-  useEffect(() => {
-    if (isConnected && !hasSyncedOnConnect.current && ads.length === 0 && hasLoadedOnce) {
-      hasSyncedOnConnect.current = true;
-      setIsBackgroundLoading(true);
-      syncAds(setAds).finally(() => {
-        setIsBackgroundLoading(false);
-        invalidateAds();
-      });
-    }
-  }, [isConnected, ads.length, hasLoadedOnce, syncAds, invalidateAds]);
-
-  useEffect(() => {
-    if (cachedAds.length > 0) {
-      setAds(cachedAds);
-      setIsLoading(false);
-      setHasLoadedOnce(true);
-    }
-
-    if (cachedAds.length === 0) {
-      setIsBackgroundLoading(true);
-      fetchAds().then((result) => {
-        if (result !== undefined && result.length > 0) {
-          setAds(result);
-          adsCacheRef.current = result;
-          hasLoadedOnceCacheRef.current = true;
-          setHasLoadedOnce(true);
-        }
-        setIsLoading(false);
-        setIsBackgroundLoading(false);
-      });
-    }
-
-    fetchSchedulerStatus().then((status) => {
-      if (status) setSchedulerStatus(status);
-    });
-
     const token = localStorage.getItem('kb_session') || localStorage.getItem('token');
-    if (token) {
-      const apiBase = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
-      fetch(`${apiBase}/ebay/status`, { headers: { Authorization: `Bearer ${token}` } })
-        .then((res) => res.json())
-        .then((data) => setIsEbayConnected(!!data.connected))
-        .catch(() => {});
+    if (!token) return;
+    const apiBase = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
+    fetch(`${apiBase}/ebay/status`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json()).then(d => setIsEbayConnected(!!d.connected)).catch(() => {});
+  }, []);
 
-      fetch(`${apiBase}/vinted/status`, { headers: { Authorization: `Bearer ${token}` } })
-        .then((res) => res.json())
-        .then((data) => setIsVintedConnected(!!data.connected))
-        .catch(() => {});
-    }
-
-    const intervalId = setInterval(() => {
-      fetchSchedulerStatus().then((status) => {
-        if (status) setSchedulerStatus(status);
-      });
-    }, 30000);
-
-    return () => clearInterval(intervalId);
-  }, [fetchAds, fetchSchedulerStatus]);
-
-  // Keep ref cache in sync with local state updates
+  // Scheduler status polling
   useEffect(() => {
-    if (ads) {
-      adsCacheRef.current = ads;
-      if (ads.length > 0) {
-        hasLoadedOnceCacheRef.current = true;
-        setHasLoadedOnce(true);
-      }
-    }
-  }, [ads]);
+    fetchSchedulerStatus().then(s => { if (s) setSchedulerStatus(s); });
+    const id = setInterval(() => {
+      fetchSchedulerStatus().then(s => { if (s) setSchedulerStatus(s); });
+    }, 30000);
+    return () => clearInterval(id);
+  }, [fetchSchedulerStatus]);
 
   // Listen for eBay connected message from popup
   useEffect(() => {
@@ -167,13 +82,22 @@ export function Ads() {
   }, []);
 
   const refreshAds = async () => {
-    const result = await fetchAds();
-    if (result !== undefined) {
-      setAds(result);
-      adsCacheRef.current = result;
-      return result;
+    invalidateAds();
+    return ads;
+  };
+
+  const handleSync = async () => {
+    if (contextInvalidated) { window.location.reload(); return; }
+    setSyncError(null);
+    setIsBackgroundSyncing(true);
+    try {
+      await syncAds(() => {});
+      invalidateAds();
+    } catch (e: any) {
+      setSyncError(e.message || 'Synchronisierung fehlgeschlagen');
+    } finally {
+      setIsBackgroundSyncing(false);
     }
-    return [];
   };
 
   const handleConnectEbay = () => {
@@ -185,43 +109,14 @@ export function Ads() {
     window.open(`${apiBase}/ebay/connect?token=${token}`, 'eBay Login', `width=${width},height=${height},left=${left},top=${top}`);
   };
 
-  const handleConnectVinted = () => {
-    setVintedEmail('');
-    setVintedPassword('');
-    setVintedConnectError(null);
-    setIsVintedModalOpen(true);
-  };
-
-  const submitVintedConnection = async () => {
-    setIsConnectingVinted(true);
-    setVintedConnectError(null);
-    try {
-      const apiBase = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
-      const token = localStorage.getItem('kb_session') || localStorage.getItem('token');
-      const res = await fetch(`${apiBase}/vinted/credentials`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ email: vintedEmail, password: vintedPassword }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Fehler beim Verbinden mit Vinted');
-      setIsVintedConnected(true);
-      setIsVintedModalOpen(false);
-    } catch (err: any) {
-      setVintedConnectError(err.message || 'Netzwerkfehler');
-    } finally {
-      setIsConnectingVinted(false);
-    }
-  };
-
   const dismissBanner = () => {
     localStorage.setItem('platform_banner_dismissed', 'true');
     setIsBannerDismissed(true);
   };
 
-  const showBanner = !isBannerDismissed && (!isEbayConnected || !isVintedConnected) && !isLoading;
+  const showBanner = !isBannerDismissed && !isEbayConnected && !isLoading;
 
-  const sortedAds = [...displayAds].sort((a, b) => {
+  const sortedAds = [...ads].sort((a, b) => {
     const viewsA = typeof a.views === 'number' ? a.views : parseInt(a.views) || 0;
     const viewsB = typeof b.views === 'number' ? b.views : parseInt(b.views) || 0;
     return sortBy === 'views-desc' ? viewsB - viewsA : viewsA - viewsB;
@@ -229,99 +124,15 @@ export function Ads() {
 
   return (
     <div className="w-full relative">
-      {isPostingVinted && (
-        <div className="bg-pink-50 border border-pink-200 rounded-sm p-4 flex items-center justify-between shadow-sm animate-pulse mb-6">
-          <div className="flex items-center gap-3">
-            <Loader2 className="w-5 h-5 text-pink-600 animate-spin shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-pink-800">Vinted Cross-Posting läuft...</p>
-              <p className="text-xs text-pink-600">Bitte schließe dieses Fenster nicht. Der Browser-Automat veröffentlicht dein Inserat im Hintergrund.</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Vinted Connection Modal */}
-      {isVintedModalOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-sm shadow-xl w-full max-w-md overflow-hidden">
-            <div className="px-5 py-4 border-b border-[#e5e5e5] flex justify-between items-center bg-[#F9FAFB]">
-              <h3 className="font-bold text-[16px] text-gray-800">Vinted verbinden</h3>
-              <button onClick={() => setIsVintedModalOpen(false)} className="text-gray-500 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-5">
-              <p className="text-[13px] text-gray-600 mb-4">
-                Verbinde dein Vinted-Konto, um Anzeigen direkt aus dem Dashboard auf Vinted zu cross-posten.
-              </p>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-[12px] font-semibold text-gray-700 mb-1">Vinted E-Mail oder Benutzername</label>
-                  <input
-                    type="text"
-                    value={vintedEmail}
-                    onChange={(e) => setVintedEmail(e.target.value)}
-                    className="w-full p-2.5 text-[14px] border border-gray-300 rounded-sm focus:border-ka-green focus:ring-1 focus:ring-ka-green outline-none"
-                    placeholder="E-Mail eingeben"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[12px] font-semibold text-gray-700 mb-1">Passwort</label>
-                  <input
-                    type="password"
-                    value={vintedPassword}
-                    onChange={(e) => setVintedPassword(e.target.value)}
-                    className="w-full p-2.5 text-[14px] border border-gray-300 rounded-sm focus:border-ka-green focus:ring-1 focus:ring-ka-green outline-none"
-                    placeholder="Passwort eingeben"
-                  />
-                </div>
-                <div className="bg-green-50 border border-green-100 p-3 rounded-sm flex items-start gap-2 mt-2">
-                  <Lock className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                  <p className="text-[11px] text-green-800 leading-relaxed">
-                    Deine Zugangsdaten werden mit starker AES-256 Verschlüsselung auf unseren Servern gespeichert und ausschließlich für automatisierte Cross-Posts verwendet.
-                  </p>
-                </div>
-              </div>
-              {vintedConnectError && (
-                <div className="mt-4 bg-red-50 text-red-600 text-[13px] p-3 rounded-sm flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <p>{vintedConnectError}</p>
-                </div>
-              )}
-            </div>
-            <div className="px-5 py-4 border-t border-[#e5e5e5] bg-[#F9FAFB] flex justify-end gap-3">
-              <button onClick={() => setIsVintedModalOpen(false)} className="px-4 py-2 text-[14px] font-medium text-gray-600 hover:text-gray-800 transition-colors" disabled={isConnectingVinted}>
-                Abbrechen
-              </button>
-              <button
-                onClick={submitVintedConnection}
-                disabled={!vintedEmail || !vintedPassword || isConnectingVinted}
-                className="bg-pink-600 hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-sm font-semibold text-[14px] flex items-center gap-2 transition-colors"
-              >
-                {isConnectingVinted && <Loader2 className="w-4 h-4 animate-spin" />}
-                Verbinden
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Plattformen verbinden Banner */}
       {showBanner && (
         <div className="bg-[#f2f7fb] border border-[#d1e5f5] rounded-sm p-4 mb-6 flex items-start justify-between relative shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div>
               <p className="text-[14px] font-semibold text-[#0064d2] mb-1">
-                Verbinde Vinted und eBay um deine Anzeigen auf mehreren Plattformen zu inserieren
+                Verbinde eBay um deine Anzeigen auf mehreren Plattformen zu inserieren
               </p>
               <div className="flex gap-2 mt-2">
-                {!isVintedConnected && (
-                  <button onClick={handleConnectVinted} className="border border-[#ccc] rounded-sm py-1.5 px-3 font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-all text-gray-700 bg-white hover:border-pink-500 hover:text-pink-600 hover:bg-pink-50/50 cursor-pointer shadow-sm hover:shadow-md">
-                    <VintedLogo />
-                    <span>Vinted verbinden</span>
-                  </button>
-                )}
                 {!isEbayConnected && (
                   <button onClick={handleConnectEbay} className="border border-[#ccc] rounded-sm py-1.5 px-3 font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-all text-gray-700 bg-white hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50/50 cursor-pointer shadow-sm hover:shadow-md">
                     <EbayLogo />
@@ -349,22 +160,24 @@ export function Ads() {
             </select>
           </div>
 
-          {isBackgroundLoading && (
-            <div className="flex items-center gap-1.5 text-xs text-gray-500 py-1.5 px-1 animate-pulse shrink-0">
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />
-              <span className="hidden md:inline">Datenbank-Check...</span>
+          {(isFetching || isBackgroundSyncing) && ads.length > 0 && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-500 py-1.5 px-1 shrink-0">
+              <RefreshCw className="w-3 h-3 animate-spin text-gray-400" />
+              <span className="hidden md:inline text-[11px]">Aktualisierung...</span>
             </div>
           )}
+          {contextInvalidated && (
+            <span className="text-[12px] text-orange-600 bg-orange-50 border border-orange-200 px-2 py-1 rounded-sm">
+              Erweiterung neu geladen — bitte Seite aktualisieren
+            </span>
+          )}
           <button
-            onClick={() => {
-              setIsBackgroundLoading(true);
-              syncAds(setAds).finally(() => { setIsBackgroundLoading(false); invalidateAds(); });
-            }}
-            disabled={isSyncing}
+            onClick={handleSync}
+            disabled={isSyncing || isBackgroundSyncing}
             className="flex items-center gap-1.5 bg-[#f2f2f2] hover:bg-[#e6e6e6] border border-[#ccc] text-[#333] font-medium py-1.5 px-3 rounded-sm transition-colors text-[13px] disabled:opacity-50"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Synchronisieren</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${(isSyncing || isBackgroundSyncing) ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">{contextInvalidated ? 'Seite neu laden' : 'Synchronisieren'}</span>
           </button>
           <button
             onClick={() => navigate('/neue-anzeige-mit-ki-erstellen')}
@@ -376,44 +189,73 @@ export function Ads() {
         </div>
       </div>
 
+      {/* Sync error banner */}
+      {syncError && (
+        <div className="flex items-center justify-between gap-3 bg-orange-50 border border-orange-200 rounded-sm px-4 py-2.5 mb-4 text-[13px] text-orange-800">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{syncError}</span>
+          </div>
+          <button onClick={handleSync} className="font-semibold underline hover:no-underline shrink-0">
+            Erneut versuchen
+          </button>
+        </div>
+      )}
+
+      {/* Fetch error banner (React Query error) */}
+      {isError && !isLoading && (
+        <div className="flex items-center justify-between gap-3 bg-red-50 border border-red-200 rounded-sm px-4 py-2.5 mb-4 text-[13px] text-red-800">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{(error as Error)?.message || 'Fehler beim Laden der Anzeigen'}</span>
+          </div>
+          <button onClick={() => invalidateAds()} className="font-semibold underline hover:no-underline shrink-0">
+            Erneut versuchen
+          </button>
+        </div>
+      )}
+
       {/* Ad list */}
       {isLoading ? (
-        <div className="text-center py-12 text-[#666]">Lade Anzeigen...</div>
-      ) : displayAds.length === 0 ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-white border border-[#e5e5e5] h-[120px] rounded-sm animate-pulse">
+              <div className="flex gap-3 p-3 h-full">
+                <div className="w-[130px] bg-gray-200 rounded-sm shrink-0" />
+                <div className="flex-1 space-y-2 py-1">
+                  <div className="h-4 bg-gray-200 rounded w-3/4" />
+                  <div className="h-3 bg-gray-100 rounded w-1/2" />
+                  <div className="h-3 bg-gray-100 rounded w-1/3" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : ads.length === 0 ? (
         <div className="text-center py-12 text-[#666]">
-          Keine Anzeigen gefunden. Klicke auf &quot;Synchronisieren&quot;, um deine Anzeigen von Kleinanzeigen abzurufen.
+          <p className="mb-3">Keine Anzeigen gefunden.</p>
+          <button
+            onClick={handleSync}
+            disabled={isSyncing || isBackgroundSyncing}
+            className="inline-flex items-center gap-1.5 bg-[#A8C300] hover:bg-[#96ae00] text-white font-medium py-2 px-4 rounded-sm transition-colors text-[13px] disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+            Jetzt synchronisieren
+          </button>
         </div>
       ) : (
         <AdGrid
           ads={sortedAds}
           onAction={(action, adId, successMsg) => handleAction(action, adId, successMsg, refreshAds)}
           onAIOptimize={(adId) => {
-            const targetAd = displayAds.find((a) => a.id === adId);
+            const targetAd = ads.find((a: any) => a.id === adId);
             if (targetAd) kiOpt.handleStartOptimization(targetAd);
           }}
           onPriceCheck={(adId, title) => handlePriceCheck(adId, title)}
           onSchedule={(adId) => setScheduleModalAd(adId)}
-          onVintedCrossPost={async (adId, reserveAfterPost) => {
-            setIsPostingVinted(true);
-            try {
-              const res = await handleVintedCrossPost(adId);
-              if (res.success) {
-                if (reserveAfterPost) {
-                  await handleAction('reserve', adId, 'Anzeige erfolgreich reserviert', refreshAds);
-                } else {
-                  refreshAds();
-                }
-              }
-              return res;
-            } finally {
-              setIsPostingVinted(false);
-            }
-          }}
           onEbayCrossPost={handleEbayCrossPost}
-          onConnectVinted={handleConnectVinted}
           onConnectEbay={handleConnectEbay}
           isEbayConnected={isEbayConnected}
-          isVintedConnected={isVintedConnected}
           onUpdateFields={updateAdFields}
           aiBlocked={isBlocked}
           aiWarning={isWarning}
@@ -460,6 +302,7 @@ export function Ads() {
         onApplyTitle={kiOpt.handleApplyTitle}
         onApplyDescription={kiOpt.handleApplyDescription}
         onApplyAll={kiOpt.handleApplyAll}
+        onPriceCheck={handlePriceCheck}
       />
 
       {/* Backdrop for panel */}

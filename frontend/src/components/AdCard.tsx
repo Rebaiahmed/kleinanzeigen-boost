@@ -18,34 +18,13 @@ export interface AdCardProps {
   onAIOptimize: (adId: string) => void;
   onPriceCheck: (adId: string, title: string) => Promise<{ suggestedPrice: number; reasoning: string } | null>;
   onSchedule: (adId: string) => void;
-  onVintedCrossPost: (adId: string, reserveAfterPost: boolean) => Promise<any>;
   onEbayCrossPost: (adId: string) => Promise<any>;
   aiBlocked?: boolean;
   aiWarning?: boolean;
-  onConnectVinted: () => void;
   onConnectEbay: () => void;
   isEbayConnected?: boolean;
-  isVintedConnected?: boolean;
   onUpdateFields?: (adId: string, fields: any) => Promise<boolean>;
 }
-
-// Inline Vinted Logo (green, 14px size)
-const VintedLogo = () => (
-  <svg 
-    viewBox="0 0 100 100" 
-    className="w-3.5 h-3.5 shrink-0" 
-    fill="none" 
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path 
-      d="M20 15 L45 80 L55 80 L80 15" 
-      stroke="#09B0BA" 
-      strokeWidth="14" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-    />
-  </svg>
-);
 
 // Inline eBay Logo (small text-based multi-color SVG matching brand colors)
 const EbayLogo = () => (
@@ -135,12 +114,9 @@ export function AdCard({
   onAIOptimize,
   onPriceCheck,
   onSchedule,
-  onVintedCrossPost,
   onEbayCrossPost,
-  onConnectVinted,
   onConnectEbay,
   isEbayConnected,
-  isVintedConnected,
   onUpdateFields,
   aiBlocked = false,
   aiWarning = false,
@@ -150,11 +126,10 @@ export function AdCard({
   const [isPostingEbay, setIsPostingEbay] = useState(false);
   const [ebayError, setEbayError] = useState<string | null>(null);
 
-  // Vinted State
-  const [showVintedConfirm, setShowVintedConfirm] = useState(false);
-  const [isPostingVinted, setIsPostingVinted] = useState(false);
-  const [vintedError, setVintedError] = useState<string | null>(null);
-  const [reserveAfterPost, setReserveAfterPost] = useState(true);
+  // Local state for optimistic UI
+  const [autoRepostChecked, setAutoRepostChecked] = useState(ad.autoRepost || false);
+  const [localNextRepostAt, setLocalNextRepostAt] = useState<string | null>(ad.nextRepostAt || null);
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
 
   // Popover & AI timing states
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -166,17 +141,28 @@ export function AdCard({
   const [aiError, setAiError] = useState<string | null>(null);
 
   const handleCheckboxChange = () => {
-    if (ad.autoRepost) {
-      if (onUpdateFields) {
-        onUpdateFields(ad.id, { autoRepost: false });
-      } else {
-        onAction('toggle-repost', ad.id, 'Auto-Repost Status aktualisiert');
-      }
-      setIsPopoverOpen(false);
-      setShowAiSection(false);
+    if (autoRepostChecked) {
+      // Show confirmation modal before deactivating
+      setShowDeactivateModal(true);
     } else {
+      // Activating: open interval popover
+      setAutoRepostChecked(true);
       setIsPopoverOpen(true);
       setShowAiSection(false);
+    }
+  };
+
+  const handleConfirmDeactivate = async () => {
+    setShowDeactivateModal(false);
+    setAutoRepostChecked(false);
+    setLocalNextRepostAt(null);
+    setIsPopoverOpen(false);
+    setShowAiSection(false);
+    if (onUpdateFields) {
+      const ok = await onUpdateFields(ad.id, { autoRepost: false });
+      if (!ok) setAutoRepostChecked(true); // revert on failure
+    } else {
+      onAction('toggle-repost', ad.id, 'Auto-Repost deaktiviert');
     }
   };
 
@@ -223,12 +209,16 @@ export function AdCard({
     setIsSavingInterval(true);
     try {
       const nextRepostAt = calculateNextOccurrence(aiSuggestion.bestDayOfWeek, aiSuggestion.bestHour);
-      await onUpdateFields(ad.id, {
+      const ok = await onUpdateFields(ad.id, {
         autoRepost: true,
-        repostIntervalMinutes: 10080, // 7 Tage
+        repostIntervalMinutes: 10080,
         nextRepostAt,
       });
-      setIsPopoverOpen(false);
+      if (ok) {
+        setLocalNextRepostAt(nextRepostAt);
+        setAutoRepostChecked(true);
+        setIsPopoverOpen(false);
+      }
     } catch (err) {
       console.error('Failed to apply AI suggestion:', err);
     } finally {
@@ -241,21 +231,22 @@ export function AdCard({
     setIsSavingInterval(true);
     try {
       const nextRepostAt = new Date(Date.now() + selectedInterval * 60 * 1000).toISOString();
-      await onUpdateFields(ad.id, {
+      const ok = await onUpdateFields(ad.id, {
         autoRepost: true,
         repostIntervalMinutes: selectedInterval,
         nextRepostAt,
       });
-      setIsPopoverOpen(false);
+      if (ok) {
+        setLocalNextRepostAt(nextRepostAt);
+        setAutoRepostChecked(true);
+        setIsPopoverOpen(false);
+      }
     } catch (err) {
       console.error('Failed to save interval:', err);
     } finally {
       setIsSavingInterval(false);
     }
   };
-
-  const vintedConnected = isVintedConnected ?? false;
-  const isVintedPosted = !!ad.vintedId || !!ad.vintedUrl;
 
   const ebayConnected = isEbayConnected ?? false;
   const isEbayPosted = !!ad.ebayListingId || !!ad.ebayUrl;
@@ -289,38 +280,9 @@ export function AdCard({
     }
   };
 
-  const handleVintedClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (!vintedConnected) {
-      onConnectVinted();
-    } else if (isVintedPosted && ad.vintedUrl) {
-      window.open(ad.vintedUrl, '_blank');
-    } else {
-      setShowVintedConfirm(true);
-    }
-  };
-
-  const handleConfirmVintedCrossPost = async () => {
-    setShowVintedConfirm(false);
-    setIsPostingVinted(true);
-    setVintedError(null);
-    try {
-      const res = await onVintedCrossPost(ad.id, reserveAfterPost);
-      if (!res.success) {
-        setVintedError(res.error || 'Fehler beim Posten auf Vinted.');
-        setTimeout(() => setVintedError(null), 6000);
-      }
-    } catch (err) {
-      setVintedError('Netzwerkfehler beim Vinted-Posting.');
-      setTimeout(() => setVintedError(null), 6000);
-    } finally {
-      setIsPostingVinted(false);
-    }
-  };
-
   // Auto-Repost formatting
-  const nextFormatted = ad.nextRepostAt
-    ? new Date(ad.nextRepostAt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  const nextFormatted = localNextRepostAt
+    ? new Date(localNextRepostAt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
     : (ad.next || 'Nicht konfiguriert');
 
   return (
@@ -403,16 +365,16 @@ export function AdCard({
               <input
                 type="checkbox"
                 className="mt-0.5 h-3.5 w-3.5 text-ka-green border-[#ccc] rounded-sm focus:ring-ka-green cursor-pointer"
-                checked={ad.autoRepost || false}
+                checked={autoRepostChecked}
                 onChange={handleCheckboxChange}
               />
               <div className="text-[13px]">
                 <span className="block font-semibold text-[#333] group-hover:text-ka-green transition-colors">Auto-Repost</span>
                 <span 
-                  onClick={() => ad.autoRepost && setIsPopoverOpen(true)}
-                  className={`text-[12px] block ${ad.autoRepost ? 'text-[#666] hover:text-[#A8C300] hover:underline cursor-pointer' : 'text-[#888]'}`}
+                  onClick={() => autoRepostChecked && setIsPopoverOpen(true)}
+                  className={`text-[12px] block ${autoRepostChecked ? 'text-[#666] hover:text-[#A8C300] hover:underline cursor-pointer' : 'text-[#888]'}`}
                 >
-                  Nächster: {formatNextRepostGerman(ad.nextRepostAt, ad.autoRepost)}
+                  Nächster: {formatNextRepostGerman(localNextRepostAt, autoRepostChecked)}
                 </span>
                 
                 {/* Tiered statistics information */}
@@ -504,7 +466,7 @@ export function AdCard({
             </label>
 
             {/* KI-Zeitvorschlag Button */}
-            {ad.autoRepost && (
+            {autoRepostChecked && (
               <button
                 type="button"
                 disabled={(ad.trackedRepostsCount || 0) < 5}
@@ -528,7 +490,7 @@ export function AdCard({
                 <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wide">Repost-Intervall</span>
                 <button 
                   type="button"
-                  onClick={() => setIsPopoverOpen(false)} 
+                  onClick={() => { setIsPopoverOpen(false); if (!ad.autoRepost) setAutoRepostChecked(false); }}
                   className="text-gray-400 hover:text-gray-600 focus:outline-none"
                 >
                   <X className="w-4 h-4" />
@@ -553,11 +515,21 @@ export function AdCard({
                 ))}
               </div>
 
+              {/* Next repost preview */}
+              <div className="text-[11px] text-gray-500 bg-gray-50 border border-gray-200 rounded-sm px-2.5 py-1.5 mb-3">
+                Nächster Repost: <span className="font-semibold text-gray-700">
+                  {formatNextRepostGerman(
+                    new Date(Date.now() + selectedInterval * 60 * 1000).toISOString(),
+                    true
+                  )}
+                </span>
+              </div>
+
               {/* Buttons */}
               <div className="flex justify-end gap-2 mb-3">
                 <button
                   type="button"
-                  onClick={() => setIsPopoverOpen(false)}
+                  onClick={() => { setIsPopoverOpen(false); if (!ad.autoRepost) setAutoRepostChecked(false); }}
                   className="px-3 py-1.5 border border-gray-300 rounded-sm text-gray-700 font-semibold text-[11px] hover:bg-gray-50 transition-colors"
                 >
                   Abbrechen
@@ -647,51 +619,19 @@ export function AdCard({
             <span>KI-Opt</span>
           </button>
 
-          {/* Vinted */}
+          {/* Vinted — coming soon */}
           <div className="relative flex-1 group">
             <button
-              onClick={handleVintedClick}
-              disabled={isPostingVinted}
-              title={!vintedConnected ? "Verwende die Schaltfläche oben, um dieses Portal zu verbinden." : isVintedPosted ? "Auf Vinted ansehen →" : "Klicken, um diese Anzeige sofort auf dieses Portal zu spiegeln."}
-              className={`w-full border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors relative ${
-                !vintedConnected
-                  ? "border-gray-200 text-gray-400 bg-gray-50 hover:bg-gray-100 cursor-pointer"
-                  : isVintedPosted
-                    ? "border-green-500 text-green-700 bg-green-50/20 hover:bg-green-50 cursor-pointer"
-                    : "border-gray-300 text-gray-700 hover:border-pink-500 hover:text-pink-600 hover:bg-pink-50 cursor-pointer"
-              }`}
+              disabled
+              title="Vinted-Integration kommt in Kürze"
+              className="w-full border border-gray-200 rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 text-gray-400 bg-gray-50 cursor-not-allowed"
             >
-              {isPostingVinted ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-pink-600" />
-              ) : (
-                <div className="relative flex items-center">
-                  <VintedLogo />
-                  {!vintedConnected && (
-                    <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
-                      <Lock className="w-2 h-2 text-gray-500" />
-                    </div>
-                  )}
-                  {isVintedPosted && (
-                    <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full border border-white" />
-                  )}
-                </div>
-              )}
-              <span className={!vintedConnected ? 'text-gray-400 opacity-80' : ''}>
-                {isVintedPosted ? 'Gepostet' : 'Vinted'}
-              </span>
+              <span>Vinted</span>
+              <span>🚧</span>
             </button>
-
-            {vintedError && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-red-600 text-white text-[10px] py-1.5 px-2.5 rounded-sm shadow-xl z-20 w-48 text-center animate-in fade-in slide-in-from-bottom-1">
-                <span>{vintedError}</span>
-                <button 
-                  onClick={() => setVintedError(null)} 
-                  className="absolute top-0.5 right-1 font-bold text-white hover:text-red-200"
-                >
-                  ×
-                </button>
-              </div>
-            )}
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block bg-gray-800 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap z-10 pointer-events-none">
+              Vinted-Integration kommt in Kürze
+            </div>
           </div>
 
           {/* eBay */}
@@ -792,56 +732,15 @@ export function AdCard({
               <span>KI-Optimierung starten</span>
             </button>
 
-            {/* Vinted */}
-            <div className="w-full relative">
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (!vintedConnected) {
-                    setVintedError("Vinted ist nicht verbunden. Bitte verbinde es in den Einstellungen.");
-                    setTimeout(() => setVintedError(null), 5000);
-                  } else if (isVintedPosted && ad.vintedUrl) {
-                    window.open(ad.vintedUrl, '_blank');
-                    setIsBottomSheetOpen(false);
-                  } else {
-                    setIsBottomSheetOpen(false);
-                    setShowVintedConfirm(true);
-                  }
-                }}
-                disabled={isPostingVinted}
-                className={`w-full py-3 px-4 rounded-lg font-semibold text-sm transition-colors flex items-center justify-center gap-2 border ${
-                  !vintedConnected
-                    ? "border-gray-200 text-gray-400 bg-gray-50/50 cursor-pointer"
-                    : isVintedPosted
-                      ? "border-green-500 text-green-700 bg-green-50/30 hover:bg-green-50 cursor-pointer"
-                      : "border-gray-300 text-gray-700 hover:border-pink-500 hover:text-pink-600 hover:bg-pink-50 cursor-pointer"
-                }`}
-              >
-                {isPostingVinted ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-pink-600" />
-                ) : (
-                  <VintedLogo />
-                )}
-                <span>
-                  {!vintedConnected 
-                    ? "Vinted (nicht verbunden)" 
-                    : isVintedPosted 
-                      ? "Auf Vinted (Gepostet)" 
-                      : "Auf Vinted cross-posten"}
-                </span>
-              </button>
-              {vintedError && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-red-600 text-white text-[10px] py-1.5 px-2.5 rounded-sm shadow-xl z-20 w-48 text-center animate-in fade-in slide-in-from-bottom-1">
-                  <span>{vintedError}</span>
-                  <button 
-                    onClick={() => setVintedError(null)} 
-                    className="absolute top-0.5 right-1 font-bold text-white hover:text-red-200"
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
-            </div>
+            {/* Vinted — coming soon */}
+            <button
+              disabled
+              className="w-full py-3 px-4 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 border border-gray-200 text-gray-400 bg-gray-50/50 cursor-not-allowed"
+              title="Vinted-Integration kommt in Kürze"
+            >
+              <span>Vinted 🚧</span>
+              <span className="text-xs font-normal">(kommt bald)</span>
+            </button>
 
             {/* eBay */}
             <button
@@ -910,42 +809,26 @@ export function AdCard({
         </div>
       )}
 
-      {/* Vinted Cross-Post Confirmation Modal */}
-      {showVintedConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xxs">
-          <div className="bg-white rounded-sm border border-gray-200 shadow-2xl p-5 w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <h4 className="text-[15px] font-bold text-gray-800 flex items-center gap-1.5 mb-2">
-              <VintedLogo /> Inserieren bestätigen
-            </h4>
-            <p className="text-[13px] text-gray-600 mb-3 leading-normal">
-              Möchtest du das Produkt <strong className="text-gray-800" dangerouslySetInnerHTML={{ __html: ad.title }} /> auf Vinted veröffentlichen?
+      {/* Auto-Repost deactivation confirmation modal */}
+      {showDeactivateModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-sm shadow-xl max-w-sm w-full p-5">
+            <h3 className="text-[15px] font-bold text-[#333] mb-2">Auto-Repost deaktivieren?</h3>
+            <p className="text-[13px] text-[#666] mb-5">
+              Alle geplanten Reposts für diese Anzeige werden abgebrochen.
             </p>
-            
-            <div className="flex items-start gap-2 mb-4 bg-pink-50/30 border border-pink-100/50 p-2.5 rounded-sm">
-              <input
-                type="checkbox"
-                id="reserve-after-post"
-                checked={reserveAfterPost}
-                onChange={(e) => setReserveAfterPost(e.target.checked)}
-                className="w-4 h-4 text-[#A8C300] border-gray-300 rounded focus:ring-[#A8C300] shrink-0 mt-0.5 cursor-pointer"
-              />
-              <label htmlFor="reserve-after-post" className="text-[12px] text-gray-655 select-none cursor-pointer leading-tight">
-                Inserat nach dem Veröffentlichen als reserviert markieren (empfohlen für Einzelstücke)
-              </label>
-            </div>
-
             <div className="flex justify-end gap-2">
               <button
-                onClick={() => setShowVintedConfirm(false)}
+                onClick={() => setShowDeactivateModal(false)}
                 className="px-3 py-1.5 text-[12px] font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-sm transition-colors"
               >
                 Abbrechen
               </button>
               <button
-                onClick={handleConfirmVintedCrossPost}
-                className="px-3 py-1.5 text-[12px] font-bold bg-[#A8C300] hover:bg-[#96ae00] text-white rounded-sm transition-colors"
+                onClick={handleConfirmDeactivate}
+                className="px-3 py-1.5 text-[12px] font-bold bg-red-500 hover:bg-red-600 text-white rounded-sm transition-colors"
               >
-                Auf Vinted posten
+                Deaktivieren
               </button>
             </div>
           </div>

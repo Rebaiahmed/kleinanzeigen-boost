@@ -86,7 +86,7 @@ interface UploadedPhoto {
 
 export function CreateWithAi() {
   const navigate = useNavigate();
-  const { saveDraft, handleVintedCrossPost, handleEbayCrossPost, handlePriceCheck } = useAdsActions();
+  const { saveDraft, handleEbayCrossPost, handlePriceCheck } = useAdsActions();
   const { callsCount, limit, remaining, pct, isWarning, isBlocked, incrementUsage } = useAiUsage();
 
   // Navigation step
@@ -122,11 +122,8 @@ export function CreateWithAi() {
   const [isSaving, setIsSaving] = useState(false);
 
   // Platform Connection warnings / states
-  const [vintedPrompt, setVintedPrompt] = useState(false);
   const [ebayPrompt, setEbayPrompt] = useState(false);
-  const [vintedConnected, setVintedConnected] = useState(false);
   const [ebayConnected, setEbayConnected] = useState(false);
-  const [isPostingVinted, setIsPostingVinted] = useState(false);
   const [isPostingEbay, setIsPostingEbay] = useState(false);
 
   // Load platform connection status on mount
@@ -134,15 +131,6 @@ export function CreateWithAi() {
     const token = localStorage.getItem('kb_session') || localStorage.getItem('token');
     if (token) {
       const apiBase = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
-      fetch(`${apiBase}/vinted/status`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          setVintedConnected(!!data.connected);
-        })
-        .catch(() => {});
-
       fetch(`${apiBase}/ebay/status`, {
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -321,52 +309,6 @@ export function CreateWithAi() {
     }
   };
 
-  const handlePostVinted = async () => {
-    if (!vintedConnected) {
-      setVintedPrompt(true);
-      return;
-    }
-
-    setIsPostingVinted(true);
-    setErrorMessage(null);
-
-    const adDraft = {
-      title,
-      category,
-      price: `${price} €`,
-      description,
-      brand,
-      condition,
-      keyFeatures,
-      image: photos.length > 0 ? photos[0].preview : 'https://via.placeholder.com/150/f5f5f5/a0a0a0?text=No+Image',
-      date: new Date().toLocaleDateString('de-DE'),
-      views: 0,
-      favorites: 0,
-      messages: 0,
-      autoRepost: false
-    };
-
-    try {
-      const draftResult = await saveDraft(adDraft);
-      if (!draftResult || !draftResult.success) {
-        throw new Error("Fehler beim Speichern des Entwurfs vor dem Posten auf Vinted.");
-      }
-
-      const adId = draftResult.ad.id;
-
-      const crossPostResult = await handleVintedCrossPost(adId);
-      if (crossPostResult.success) {
-        navigate('/meine-anzeigen');
-      } else {
-        setErrorMessage(crossPostResult.error || "Fehler beim Posten auf Vinted.");
-      }
-    } catch (err: any) {
-      setErrorMessage(err.message || "Fehler beim Cross-Posting.");
-    } finally {
-      setIsPostingVinted(false);
-    }
-  };
-
   const handlePostEbay = async () => {
     if (!ebayConnected) {
       setEbayPrompt(true);
@@ -437,22 +379,6 @@ export function CreateWithAi() {
 
   return (
     <div className="w-full max-w-[680px] mx-auto py-4">
-      {isPostingVinted && (
-        <div className="bg-pink-50 border border-pink-200 rounded-sm p-4 flex items-center justify-between shadow-sm animate-pulse mb-6">
-          <div className="flex items-center gap-3">
-            <Loader2 className="w-5 h-5 text-pink-600 animate-spin shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-pink-800">
-                Vinted Cross-Posting läuft...
-              </p>
-              <p className="text-xs text-pink-600">
-                Bitte schließe dieses Fenster nicht. Der Browser-Automat veröffentlicht dein Inserat im Hintergrund.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-      
       {/* Return Navigation Button */}
       <div className="mb-4">
         <button 
@@ -837,12 +763,6 @@ export function CreateWithAi() {
                 Inseriere dieses Angebot per Mausklick zeitgleich auf weiteren Plattformen (entwirft und postet automatisch).
               </p>
 
-              {vintedPrompt && (
-                <div className="mb-3 p-3 bg-pink-50 border border-pink-200 text-pink-700 rounded-md text-xs font-medium animate-in slide-in-from-top-2 duration-200 flex justify-between items-center">
-                  <span>Bitte verbinde zuerst dein Vinted-Konto in den Einstellungen.</span>
-                  <button onClick={() => setVintedPrompt(false)} className="text-pink-600"><X className="w-3.5 h-3.5" /></button>
-                </div>
-              )}
               {ebayPrompt && (
                 <div className="mb-3 p-3 bg-blue-50 border border-blue-200 text-blue-700 rounded-md text-xs font-medium animate-in slide-in-from-top-2 duration-200 flex justify-between items-center">
                   <span>Bitte verbinde zuerst dein eBay-Konto in den Einstellungen.</span>
@@ -851,24 +771,19 @@ export function CreateWithAi() {
               )}
 
               <div className="grid grid-cols-2 gap-3">
-                {/* Post Vinted */}
+                {/* Vinted — coming soon */}
                 <button
-                  onClick={handlePostVinted}
-                  disabled={isPostingVinted || isPostingEbay || isSaving || title.length === 0 || description.length < 80 || title.length > 60}
-                  className="flex justify-center items-center gap-1.5 text-xs font-semibold text-pink-700 border border-pink-200 hover:border-pink-300 hover:bg-pink-50/20 disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200 rounded py-2.5 transition-colors"
+                  disabled
+                  title="Vinted-Integration kommt in Kürze"
+                  className="flex justify-center items-center gap-1.5 text-xs font-semibold text-gray-400 border border-gray-200 bg-gray-50 rounded py-2.5 cursor-not-allowed"
                 >
-                  {isPostingVinted ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-pink-600" />
-                  ) : (
-                    <VintedLogo />
-                  )}
-                  <span>{isPostingVinted ? 'Postet...' : 'Auf Vinted posten'}</span>
+                  <span>Vinted 🚧</span>
                 </button>
 
                 {/* Post eBay */}
                 <button
                   onClick={handlePostEbay}
-                  disabled={isPostingVinted || isPostingEbay || isSaving || title.length === 0 || description.length < 80 || title.length > 60}
+                  disabled={isPostingEbay || isSaving || title.length === 0 || description.length < 80 || title.length > 60}
                   className="flex justify-center items-center gap-1.5 text-xs font-semibold text-blue-700 border border-blue-200 hover:border-blue-300 hover:bg-blue-50/20 disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200 rounded py-2.5 transition-colors"
                 >
                   {isPostingEbay ? (

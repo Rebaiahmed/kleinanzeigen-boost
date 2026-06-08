@@ -53,6 +53,36 @@ export class SchedulerService {
     return null;
   }
 
+  /**
+   * Confirms whether a session is genuinely expired before halting a user's
+   * whole batch. A single SESSION_EXPIRED from the worker can be a false
+   * positive (garbled response, transient worker hiccup); halting on it would
+   * skip the user's other still-valid ads.
+   *
+   * Note: Kleinanzeigen sessions cannot be refreshed server-side — the cookies
+   * come from the extension handshake. So this re-fetches the freshest cookies
+   * (in case the user re-logged in via the extension) and does one lightweight
+   * validation call. Returns true only when expiry is confirmed.
+   */
+  private async confirmSessionExpired(userId: string, adId: string): Promise<boolean> {
+    const freshCookies = await this.sessionService.getDecryptedCookies(userId);
+    if (freshCookies.length === 0) return true; // no cookies at all — definitely gone
+
+    try {
+      const result = await this.automationService.callAutomationWorker('scrape-views', { userId, cookies: freshCookies, adId });
+      // Any non-erroring response means the session still authenticates.
+      if (result && (result.success || typeof result.views === 'number')) {
+        return false;
+      }
+      // Ambiguous response — don't confirm expiry, treat as transient.
+      return false;
+    } catch (e: any) {
+      // Only a repeated SESSION_EXPIRED confirms the session is truly dead.
+      // Other errors (network/timeout) are transient — don't halt the batch.
+      return e.message === 'SESSION_EXPIRED';
+    }
+  }
+
   async getStatus() {
     const db = this.firebaseService.firestore;
     const doc = await db.collection('meta').doc('schedulerMeta').get();
@@ -194,9 +224,19 @@ export class SchedulerService {
         const adRef = db.collection('users').doc(userId).collection('ads').doc(adId);
 
         if (error.message === 'SESSION_EXPIRED') {
-          await db.collection('users').doc(userId).update({ accountStatus: 'expired' });
+          // Confirm before halting — a single SESSION_EXPIRED can be a false positive.
+          const reallyExpired = await this.confirmSessionExpired(userId, adId);
           await adRef.update({ status: AdStatus.ACTIVE, pendingRepostSince: null });
-          break; // Stop processing this user — session is gone
+
+          if (reallyExpired) {
+            await db.collection('users').doc(userId).update({ accountStatus: 'expired' });
+            this.logger.warn(`Session confirmed expired for user ${userId} — halting remaining reposts`);
+            break; // All ads share these cookies; no point continuing.
+          }
+
+          // False positive — session still authenticates. Skip this ad, keep going.
+          this.logger.warn(`SESSION_EXPIRED for ${adId} not confirmed on re-check — continuing with other ads`);
+          continue;
         }
 
         // Track consecutive failures per ad. After 3, disable auto-repost and notify.

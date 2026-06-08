@@ -190,7 +190,25 @@ export class AuthService {
       marketplaceCookies: this.encryptData(JSON.stringify(cookies)),
     }, { merge: true });
 
+    // Fresh cookies → clear any prior 'expired' flag so the scheduler resumes this user.
+    await this.clearExpiredStatus(userId);
+
     return { accessToken: jwtToken, userId };
+  }
+
+  /**
+   * Resets a user's accountStatus after a successful (re-)login so the scheduler
+   * stops skipping them. The scheduler marks users 'expired' on confirmed session
+   * loss; only a fresh login should clear it.
+   */
+  private async clearExpiredStatus(userId: string): Promise<void> {
+    try {
+      await this.firebaseService.firestore
+        .collection('users').doc(userId)
+        .set({ accountStatus: 'active' }, { merge: true });
+    } catch (e: any) {
+      this.logger.warn(`Could not reset accountStatus for ${userId}: ${e.message}`);
+    }
   }
 
   async login(email: string, passwordHash: string) {
@@ -228,6 +246,7 @@ export class AuthService {
         console.warn('Could not save session to Firestore (Check Firebase Credentials):', e.message);
       }
 
+      await this.clearExpiredStatus(userId);
       return { accessToken: token };
     } catch (error: any) {
       if (error.response?.status === 401 || error.message.includes('401')) {
@@ -257,6 +276,7 @@ export class AuthService {
         console.warn('Could not save 2FA session to Firestore:', e.message);
       }
 
+      await this.clearExpiredStatus(userId);
       return { accessToken: token };
     } catch (error: any) {
       throw new UnauthorizedException('Invalid 2FA code');
@@ -280,6 +300,7 @@ export class AuthService {
         marketplaceCookies: this.encryptData(JSON.stringify(parsedCookies)),
       }, { merge: true });
 
+      await this.clearExpiredStatus(userId);
       return { accessToken: token };
     } catch (error: any) {
       throw new UnauthorizedException('Invalid cookie format: ' + error.message);

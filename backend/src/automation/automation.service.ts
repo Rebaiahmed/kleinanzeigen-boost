@@ -7,6 +7,17 @@ export class AutomationService {
   private readonly workerUrl = process.env.AUTOMATION_WORKER_URL || 'http://localhost:3001';
   private readonly internalSecret = process.env.INTERNAL_SECRET || 'dev_secret_key';
 
+  constructor() {
+    // Session cookies are POSTed to the worker. In production that transport
+    // MUST be HTTPS so the cookies are never sent in clear text.
+    if (process.env.NODE_ENV === 'production' && this.workerUrl.startsWith('http://')) {
+      this.logger.error(
+        `SECURITY: AUTOMATION_WORKER_URL is non-HTTPS (${this.workerUrl}) in production. ` +
+        `Session cookies would be sent unencrypted. Set an https:// URL.`,
+      );
+    }
+  }
+
   /** Standard POST — long timeout (120s) for browser automation tasks. */
   async callAutomationWorker(endpoint: string, payload: any): Promise<any> {
     try {

@@ -24,7 +24,7 @@ export class SchedulerService {
 
   async triggerNow() {
     this.logger.log('⚡ Manual trigger invoked');
-    return this.handleRepostCron();
+    return this.handleRepostCron('manual');
   }
 
   /**
@@ -101,8 +101,8 @@ export class SchedulerService {
   }
 
   @Cron('*/15 * * * *') // Runs every 15 minutes in production
-  async handleRepostCron() {
-    this.logger.log('Running scheduled repost check...');
+  async handleRepostCron(triggeredBy: 'cron' | 'manual' = 'cron') {
+    this.logger.log(`Running scheduled repost check... (triggeredBy=${triggeredBy})`);
     const db = this.firebaseService.firestore;
     const now = new Date().toISOString();
 
@@ -139,19 +139,25 @@ export class SchedulerService {
       }
       // ─────────────────────────────────────────────────────────────────────────
 
-      // Find all users
+      // Find all users, skipping those whose marketplace session is known-expired —
+      // every repost would fail with SESSION_EXPIRED until they re-login via the extension.
       const usersSnapshot = await db.collection('users').get();
+      const activeUserDocs = usersSnapshot.docs.filter(d => d.data()?.accountStatus !== 'expired');
+      const skipped = usersSnapshot.docs.length - activeUserDocs.length;
+      if (skipped > 0) {
+        this.logger.log(`Skipping ${skipped} user(s) with expired session`);
+      }
 
-      // Process up to 5 users concurrently — automation tasks can take 120s each,
+      // Process up to N users concurrently — automation tasks can take 120s each,
       // so serial processing would block for minutes with many users.
       const USER_CONCURRENCY = SCHEDULER_CONFIG.userConcurrency;
-      const userChunks: (typeof usersSnapshot.docs[number])[][] = [];
-      for (let i = 0; i < usersSnapshot.docs.length; i += USER_CONCURRENCY) {
-        userChunks.push(usersSnapshot.docs.slice(i, i + USER_CONCURRENCY));
+      const userChunks: (typeof activeUserDocs[number])[][] = [];
+      for (let i = 0; i < activeUserDocs.length; i += USER_CONCURRENCY) {
+        userChunks.push(activeUserDocs.slice(i, i + USER_CONCURRENCY));
       }
 
       for (const chunk of userChunks) {
-        await Promise.all(chunk.map(userDoc => this.processUserReposts(userDoc.id, now)));
+        await Promise.all(chunk.map(userDoc => this.processUserReposts(userDoc.id, now, triggeredBy)));
       }
     } catch (error: any) {
       this.logger.error(`Cron iteration failed: ${error.message}`);
@@ -162,7 +168,7 @@ export class SchedulerService {
    * Processes all due reposts for a single user.
    * Extracted from the cron loop so it can run concurrently across users.
    */
-  private async processUserReposts(userId: string, now: string): Promise<void> {
+  private async processUserReposts(userId: string, now: string, triggeredBy: 'cron' | 'manual' = 'cron'): Promise<void> {
     const db = this.firebaseService.firestore;
 
     // Find due ads for this user
@@ -221,6 +227,7 @@ export class SchedulerService {
             durationMs: Date.now() - startTime,
             viewsBefore,
             viewsAfter: null,
+            triggeredBy,
           });
 
           this.logger.log(`${logCtx(userId, adId)} Repost scheduled: next in ${repostIntervalMinutes} minutes`);

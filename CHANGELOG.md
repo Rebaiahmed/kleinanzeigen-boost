@@ -9,6 +9,19 @@ All notable changes to this project are documented here.
 - redesign extension popup with quick-action buttons
 
 ### Fixed
+- confirm session expiry before halting a user's whole repost batch
+- retry scrape-views with exponential backoff before falling back
+
+### Changed
+- commit in-progress changes to auth, extension, and ads actions
+
+## [1.0.0] - 2026-06-08
+
+### Added
+- Vinted dual-template, language selector, feedback button + production-readiness fixes
+- redesign extension popup with quick-action buttons
+
+### Fixed
 - retry scrape-views with exponential backoff before falling back
 
 ### Changed

@@ -6,6 +6,7 @@ import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private readonly encryptionKey: Buffer;
   
   constructor(
@@ -16,6 +17,14 @@ export class AuthService {
     // Derive 32-byte key from internal secret
     const secret = process.env.INTERNAL_SECRET || 'dev_secret_key';
     this.encryptionKey = crypto.createHash('sha256').update(secret).digest();
+  }
+
+  /**
+   * Derives a stable, case-normalised userId from an email address.
+   * Uses SHA-256 so it is one-way and consistent across case variants.
+   */
+  private deriveUserId(email: string): string {
+    return crypto.createHash('sha256').update(email.toLowerCase().trim()).digest('hex');
   }
 
   private encryptData(text: string): string {
@@ -45,19 +54,64 @@ export class AuthService {
   async generateHandshakeToken(cookies: any[]): Promise<string> {
     const token = crypto.randomUUID();
     const encryptedCookies = this.encryptData(JSON.stringify(cookies));
-    
-    // Attempt to extract stable ID from cookies if possible
-    let stableUserId = null;
+
+    let stableUserId: string | null = null;
+    let username: string | null = null;
     try {
-      const uIdCookie = cookies.find((c: any) => c.name === 'kb_user_id' || c.name === 'user_id');
-      if (uIdCookie) stableUserId = uIdCookie.value;
-    } catch(e) {}
-    
+      // 'up' = user profile cookie — stable Kleinanzeigen user identifier
+      // 'access_token' can also be decoded to get user info
+      const upCookie = cookies.find((c: any) => c.name === 'up');
+      if (upCookie) {
+        try {
+          // Try URL-encoded JSON first (Kleinanzeigen encodes the 'up' cookie this way)
+          const decoded = JSON.parse(decodeURIComponent(upCookie.value));
+          stableUserId = decoded.userId || decoded.id || decoded.sub || decoded.uid || null;
+          username = decoded.username || decoded.displayName || decoded.name || decoded.nickName || null;
+          this.logger.log(`Extracted from 'up' cookie (url-encoded) — userId: ${stableUserId}, username: ${username}`);
+          this.logger.log(`'up' cookie keys: ${Object.keys(decoded).join(', ')}`);
+        } catch {
+          try {
+            // Fallback: try base64 JSON
+            const decoded = JSON.parse(Buffer.from(upCookie.value, 'base64').toString('utf8'));
+            stableUserId = decoded.userId || decoded.id || decoded.sub || null;
+            username = decoded.username || decoded.displayName || decoded.name || null;
+            this.logger.log(`Extracted from 'up' cookie (base64) — userId: ${stableUserId}, username: ${username}`);
+          } catch {
+            // Raw value as stable ID
+            stableUserId = upCookie.value;
+          }
+        }
+        if (!stableUserId) stableUserId = upCookie.value;
+      }
+
+      // Fallback: try common userId cookie names
+      if (!stableUserId) {
+        const userIdCookie = cookies.find((c: any) =>
+          ['user.id', 'aid', 'kb_user_id', 'user_id', 'userId'].includes(c.name)
+        );
+        if (userIdCookie) stableUserId = userIdCookie.value;
+      }
+
+      // Username fallback
+      if (!username) {
+        const usernameCookie = cookies.find((c: any) =>
+          ['user.username', 'username', 'ka_username'].includes(c.name)
+        );
+        if (usernameCookie) username = decodeURIComponent(usernameCookie.value);
+      }
+
+      // Log available cookie names for debugging
+      this.logger.log(`Cookie names: ${cookies.map((c: any) => c.name).join(', ')}`);
+    } catch (e: any) {
+      this.logger.warn(`Could not extract user info from cookies: ${e.message}`);
+    }
+
     await this.firebaseService.firestore.collection('handshakes').doc(token).set({
       encryptedCookies,
       createdAt: new Date().toISOString(),
-      expiresAt: Date.now() + 1800000, // 30 minutes (1800000 milliseconds)
+      expiresAt: Date.now() + 1800000,
       stableUserId: stableUserId || crypto.randomUUID(),
+      username: username || null,
       used: false,
     });
 
@@ -65,54 +119,73 @@ export class AuthService {
   }
 
   async exchangeHandshakeToken(token: string) {
-    const docRef = this.firebaseService.firestore.collection('handshakes').doc(token);
-    const doc = await docRef.get();
+    const db = this.firebaseService.firestore;
+    const docRef = db.collection('handshakes').doc(token);
 
-    if (!doc.exists) {
-      // Document never existed or was already deleted after TTL
+    // Atomically claim the token inside a Firestore transaction.
+    // This prevents a race condition where two concurrent requests both
+    // pass the `used === false` check before either writes `used = true`.
+    let data: FirebaseFirestore.DocumentData;
+    try {
+      await db.runTransaction(async (t) => {
+        const doc = await t.get(docRef);
+
+        if (!doc.exists) {
+          throw new HttpException(
+            { message: 'Handshake abgelaufen — bitte erneut verbinden' },
+            HttpStatus.UNAUTHORIZED,
+          );
+        }
+
+        const d = doc.data()!;
+
+        if (d.used === true) {
+          throw new HttpException(
+            { message: 'Handshake bereits verwendet' },
+            HttpStatus.UNAUTHORIZED,
+          );
+        }
+
+        if (Date.now() > d.expiresAt) {
+          t.delete(docRef);
+          throw new HttpException(
+            { message: 'Handshake abgelaufen — bitte erneut verbinden' },
+            HttpStatus.UNAUTHORIZED,
+          );
+        }
+
+        // Atomically mark as used within the same transaction
+        t.update(docRef, { used: true });
+        data = d;
+      });
+    } catch (err: any) {
+      // Re-throw HttpExceptions from inside the transaction directly
+      if (err instanceof HttpException) throw err;
       throw new HttpException(
-        { message: 'Handshake abgelaufen — bitte erneut verbinden' },
-        HttpStatus.UNAUTHORIZED,
+        { message: 'Handshake konnte nicht verarbeitet werden' },
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
 
-    const data = doc.data()!;
+    // Delete the document now that the transaction succeeded
+    await docRef.delete().catch(() => {});
 
-    // Detect double-use: mark as used before doing anything else
-    if (data.used === true) {
-      throw new HttpException(
-        { message: 'Handshake bereits verwendet' },
-        HttpStatus.UNAUTHORIZED,
-      );
-    }
-
-    // Mark the token as used atomically (prevents replay even if delete fails)
-    await docRef.update({ used: true });
-
-    // Check TTL after the used-flag update
-    if (Date.now() > data.expiresAt) {
-      await docRef.delete();
-      throw new HttpException(
-        { message: 'Handshake abgelaufen — bitte erneut verbinden' },
-        HttpStatus.UNAUTHORIZED,
-      );
-    }
-
-    // Delete the document now that we have the data
-    await docRef.delete();
-
-    const decryptedJson = this.decryptData(data.encryptedCookies);
+    const decryptedJson = this.decryptData(data!.encryptedCookies);
     const cookies = JSON.parse(decryptedJson);
 
-    const userId = data.stableUserId;
-    const jwtToken = this.jwtService.sign({ sub: userId, type: 'marketplace_session' });
+    const userId = data!.stableUserId;
+    const username = data!.username || null;
+    const jwtToken = this.jwtService.sign({
+      sub: userId,
+      type: 'marketplace_session',
+      ...(username && { username }),
+    });
 
-    // Store permanent session
-    await this.firebaseService.firestore.collection('sessions').doc(userId).set({
-      token: jwtToken,
+    // Store permanent session — cookies encrypted at rest
+    await db.collection('sessions').doc(userId).set({
       status: 'active',
       lastLogin: new Date().toISOString(),
-      marketplaceCookies: cookies
+      marketplaceCookies: this.encryptData(JSON.stringify(cookies)),
     }, { merge: true });
 
     return { accessToken: jwtToken, userId };
@@ -121,7 +194,7 @@ export class AuthService {
   async login(email: string, passwordHash: string) {
     try {
       // Live Verification via Playwright Worker
-      const generatedUserId = Buffer.from(email).toString('base64');
+      const generatedUserId = this.deriveUserId(email);
       const workerResponse = await this.automationService.callAutomationWorker('login', { 
         userId: generatedUserId,
         email, 
@@ -143,12 +216,11 @@ export class AuthService {
       const token = this.jwtService.sign(payload);
       
       try {
-        // Save session info and the extracted Playwright cookies to Firestore
+        // Save session info and the extracted Playwright cookies to Firestore (cookies encrypted at rest)
         await this.firebaseService.firestore.collection('sessions').doc(userId).set({
-          token,
           status: 'active',
           lastLogin: new Date().toISOString(),
-          marketplaceCookies: workerResponse.cookies || []
+          marketplaceCookies: this.encryptData(JSON.stringify(workerResponse.cookies || [])),
         }, { merge: true });
       } catch (e: any) {
         console.warn('Could not save session to Firestore (Check Firebase Credentials):', e.message);
@@ -170,15 +242,14 @@ export class AuthService {
         throw new UnauthorizedException('Invalid 2FA code');
       }
 
-      const userId = Buffer.from(email).toString('base64');
+      const userId = this.deriveUserId(email);
       const token = this.jwtService.sign({ email, sub: userId });
       
       try {
         await this.firebaseService.firestore.collection('sessions').doc(userId).set({
-          token,
           status: 'active',
           lastLogin: new Date().toISOString(),
-          marketplaceCookies: workerResponse.cookies || []
+          marketplaceCookies: this.encryptData(JSON.stringify(workerResponse.cookies || [])),
         }, { merge: true });
       } catch (e: any) {
         console.warn('Could not save 2FA session to Firestore:', e.message);
@@ -190,21 +261,21 @@ export class AuthService {
     }
   }
 
-  async loginWithCookie(email: string, cookieJson: string) {
+  async loginWithCookie(email: string, cookies: any[] | string) {
     try {
-      const cookies = JSON.parse(cookieJson);
-      if (!Array.isArray(cookies)) {
+      // Accept either a pre-parsed array (new) or a legacy JSON string (old extension)
+      const parsedCookies: any[] = Array.isArray(cookies) ? cookies : JSON.parse(cookies as string);
+      if (!Array.isArray(parsedCookies)) {
         throw new Error('Cookies must be a JSON array');
       }
 
-      const userId = Buffer.from(email).toString('base64');
+      const userId = this.deriveUserId(email);
       const token = this.jwtService.sign({ email, sub: userId });
       
       await this.firebaseService.firestore.collection('sessions').doc(userId).set({
-        token,
         status: 'active',
         lastLogin: new Date().toISOString(),
-        marketplaceCookies: cookies
+        marketplaceCookies: this.encryptData(JSON.stringify(parsedCookies)),
       }, { merge: true });
 
       return { accessToken: token };
@@ -294,14 +365,13 @@ export class AuthService {
       // Finalise: build JWT, persist session
       const jobDoc = await this.firebaseService.firestore.collection('loginJobs').doc(jobId).get();
       const email = jobDoc.data()?.email || 'unknown';
-      const userId = Buffer.from(email).toString('base64');
+      const userId = this.deriveUserId(email);
       const token = this.jwtService.sign({ email, sub: userId });
 
       await this.firebaseService.firestore.collection('sessions').doc(userId).set({
-        token,
         status: 'active',
         lastLogin: new Date().toISOString(),
-        marketplaceCookies: workerJob.cookies,
+        marketplaceCookies: this.encryptData(JSON.stringify(workerJob.cookies)),
       }, { merge: true });
 
       // Clean up the job doc

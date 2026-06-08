@@ -1,9 +1,14 @@
 import { Module } from '@nestjs/common';
 import { SchedulerService } from './scheduler.service';
+import { SchedulerController } from './scheduler.controller';
 import { AutomationModule } from '../automation/automation.module';
+import { AuthModule } from '../auth/auth.module';
+import { FirebaseModule } from '../firebase/firebase.module';
 
 @Module({
-  imports: [AutomationModule],
+  imports: [AutomationModule, AuthModule, FirebaseModule],
+  controllers: [SchedulerController],
   providers: [SchedulerService],
+  exports: [SchedulerService],
 })
 export class SchedulerModule {}

@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Compiled output that should never be committed alongside TypeScript source
+src/**/*.js
+src/**/*.js.map
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

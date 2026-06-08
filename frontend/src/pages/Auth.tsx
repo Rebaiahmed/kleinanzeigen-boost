@@ -87,11 +87,17 @@ export function Auth() {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  // Method 1: Chrome Extension Auto-Detect
+  // Method 1: Chrome Extension — trigger full handshake (same as popup button)
   const handleExtensionConnect = () => {
     setIsExtensionChecking(true);
     setExtensionError(null);
-    window.postMessage({ type: 'CHECK_PLATFORM_LOGIN' }, '*');
+    // Relay INIT_HANDSHAKE via content script
+    window.postMessage({ type: 'ANZEIGENBOOST_INIT_HANDSHAKE' }, '*');
+    // Fallback timeout if extension doesn't respond
+    setTimeout(() => {
+      setIsExtensionChecking(false);
+      setExtensionError('Extension nicht gefunden. Bitte installiere & aktiviere die Erweiterung.');
+    }, 8000);
   };
 
   // Method 2: Manual Cookies Action

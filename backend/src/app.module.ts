@@ -35,7 +35,10 @@ import { ReplyTemplatesModule } from './reply-templates/reply-templates.module';
   ],
   controllers: [],
   providers: [
-    // Removed ThrottlerGuard to avoid 429 errors during testing
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}

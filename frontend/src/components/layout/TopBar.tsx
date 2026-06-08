@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, LogOut, Settings } from 'lucide-react';
 
@@ -6,15 +6,24 @@ function getUserFromToken(): { email: string; initials: string; fullEmail: strin
   try {
     const token = localStorage.getItem('kb_session') || localStorage.getItem('token');
     if (!token) return null;
-    // JWT payload is the second base64 segment
     const payload = JSON.parse(atob(token.split('.')[1]));
-    const email: string = payload.email || '';
-    if (!email) return null;
-    // Build display name from email prefix (e.g. "ahmed.test@mail.de" → "Ahmed")
-    const prefix = email.split('@')[0];
-    const display = prefix.charAt(0).toUpperCase() + prefix.slice(1).replace(/[._-]/g, ' ');
-    const initials = prefix.slice(0, 2).toUpperCase();
-    return { email: display, initials, fullEmail: email };
+
+    // Priority 1: email in JWT (email-based login)
+    if (payload.email) {
+      const prefix = payload.email.split('@')[0];
+      const display = prefix.charAt(0).toUpperCase() + prefix.slice(1).replace(/[._-]/g, ' ');
+      return { email: display, initials: prefix.slice(0, 2).toUpperCase(), fullEmail: payload.email };
+    }
+
+    // Priority 2: username extracted from Kleinanzeigen cookies during handshake
+    if (payload.username) {
+      const name = decodeURIComponent(payload.username);
+      const initials = name.slice(0, 2).toUpperCase();
+      return { email: name, initials, fullEmail: name };
+    }
+
+    // Fallback: show generic label — username will be found after next handshake
+    return { email: 'Mein Konto', initials: 'KA', fullEmail: '' };
   } catch {
     return null;
   }
@@ -22,17 +31,17 @@ function getUserFromToken(): { email: string; initials: string; fullEmail: strin
 
 export function TopBar() {
   const navigate = useNavigate();
-  const user = useMemo(() => getUserFromToken(), []);
-
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [extensionUsername, setExtensionUsername] = useState<string | null>(
     localStorage.getItem('kb_username')
   );
+  const [user, setUser] = useState(() => getUserFromToken());
 
   useEffect(() => {
     const handleUsernameChange = () => {
       setExtensionUsername(localStorage.getItem('kb_username'));
+      setUser(getUserFromToken());
     };
     window.addEventListener('kb_username_changed', handleUsernameChange);
     
@@ -91,16 +100,10 @@ export function TopBar() {
           
           {/* Right: Profile & Logout */}
           <div className="flex items-center gap-3 border-l border-[#d4d4d4] pl-4 relative" ref={dropdownRef}>
-            {user ? (
-              <span className="text-[13px] font-medium text-gray-600 flex items-center gap-1">
-                👤 {user.email} ({user.fullEmail})
-              </span>
-            ) : extensionUsername ? (
-              <span className="text-[13px] font-medium text-gray-600 flex items-center gap-1">
-                👤 {extensionUsername}
-              </span>
-            ) : null}
-            {(user || extensionUsername) && <span className="text-[#d4d4d4] hidden sm:inline">|</span>}
+            <span className="text-[13px] font-medium text-gray-600 flex items-center gap-1">
+              👤 {extensionUsername || user?.email || 'Nicht eingeloggt'}
+            </span>
+            <span className="text-[#d4d4d4] hidden sm:inline">|</span>
             <button
               onClick={handleLogout}
               className="text-[13px] text-red-600 hover:text-red-700 transition-colors hidden sm:inline"
@@ -108,13 +111,13 @@ export function TopBar() {
               Logout
             </button>
             <span className="text-[#d4d4d4] hidden sm:inline">|</span>
-            {user ? (
+            {(user || extensionUsername) ? (
               <>
-                <button 
+                <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className="h-8 w-8 rounded-full bg-[#A8C300] flex items-center justify-center text-white text-[11px] font-bold focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#A8C300] transition-shadow"
                 >
-                  {user.initials}
+                  {extensionUsername ? extensionUsername.slice(0, 2).toUpperCase() : user!.initials}
                 </button>
               </>
             ) : (

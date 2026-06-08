@@ -1,6 +1,8 @@
 import { Controller, Get, Post, Param, Body, UseGuards, Req, Patch } from '@nestjs/common';
 import { AdsService } from './ads.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { UpdateAdDto } from './dto/update-ad.dto';
+import { SaveDraftDto } from './dto/save-draft.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('api/ads')
@@ -10,6 +12,12 @@ export class AdsController {
   @Get()
   async getAds(@Req() req: any) {
     return this.adsService.getAds(req.user.userId);
+  }
+
+  /** Called by the extension background after it fetches ads from Kleinanzeigen */
+  @Post('import')
+  async importAds(@Req() req: any, @Body() body: { ads: any[] }) {
+    return this.adsService.importAds(req.user.userId, body.ads || []);
   }
 
   @Get('scheduler-status')
@@ -58,7 +66,7 @@ export class AdsController {
   }
 
   @Post('draft')
-  async saveDraft(@Req() req: any, @Body() adData: any) {
+  async saveDraft(@Req() req: any, @Body() adData: SaveDraftDto) {
     return this.adsService.saveDraft(req.user.userId, adData);
   }
 
@@ -66,7 +74,7 @@ export class AdsController {
   async updateAd(
     @Req() req: any,
     @Param('id') adId: string,
-    @Body() body: { title?: string; description?: string; repostIntervalMinutes?: number; nextRepostAt?: string; autoRepost?: boolean }
+    @Body() body: UpdateAdDto,
   ) {
     return this.adsService.updateAd(req.user.userId, adId, body);
   }

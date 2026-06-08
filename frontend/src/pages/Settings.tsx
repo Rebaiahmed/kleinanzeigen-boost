@@ -19,7 +19,7 @@ const VintedLogo = () => (
 
 // Inline eBay Logo
 const EbayLogo = () => (
-  <svg viewBox="0 0 42 16" className="h-10 shrink-0 flex items-center" xmlns="http://www.w3.org/2000/svg">
+  <svg viewBox="0 0 42 16" className="h-6 w-auto shrink-0" xmlns="http://www.w3.org/2000/svg">
     <text 
       x="50%" 
       y="50%" 

@@ -10,6 +10,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useAdsActions } from '../hooks/useAdsActions';
+import { useAiUsage } from '../hooks/useAiUsage';
 
 const CATEGORIES = [
   "Auto, Rad & Boot",
@@ -85,6 +86,7 @@ interface UploadedPhoto {
 export function CreateWithAi() {
   const navigate = useNavigate();
   const { saveDraft, handleVintedCrossPost, handleEbayCrossPost } = useAdsActions();
+  const { callsCount, limit, remaining, pct, isWarning, isBlocked, incrementUsage } = useAiUsage();
 
   // Navigation step
   const [step, setStep] = useState<'upload' | 'result'>('upload');
@@ -214,6 +216,10 @@ export function CreateWithAi() {
   // Submit flow
   const analyzePhotos = async () => {
     if (photos.length === 0) return;
+    if (isBlocked) {
+      setErrorMessage(`Tageslimit erreicht (${callsCount}/${limit}). Morgen wieder verfügbar.`);
+      return;
+    }
 
     setIsLoading(true);
     setErrorMessage(null);
@@ -260,6 +266,7 @@ export function CreateWithAi() {
       setKeyFeatures(data.keyFeatures || []);
       setRemainingCalls(data.remainingCallsThisMonth !== undefined ? data.remainingCallsThisMonth : null);
 
+      incrementUsage(); // update usage counter immediately
       setStep('result');
     } catch (err: any) {
       setErrorMessage(err.message || 'Netzwerkfehler beim Analysieren der Fotos.');
@@ -551,11 +558,29 @@ export function CreateWithAi() {
             </div>
           </div>
 
+          {/* AI Usage indicator */}
+          <div className={`mt-4 rounded-lg px-4 py-2.5 flex items-center gap-3 text-[13px] ${
+            isBlocked ? 'bg-red-50 border border-red-200' :
+            isWarning ? 'bg-yellow-50 border border-yellow-200' :
+            'bg-gray-50 border border-gray-200'
+          }`}>
+            <span className={`font-medium whitespace-nowrap ${isBlocked ? 'text-red-600' : isWarning ? 'text-yellow-700' : 'text-gray-500'}`}>
+              {isBlocked ? '🚫 Tageslimit erreicht' : isWarning ? `⚠️ Noch ${remaining} KI-Anfragen` : `✨ ${remaining} von ${limit} verfügbar`}
+            </span>
+            <div className="flex-1 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${isBlocked ? 'bg-red-500' : isWarning ? 'bg-yellow-400' : 'bg-green-400'}`}
+                style={{ width: `${Math.min(100, pct)}%` }}
+              />
+            </div>
+            <span className="text-gray-400 font-mono whitespace-nowrap">{callsCount}/{limit}</span>
+          </div>
+
           {/* Action button */}
           <button
             onClick={analyzePhotos}
-            disabled={photos.length === 0 || isLoading}
-            className="mt-6 w-full flex items-center justify-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-bold py-3.5 px-4 rounded transition-colors text-sm shadow-sm"
+            disabled={photos.length === 0 || isLoading || isBlocked}
+            className="mt-4 w-full flex items-center justify-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-bold py-3.5 px-4 rounded transition-colors text-sm shadow-sm"
           >
             {isLoading ? (
               <>

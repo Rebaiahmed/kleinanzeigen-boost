@@ -46,3 +46,5 @@ sync_payload.json
 firebase-sa.json
 frontend/firebase-sa.json
 *.local
+firebase-credentials.json
+.dev-store.json

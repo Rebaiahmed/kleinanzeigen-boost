@@ -16,10 +16,12 @@ export interface AdCardProps {
   ad: any;
   onAction: (action: string, adId: string, successMsg: string) => void;
   onAIOptimize: (adId: string) => void;
-  onPriceCheck: (adId: string) => void;
+  onPriceCheck: (adId: string, title: string) => Promise<{ suggestedPrice: number; reasoning: string } | null>;
   onSchedule: (adId: string) => void;
   onVintedCrossPost: (adId: string, reserveAfterPost: boolean) => Promise<any>;
   onEbayCrossPost: (adId: string) => Promise<any>;
+  aiBlocked?: boolean;
+  aiWarning?: boolean;
   onConnectVinted: () => void;
   onConnectEbay: () => void;
   isEbayConnected?: boolean;
@@ -140,6 +142,8 @@ export function AdCard({
   isEbayConnected,
   isVintedConnected,
   onUpdateFields,
+  aiBlocked = false,
+  aiWarning = false,
 }: AdCardProps) {
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [showEbayConfirm, setShowEbayConfirm] = useState(false);
@@ -325,7 +329,16 @@ export function AdCard({
       {/* Left side: Image & Metadata */}
       <div className="flex flex-col sm:flex-row flex-1 p-3 gap-3 border-b md:border-b-0 border-[#e5e5e5]">
         <div className="shrink-0 w-full sm:w-[130px] h-[100px] bg-[#f5f5f5] flex items-center justify-center overflow-hidden">
-          <img src={ad.image} alt={ad.title} className="w-full h-full object-cover mix-blend-multiply" />
+          {(ad.image || ad.thumbnailUrl || ad.pictureUrl) ? (
+            <img
+              src={ad.image || ad.thumbnailUrl || ad.pictureUrl}
+              alt={ad.title}
+              className="w-full h-full object-cover mix-blend-multiply"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          ) : (
+            <span className="text-[#bbb] text-[11px]">Kein Bild</span>
+          )}
         </div>
 
         <div className="flex flex-col justify-between flex-1">
@@ -358,7 +371,7 @@ export function AdCard({
             <span className="text-[12px] font-semibold text-[#888] uppercase tracking-wider">Optionen</span>
             <span className="text-[16px] font-bold text-[#333]" dangerouslySetInnerHTML={{ __html: ad.price }} />
           </div>
-          
+
           <div className="flex items-center gap-1.5 mt-1">
             {ad.status === 'Aktiv' && (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-green-50 text-green-700 px-2 py-0.5 rounded-full border border-green-200">
@@ -620,10 +633,17 @@ export function AdCard({
           {/* KI-Optimierung */}
           <button
             onClick={() => onAIOptimize(ad.id)}
-            title="KI-Optimierung"
-            className="flex-1 border border-gray-300 text-gray-700 hover:border-green-600 hover:text-green-600 hover:bg-green-50 rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors"
+            title={aiBlocked ? 'Tageslimit erreicht' : aiWarning ? 'Fast am Limit' : 'KI-Optimierung'}
+            disabled={aiBlocked}
+            className={`flex-1 border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors ${
+              aiBlocked
+                ? 'border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50'
+                : aiWarning
+                ? 'border-yellow-400 text-yellow-700 hover:bg-yellow-50'
+                : 'border-gray-300 text-gray-700 hover:border-green-600 hover:text-green-600 hover:bg-green-50'
+            }`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-green-600" />
+            <Sparkles className={`w-3.5 h-3.5 ${aiBlocked ? 'text-gray-300' : aiWarning ? 'text-yellow-500' : 'text-green-600'}`} />
             <span>KI-Opt</span>
           </button>
 

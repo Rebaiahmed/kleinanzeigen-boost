@@ -104,7 +104,7 @@ AnzeigenBoost uses Firebase Firestore as its persistence layer. The data models 
 │                       ├── viewsAfter: number
 │                       └── viewsGained: number
 │
-├── schedulerMeta (Collection)
+├── meta (Collection)
 │   └── schedulerMeta (Document)
 │       └── lastRunAt: ISO-String
 │
@@ -141,7 +141,7 @@ sequenceDiagram
     Extension->>Extension: Get cookies for *.kleinanzeigen.de
     Extension->>Backend: POST /auth/handshake-token { cookies }
     Note over Backend: Encrypt cookies using AES-256-GCM<br>derived from INTERNAL_SECRET
-    Backend->>Firestore: Store handshake document (120s TTL)
+    Backend->>Firestore: Store handshake document (30 min TTL)
     Backend-->>Extension: Return { token }
     Extension->>Extension: Open Tab to: /auth/callback?token={handshakeToken}
     Frontend->>Backend: POST /auth/exchange-token { token }
@@ -316,7 +316,7 @@ The `automation` service is deployed internally. All HTTP communication from the
 - **Access Control**: Requests with invalid secrets are immediately rejected with a `403 Forbidden` response.
 
 ### 5.3 Cookie Handshake Security
-The extension-to-backend cookie handshake uses an extended **120s TTL** on handshake documents to account for slower network connections. When the backend exchanges the token, it employs an **atomic read-and-delete pattern** in Firestore to ensure the handshake token can only be consumed exactly once, preventing replay attacks.
+The extension-to-backend cookie handshake uses a **30-minute TTL** on handshake documents to give users enough time to complete the browser flow. When the backend exchanges the token, it employs an **atomic read-and-delete pattern** in Firestore to ensure the handshake token can only be consumed exactly once, preventing replay attacks.
 
 ---
 

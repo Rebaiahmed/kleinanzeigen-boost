@@ -5,7 +5,7 @@ interface AdGridProps {
   ads: any[];
   onAction: (action: string, adId: string, successMsg: string) => void;
   onAIOptimize: (adId: string) => void;
-  onPriceCheck: (adId: string) => void;
+  onPriceCheck: (adId: string, title: string) => Promise<{ suggestedPrice: number; reasoning: string } | null>;
   onSchedule: (adId: string) => void;
   onVintedCrossPost: (adId: string, reserveAfterPost: boolean) => Promise<any>;
   onEbayCrossPost: (adId: string) => Promise<any>;
@@ -14,6 +14,8 @@ interface AdGridProps {
   isEbayConnected?: boolean;
   isVintedConnected?: boolean;
   onUpdateFields: (adId: string, fields: any) => Promise<boolean>;
+  aiBlocked?: boolean;
+  aiWarning?: boolean;
 }
 
 export function AdGrid({
@@ -29,6 +31,8 @@ export function AdGrid({
   isEbayConnected,
   isVintedConnected,
   onUpdateFields,
+  aiBlocked = false,
+  aiWarning = false,
 }: AdGridProps) {
   return (
     <div className="space-y-3">
@@ -47,6 +51,8 @@ export function AdGrid({
           isEbayConnected={isEbayConnected}
           isVintedConnected={isVintedConnected}
           onUpdateFields={onUpdateFields}
+          aiBlocked={aiBlocked}
+          aiWarning={aiWarning}
         />
       ))}
     </div>

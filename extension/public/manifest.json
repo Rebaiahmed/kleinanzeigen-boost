@@ -1,0 +1,57 @@
+{
+  "manifest_version": 3,
+  "name": "AnzeigenBoost",
+  "version": "1.0.0",
+  "description": "Boost your Kleinanzeigen listings with AI",
+  "permissions": [
+    "storage",
+    "alarms",
+    "notifications",
+    "cookies"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:3000/*",
+    "http://localhost:3000/*",
+    "ws://127.0.0.1:3000/*",
+    "ws://localhost:3000/*",
+    "https://api.anzeigenboost.de/*",
+    "wss://api.anzeigenboost.de/*",
+    "https://*.kleinanzeigen.de/*",
+    "http://localhost:5173/*",
+    "https://app.anzeigenboost.de/*"
+  ],
+  "externally_connectable": {
+    "matches": [
+      "http://localhost:5173/*",
+      "https://app.anzeigenboost.de/*"
+    ]
+  },
+  "action": {
+    "default_popup": "src/popup/index.html",
+    "default_title": "AnzeigenBoost"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.kleinanzeigen.de/*"
+      ],
+      "js": [
+        "content.js"
+      ]
+    },
+    {
+      "matches": [
+        "http://localhost:5173/*",
+        "https://app.anzeigenboost.de/*"
+      ],
+      "js": [
+        "dashboard.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ]
+}

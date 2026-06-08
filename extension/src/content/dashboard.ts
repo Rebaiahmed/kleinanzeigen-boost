@@ -13,7 +13,34 @@ window.addEventListener('message', (event) => {
   const data = event.data;
   if (!data || typeof data !== 'object') return;
 
-  if (data.type === 'ANZEIGENBOOST_RETRY_HANDSHAKE') {
+  if (data.type === 'ANZEIGENBOOST_SET_TOKEN') {
+    if (data.token) {
+      // Relay to background — content scripts cannot call chrome.storage.session directly
+      chrome.runtime.sendMessage({ type: 'STORE_SESSION_TOKEN', token: data.token }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.warn('[AnzeigenBoost] Token relay error:', chrome.runtime.lastError.message);
+        } else {
+          console.log('[AnzeigenBoost] Token relayed to background:', response);
+        }
+      });
+    }
+    return;
+  }
+
+  if (data.type === 'TRIGGER_SYNC_REQUEST') {
+    chrome.runtime.sendMessage({ type: 'TRIGGER_SYNC' }, (response) => {
+      const error = chrome.runtime.lastError?.message;
+      window.postMessage({
+        type: 'TRIGGER_SYNC_RESPONSE',
+        success: !error && response?.success,
+        ads: response?.ads || [],
+        error: error || response?.error,
+      }, '*');
+    });
+    return;
+  }
+
+  if (data.type === 'ANZEIGENBOOST_INIT_HANDSHAKE' || data.type === 'ANZEIGENBOOST_RETRY_HANDSHAKE') {
     chrome.runtime.sendMessage({ type: 'ANZEIGENBOOST_RETRY_HANDSHAKE' }, (response) => {
       if (chrome.runtime.lastError) {
         console.warn('[AnzeigenBoost] Retry handshake relay error:', chrome.runtime.lastError.message);
@@ -32,11 +59,27 @@ window.addEventListener('message', (event) => {
           type: 'PLATFORM_LOGIN_STATUS',
           platform: data.platform,
           isLoggedIn: response?.isLoggedIn,
-          username: response?.username
+          username: response?.username || null,
         }, '*');
       }
     });
   }
 });
+
+function announceReady() {
+  window.postMessage({
+    type: 'ANZEIGENBOOST_EXTENSION_READY',
+    extensionId: chrome.runtime.id,
+  }, '*');
+}
+
+// Announce immediately (catches pages that load before React mounts)
+announceReady();
+// Announce again after DOM is ready (ensures React's useEffect listener catches it)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', announceReady);
+} else {
+  setTimeout(announceReady, 500);
+}
 
 console.log('[AnzeigenBoost] Dashboard content script loaded.');

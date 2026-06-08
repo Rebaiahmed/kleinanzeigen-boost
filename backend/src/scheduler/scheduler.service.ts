@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { FirebaseService } from '../firebase/firebase.service';
 import { AutomationService } from '../automation/automation.service';
+import { SessionService } from '../auth/session.service';
+import { AdStatus } from '../ads/dto/ad-status.enum';
 
 @Injectable()
 export class SchedulerService {
@@ -9,10 +11,26 @@ export class SchedulerService {
 
   constructor(
     private readonly firebaseService: FirebaseService,
-    private readonly automationService: AutomationService
+    private readonly automationService: AutomationService,
+    private readonly sessionService: SessionService,
   ) {}
 
-  @Cron('*/1 * * * *') // Runs every 1 minute
+  async triggerNow() {
+    this.logger.log('⚡ Manual trigger invoked');
+    return this.handleRepostCron();
+  }
+
+  async getStatus() {
+    const db = this.firebaseService.firestore;
+    const doc = await db.collection('meta').doc('schedulerMeta').get();
+    return {
+      lastRunAt: doc.data()?.lastRunAt || null,
+      lastRepostAt: doc.data()?.lastRepostAt || null,
+      totalRepostsAllTime: doc.data()?.totalRepostsAllTime || 0,
+    };
+  }
+
+  @Cron('*/15 * * * *') // Runs every 15 minutes in production
   async handleRepostCron() {
     this.logger.log('Running scheduled repost check...');
     const db = this.firebaseService.firestore;
@@ -27,108 +45,132 @@ export class SchedulerService {
     }
 
     try {
+      // ── Stuck-task recovery ──────────────────────────────────────────────────
+      // Ads can get stuck in AdStatus.PENDING_REPOST if the worker crashes mid-task.
+      // Any ad that has been in that state for more than 10 minutes is reverted
+      // back to 'active' so the next cron tick can retry it.
+      const stuckCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+      try {
+        const usersForRecovery = await db.collection('users').get();
+        for (const userDoc of usersForRecovery.docs) {
+          const stuckAds = await db
+            .collection('users').doc(userDoc.id).collection('ads')
+            .where('status', '==', AdStatus.PENDING_REPOST)
+            .where('pendingRepostSince', '<=', stuckCutoff)
+            .get();
+
+          for (const stuckAd of stuckAds.docs) {
+            this.logger.warn(`Recovering stuck ad ${stuckAd.id} for user ${userDoc.id}`);
+            await stuckAd.ref.update({ status: AdStatus.ACTIVE, pendingRepostSince: null });
+          }
+        }
+      } catch (e: any) {
+        this.logger.warn(`Stuck-task recovery failed: ${e.message}`);
+      }
+      // ─────────────────────────────────────────────────────────────────────────
+
       // Find all users
       const usersSnapshot = await db.collection('users').get();
 
-      for (const userDoc of usersSnapshot.docs) {
-        const userId = userDoc.id;
-        
-        // Find due ads for this user
-        const adsSnapshot = await db.collection('users').doc(userId).collection('ads')
-          .where('autoRepost', '==', true)
-          .where('nextRepostAt', '<=', now)
-          .where('status', '==', 'active')
-          .get();
+      // Process up to 5 users concurrently — automation tasks can take 120s each,
+      // so serial processing would block for minutes with many users.
+      const USER_CONCURRENCY = 5;
+      const userChunks: (typeof usersSnapshot.docs[number])[][] = [];
+      for (let i = 0; i < usersSnapshot.docs.length; i += USER_CONCURRENCY) {
+        userChunks.push(usersSnapshot.docs.slice(i, i + USER_CONCURRENCY));
+      }
 
-        if (adsSnapshot.empty) continue;
-
-        // Fetch session cookies for view scraping
-        let cookies: any[] = [];
-        try {
-          const sessionDoc = await db.collection('sessions').doc(userId).get();
-          if (sessionDoc.exists) {
-            cookies = sessionDoc.data()?.marketplaceCookies || [];
-          }
-        } catch (e: any) {
-          this.logger.warn(`Could not fetch session for user ${userId}: ${e.message}`);
-        }
-
-        for (const adDoc of adsSnapshot.docs) {
-          const adId = adDoc.id;
-          const adData = adDoc.data();
-
-          // Read per-ad interval (fallback: 1440 min = 24 h)
-          const repostIntervalMinutes: number = adData.repostIntervalMinutes ?? 1440;
-          
-          this.logger.log(`Initiating automated repost for Ad: ${adId} (User: ${userId})`);
-
-          // 1. Atomic state lock
-          await db.runTransaction(async (t) => {
-            const ref = db.collection('users').doc(userId).collection('ads').doc(adId);
-            t.update(ref, { status: 'pending_repost' });
-          });
-
-          // 2. Fetch viewsBefore
-          let viewsBefore = 0;
-          if (cookies.length > 0) {
-            try {
-              const viewsResult = await this.automationService.callAutomationWorker('scrape-views', { userId, cookies, adId });
-              if (viewsResult.success && typeof viewsResult.views === 'number') {
-                viewsBefore = viewsResult.views;
-              }
-            } catch (e: any) {
-              this.logger.warn(`Failed to get viewsBefore for ${adId}: ${e.message}`);
-            }
-          }
-
-          const startTime = Date.now();
-
-          // 3. Trigger worker
-          try {
-            const result = await this.automationService.callAutomationWorker('repost', { userId, adId, adData });
-            
-            // 4. On success, update state and create log
-            if (result.success) {
-              const nextRepostAt = new Date(
-                Date.now() + repostIntervalMinutes * 60 * 1000,
-              ).toISOString();
-
-              await db.collection('users').doc(userId).collection('ads').doc(adId).update({
-                status: 'active',
-                lastPostedAt: new Date().toISOString(),
-                nextRepostAt,
-              });
-
-              // Create repostLogs document
-              await db.collection('users').doc(userId).collection('ads').doc(adId).collection('repostLogs').add({
-                status: 'success',
-                executedAt: new Date().toISOString(),
-                durationMs: Date.now() - startTime,
-                viewsBefore,
-                viewsAfter: null
-              });
-
-              this.logger.log(`Repost scheduled: next in ${repostIntervalMinutes} minutes`);
-            }
-          } catch (error: any) {
-            this.logger.error(`Repost failed for ${adId}: ${error.message}`);
-            
-            // Handle Session Trap
-            if (error.message === 'SESSION_EXPIRED') {
-              await db.collection('users').doc(userId).update({ accountStatus: 'expired' });
-              // Revert ad status
-              await db.collection('users').doc(userId).collection('ads').doc(adId).update({ status: 'active' });
-              // Stop processing for this user
-              break; 
-            } else {
-              // Standard failure, revert status
-              await db.collection('users').doc(userId).collection('ads').doc(adId).update({ status: 'active' });
-            }
-          }
-        }
+      for (const chunk of userChunks) {
+        await Promise.all(chunk.map(userDoc => this.processUserReposts(userDoc.id, now)));
       }
     } catch (error: any) {
       this.logger.error(`Cron iteration failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Processes all due reposts for a single user.
+   * Extracted from the cron loop so it can run concurrently across users.
+   */
+  private async processUserReposts(userId: string, now: string): Promise<void> {
+    const db = this.firebaseService.firestore;
+
+    // Find due ads for this user
+    const adsSnapshot = await db.collection('users').doc(userId).collection('ads')
+      .where('autoRepost', '==', true)
+      .where('nextRepostAt', '<=', now)
+      .where('status', '==', AdStatus.ACTIVE)
+      .get();
+
+    if (adsSnapshot.empty) return;
+
+    // Fetch decrypted session cookies for view scraping
+    const cookies = await this.sessionService.getDecryptedCookies(userId);
+
+    for (const adDoc of adsSnapshot.docs) {
+      const adId = adDoc.id;
+      const adData = adDoc.data();
+      const repostIntervalMinutes: number = adData.repostIntervalMinutes ?? 1440;
+
+      this.logger.log(`Initiating automated repost for Ad: ${adId} (User: ${userId})`);
+
+      // 1. Atomic state lock — also stamp time so stuck-task recovery can detect it
+      await db.runTransaction(async (t) => {
+        const ref = db.collection('users').doc(userId).collection('ads').doc(adId);
+        t.update(ref, { status: AdStatus.PENDING_REPOST, pendingRepostSince: new Date().toISOString() });
+      });
+
+      // 2. Fetch viewsBefore
+      let viewsBefore = 0;
+      if (cookies.length > 0) {
+        try {
+          const viewsResult = await this.automationService.callAutomationWorker('scrape-views', { userId, cookies, adId });
+          if (viewsResult.success && typeof viewsResult.views === 'number') {
+            viewsBefore = viewsResult.views;
+          }
+        } catch (e: any) {
+          this.logger.warn(`Failed to get viewsBefore for ${adId}: ${e.message}`);
+        }
+      }
+
+      const startTime = Date.now();
+
+      // 3. Trigger worker
+      try {
+        const result = await this.automationService.callAutomationWorker('repost', { userId, adId, adData });
+
+        // 4. On success, update state and create log
+        if (result.success) {
+          const nextRepostAt = new Date(Date.now() + repostIntervalMinutes * 60 * 1000).toISOString();
+
+          await db.collection('users').doc(userId).collection('ads').doc(adId).update({
+            status: AdStatus.ACTIVE,
+            lastPostedAt: new Date().toISOString(),
+            nextRepostAt,
+            pendingRepostSince: null,
+          });
+
+          await db.collection('users').doc(userId).collection('ads').doc(adId).collection('repostLogs').add({
+            status: 'success',
+            executedAt: new Date().toISOString(),
+            durationMs: Date.now() - startTime,
+            viewsBefore,
+            viewsAfter: null,
+          });
+
+          this.logger.log(`Repost scheduled: next in ${repostIntervalMinutes} minutes`);
+        }
+      } catch (error: any) {
+        this.logger.error(`Repost failed for ${adId}: ${error.message}`);
+
+        if (error.message === 'SESSION_EXPIRED') {
+          await db.collection('users').doc(userId).update({ accountStatus: 'expired' });
+          await db.collection('users').doc(userId).collection('ads').doc(adId).update({ status: AdStatus.ACTIVE, pendingRepostSince: null });
+          break; // Stop processing this user — session is gone
+        } else {
+          await db.collection('users').doc(userId).collection('ads').doc(adId).update({ status: AdStatus.ACTIVE, pendingRepostSince: null });
+        }
+      }
     }
   }
 
@@ -144,17 +186,8 @@ export class SchedulerService {
       for (const userDoc of usersSnapshot.docs) {
         const userId = userDoc.id;
 
-        // Fetch session cookies once per user
-        let cookies: any[] = [];
-        try {
-          const sessionDoc = await db.collection('sessions').doc(userId).get();
-          if (sessionDoc.exists) {
-            cookies = sessionDoc.data()?.marketplaceCookies || [];
-          }
-        } catch (e: any) {
-          continue;
-        }
-
+        // Fetch decrypted session cookies once per user
+        const cookies = await this.sessionService.getDecryptedCookies(userId);
         if (cookies.length === 0) continue;
 
         const adsSnapshot = await db.collection('users').doc(userId).collection('ads').get();
@@ -180,53 +213,32 @@ export class SchedulerService {
 
                   await logDoc.ref.update({
                     viewsAfter,
-                    viewsGained
+                    viewsGained,
                   });
 
-                  // Update parent ad document stats (trackedRepostsCount, lastRepostViewsGained, bestDayBisher, bestHourBisher)
+                  // Incrementally update ad stats — avoids re-fetching all logs.
+                  // trackedRepostsCount and lastRepostViewsGained are maintained in-place.
+                  // bestDayBisher/bestHourBisher are only updated if this log beats the current best.
                   try {
                     const adRef = db.collection('users').doc(userId).collection('ads').doc(adId);
-                    
-                    // Fetch all completed logs to calculate stats
-                    const allLogsSnapshot = await adRef.collection('repostLogs').get();
-                    const allLogs = allLogsSnapshot.docs.map(d => d.data());
-                    
-                    // Filter logs with viewsGained
-                    const completedLogs = allLogs.filter(log => 
-                      log.viewsAfter !== null && log.viewsAfter !== undefined &&
-                      log.viewsBefore !== null && log.viewsBefore !== undefined
-                    );
+                    const adSnap = await adRef.get();
+                    const adD = adSnap.data() || {};
 
-                    const trackedRepostsCount = completedLogs.length;
+                    const deDays = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+                    const executedDate = new Date(logData.executedAt);
+                    const statsUpdate: Record<string, any> = {
+                      trackedRepostsCount: (adD.trackedRepostsCount || 0) + 1,
+                      lastRepostViewsGained: viewsGained,
+                    };
 
-                    // Get last repost views gained
-                    let lastRepostViewsGained = 0;
-                    if (completedLogs.length > 0) {
-                      // Sort descending by execution date
-                      const sortedLogs = [...completedLogs].sort((a, b) => new Date(b.executedAt).getTime() - new Date(a.executedAt).getTime());
-                      lastRepostViewsGained = sortedLogs[0].viewsGained || 0;
+                    // Update best day/hour only when this log beats the stored best
+                    if (viewsGained > (adD.bestViewsGained || 0)) {
+                      statsUpdate.bestViewsGained = viewsGained;
+                      statsUpdate.bestDayBisher = deDays[executedDate.getDay()];
+                      statsUpdate.bestHourBisher = executedDate.getHours();
                     }
 
-                    // Get best day and hour based on completed logs
-                    let bestDayBisher = '';
-                    let bestHourBisher: number | null = null;
-                    if (completedLogs.length > 0) {
-                      // Find completed log with max viewsGained
-                      const bestLog = completedLogs.reduce((max, current) => 
-                        (current.viewsGained || 0) > (max.viewsGained || 0) ? current : max
-                      , completedLogs[0]);
-
-                      const d = new Date(bestLog.executedAt);
-                      const deDays = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
-                      bestDayBisher = deDays[d.getDay()];
-                      bestHourBisher = d.getHours();
-                    }
-
-                    await adRef.update({ 
-                      trackedRepostsCount,
-                      lastRepostViewsGained,
-                      ...(bestDayBisher ? { bestDayBisher, bestHourBisher } : {})
-                    });
+                    await adRef.update(statsUpdate);
                   } catch (e: any) {
                     this.logger.warn(`Failed to update stats for ad ${adId}: ${e.message}`);
                   }

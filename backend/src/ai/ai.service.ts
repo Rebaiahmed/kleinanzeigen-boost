@@ -38,8 +38,18 @@ export class AiService {
 
   private async executeWithFallback(contents: any[], systemInstruction: string, generationConfig: any): Promise<{ responseText: string, promptTokenCount: number, candidatesTokenCount: number }> {
     const modelChain = [
-      { type: 'google', name: 'gemini-1.5-pro' },
-      { type: 'openrouter', name: 'openai/gpt-3.5-turbo' }
+      // 1. Gemini 2.5 Flash — best quality/price, great German (Google key)
+      { type: 'google', name: 'gemini-2.5-flash' },
+      // 2. Gemini 2.0 Flash — fast cheap fallback
+      { type: 'google', name: 'gemini-2.0-flash' },
+      // 3. Grok 3 Mini — xAI key configured in GROQ_API_KEY env var, excellent & cheap
+      { type: 'openrouter', name: 'x-ai/grok-3-mini' },
+      // 4. GPT-4o Mini — best German quality among OpenAI models
+      { type: 'openrouter', name: 'openai/gpt-4o-mini' },
+      // 5. DeepSeek V3 — very cheap, surprisingly capable
+      { type: 'openrouter', name: 'deepseek/deepseek-chat' },
+      // 6. Llama 3.3 70B — free tier, solid open-source fallback
+      { type: 'openrouter', name: 'meta-llama/llama-3.3-70b-instruct' },
     ];
 
     // Append JSON instruction if JSON response is requested

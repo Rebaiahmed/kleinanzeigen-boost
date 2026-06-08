@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 
 const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -24,7 +25,7 @@ export interface AdsActionsReturn {
     onSuccess: () => void,
   ) => Promise<void>;
   handleAIOptimize: (adId: string) => Promise<void>;
-  handlePriceCheck: (adId: string) => Promise<void>;
+  handlePriceCheck: (adId: string, title: string) => Promise<{ suggestedPrice: number; reasoning: string } | null>;
   handleVintedCrossPost: (adId: string) => Promise<{ success: boolean; url?: string; error?: string }>;
   handleEbayCrossPost: (adId: string) => Promise<{ success: boolean; url?: string; error?: string }>;
   saveDraft: (adData: any) => Promise<any>;
@@ -38,6 +39,7 @@ export interface AdsActionsReturn {
 }
 
 export function useAdsActions(): AdsActionsReturn {
+  const queryClient = useQueryClient();
   const [isSyncing, setIsSyncing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<ToastType>(null);
@@ -96,48 +98,80 @@ export function useAdsActions(): AdsActionsReturn {
 
   const syncAds = useCallback(
     async (setAds: React.Dispatch<React.SetStateAction<any[]>>) => {
-      // 1. Immediately fetch and display saved ads from the local database (if any exist)
+      setIsSyncing(true);
+
+      // 1. Show cached ads immediately while sync runs
       try {
         const localRes = await fetch(`${API_URL}/ads`, {
           headers: { Authorization: `Bearer ${getToken()}` },
         });
         if (localRes.ok) {
           const localData = await localRes.json();
-          if (localData.success && localData.ads && localData.ads.length > 0) {
-            setAds(localData.ads);
-          }
+          if (localData.success && localData.ads?.length > 0) setAds(localData.ads);
         }
       } catch (e) {
-        console.warn('Failed to load local ads before sync:', e);
+        console.warn('Failed to load cached ads:', e);
       }
 
-      // 2. Show loading/sync indicator that a background refresh is happening
-      setIsSyncing(true);
+      // 2. Ensure extension has the token (in case session storage was cleared)
+      const currentToken = getToken();
+      if (currentToken) {
+        window.postMessage({ type: 'ANZEIGENBOOST_SET_TOKEN', token: currentToken }, '*');
+        await new Promise(r => setTimeout(r, 200));
+      }
 
-      // 3. Run background synchronization task asynchronously
+      // 3. Try extension-initiated sync via content script relay (no extId needed)
+      try {
+        const result = await Promise.race<any>([
+          new Promise<any>((resolve) => {
+            const handler = (event: MessageEvent) => {
+              if (event.data?.type === 'TRIGGER_SYNC_RESPONSE') {
+                window.removeEventListener('message', handler);
+                resolve(event.data);
+              }
+            };
+            window.addEventListener('message', handler);
+            window.postMessage({ type: 'TRIGGER_SYNC_REQUEST' }, '*');
+          }),
+          new Promise<any>((_, reject) =>
+            setTimeout(() => reject(new Error('Extension sync timed out')), 15000)
+          ),
+        ]);
+
+        console.log('[Sync] Extension result:', result);
+        if (result.success && result.ads) {
+          setAds(result.ads);
+          queryClient.setQueryData(['ads'], result.ads);
+          showToast('Anzeigen wurden erfolgreich synchronisiert', 'success');
+          setIsSyncing(false);
+          return;
+        }
+        console.warn('[Sync] Extension sync failed:', result.error);
+      } catch (e: any) {
+        console.warn('[Sync] Extension sync error:', e.message);
+      }
+
+      // 3. Fallback: server-side sync (uses WS if connected, cached ads otherwise)
       try {
         const res = await fetch(`${API_URL}/ads/sync`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${getToken()}` },
         });
-        if (res.status === 401) {
-          handleUnauthorized();
-          return;
-        }
+        if (res.status === 401) { handleUnauthorized(); return; }
         const data = await res.json();
         if (data.success) {
-          // 4. Update the UI with any changes (new ads, updated views, etc.)
           setAds(data.ads || []);
-          showToast('Anzeigen wurden erfolgreich synchronisiert', 'success');
+          showToast(
+            data.extensionConnected
+              ? 'Anzeigen wurden erfolgreich synchronisiert'
+              : 'Gespeicherte Anzeigen geladen (Extension offline)',
+            data.extensionConnected ? 'success' : 'error'
+          );
         } else {
           showToast(data.message || 'Fehler beim Synchronisieren', 'error');
         }
       } catch (e: any) {
-        if (e?.message?.includes('Failed to fetch') || e?.name === 'TypeError') {
-          showToast('Backend nicht erreichbar — bitte starte: cd backend && npm start', 'error');
-        } else {
-          showToast('Fehler beim Synchronisieren', 'error');
-        }
+        showToast('Backend nicht erreichbar', 'error');
       } finally {
         setIsSyncing(false);
       }
@@ -193,21 +227,23 @@ export function useAdsActions(): AdsActionsReturn {
   );
 
   const handlePriceCheck = useCallback(
-    async (adId: string) => {
-      showToast('Preisanalyse läuft...', 'success');
+    async (adId: string, title: string): Promise<{ suggestedPrice: number; reasoning: string } | null> => {
       try {
         const res = await fetch(`${API_URL}/ai/price`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${getToken()}`,
-          },
-          body: JSON.stringify({ adId }),
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+          body: JSON.stringify({ title }),
         });
+        if (res.status === 401) { handleUnauthorized(); return null; }
         const data = await res.json();
-        showToast(data.message || 'Preisanalyse abgeschlossen', 'success');
+        if (!res.ok) {
+          showToast(data.message || 'Fehler bei der Preisanalyse', 'error');
+          return null;
+        }
+        return { suggestedPrice: data.suggestedPrice, reasoning: data.reasoning };
       } catch {
         showToast('Fehler bei der Preisanalyse', 'error');
+        return null;
       }
     },
     [showToast],

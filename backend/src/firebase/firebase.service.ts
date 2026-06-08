@@ -1,48 +1,56 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import * as admin from 'firebase-admin';
+import * as fs from 'fs';
+import * as path from 'path';
 
-// In-Memory store for local development without Firebase credentials
-const inMemoryStore: Record<string, any> = {};
+// Persistent store — survives backend hot-reloads in dev mode
+const STORE_FILE = path.resolve(process.cwd(), '.dev-store.json');
+function loadStore(): Record<string, any> {
+  try { return JSON.parse(fs.readFileSync(STORE_FILE, 'utf8')); } catch { return {}; }
+}
+function saveStore(store: Record<string, any>) {
+  try { fs.writeFileSync(STORE_FILE, JSON.stringify(store, null, 2)); } catch {}
+}
+const inMemoryStore: Record<string, any> = loadStore();
 
 @Injectable()
 export class FirebaseService implements OnModuleInit {
   private app: admin.app.App | null = null;
   private readonly logger = new Logger(FirebaseService.name);
 
-  onModuleInit() {
+  async onModuleInit() {
     try {
-      const credentialStr = process.env.FIREBASE_SERVICE_ACCOUNT;
-      if (!credentialStr) {
-        this.logger.warn('No FIREBASE_SERVICE_ACCOUNT provided. Forcing In-Memory Mock database!');
-        this.app = null;
-        return;
-      }
-      
+      // Try multiple paths — __dirname differs between ts-node watch and compiled dist
+      const candidates = [
+        path.resolve(__dirname, '../../firebase-credentials.json'),       // from dist/firebase
+        path.resolve(__dirname, '../../../firebase-credentials.json'),    // from dist/src/firebase
+        path.resolve(process.cwd(), 'firebase-credentials.json'),        // from working dir
+      ];
+      const credFile = candidates.find(f => fs.existsSync(f)) || candidates[0];
       if (!admin.apps.length) {
-        let cleanCredentialStr = credentialStr.trim();
-        // Unwrap quotes if present
-        if (
-          (cleanCredentialStr.startsWith('"') && cleanCredentialStr.endsWith('"')) ||
-          (cleanCredentialStr.startsWith("'") && cleanCredentialStr.endsWith("'"))
-        ) {
-          cleanCredentialStr = cleanCredentialStr.slice(1, -1);
+        if (!fs.existsSync(credFile)) {
+          this.logger.warn('firebase-credentials.json not found. Using file-based mock.');
+          this.app = null;
+          return;
         }
-        // Unescape newlines, double quotes, and backslashes
-        cleanCredentialStr = cleanCredentialStr
-          .replace(/\\n/g, '\n')
-          .replace(/\\"/g, '"')
-          .replace(/\\\\/g, '\\');
-
-        const credentialObj = JSON.parse(cleanCredentialStr);
+        const credentialObj = JSON.parse(fs.readFileSync(credFile, 'utf8'));
         this.app = admin.initializeApp({
           credential: admin.credential.cert(credentialObj),
-          projectId: credentialObj.project_id || 'demo-kleinanzeigen-boost',
+          projectId: credentialObj.project_id,
         });
       } else {
         this.app = admin.apps[0]!;
       }
+
+      // Verify Firestore API is actually enabled by doing a test read
+      await this.app!.firestore().collection('_health').doc('ping').get();
+      this.logger.log('✅ Firestore connected successfully.');
     } catch (e: any) {
-      this.logger.warn(`Firebase initialization failed: ${e.message}. Using In-Memory Mock.`);
+      if (e.code === 5 || e.message?.includes('PERMISSION_DENIED') || e.message?.includes('not been used')) {
+        this.logger.warn('⚠️  Firestore API not enabled in GCP — using file-based store. Enable at: https://console.firebase.google.com/project/kleinanzeigen-app/firestore');
+      } else {
+        this.logger.warn(`Firebase init failed: ${e.message} — using file-based store.`);
+      }
       this.app = null;
     }
   }
@@ -94,12 +102,15 @@ export class FirebaseService implements OnModuleInit {
       set: async (data: any, options?: any) => {
         const existing = inMemoryStore[fullPath] || {};
         inMemoryStore[fullPath] = options?.merge ? { ...existing, ...data } : data;
+        saveStore(inMemoryStore);
       },
       update: async (data: any) => {
         inMemoryStore[fullPath] = { ...inMemoryStore[fullPath], ...data };
+        saveStore(inMemoryStore);
       },
       delete: async () => {
         delete inMemoryStore[fullPath];
+        saveStore(inMemoryStore);
       },
       collection: (subCol: string) => makeQueryable(`${fullPath}/${subCol}/`),
     });

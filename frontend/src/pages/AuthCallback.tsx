@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { RefreshCw, AlertCircle, Loader2 } from 'lucide-react';
 import axios from 'axios';
@@ -11,9 +11,13 @@ export function AuthCallback() {
   const [status, setStatus] = useState('Verifiziere sichere Sitzung...');
   const [errorType, setErrorType] = useState<ErrorType>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // Prevent React StrictMode from firing the exchange twice (which burns the one-time token)
+  const hasExchanged = useRef(false);
 
   useEffect(() => {
     const exchangeToken = async () => {
+      if (hasExchanged.current) return;
+      hasExchanged.current = true;
       const token = searchParams.get('token');
       if (!token) {
         setErrorType('generic');
@@ -35,20 +39,39 @@ export function AuthCallback() {
         });
 
         if (exchangeRes.data.success) {
-          localStorage.setItem('kb_session', exchangeRes.data.accessToken);
-          localStorage.setItem('token', exchangeRes.data.accessToken);
-          setStatus('Sitzung erfolgreich verknüpft! Synchronisiere Anzeigen...');
+          const accessToken = exchangeRes.data.accessToken;
+          localStorage.setItem('kb_session', accessToken);
+          localStorage.setItem('token', accessToken);
 
-          // Trigger initial ad sync securely
-          try {
-            await axios.post(`${apiUrl}/ads/sync`, {}, {
-              withCredentials: true
+          // Send token directly to the extension background via externally_connectable.
+          // This bypasses the postMessage → content script relay which can fail silently.
+          const extId = localStorage.getItem('anzeigenboost_ext_id');
+          const chromeRuntime = (window as any).chrome?.runtime;
+          if (extId && chromeRuntime) {
+            chromeRuntime.sendMessage(extId, { type: 'STORE_SESSION_TOKEN', token: accessToken }, (res: any) => {
+              if (chromeRuntime.lastError) {
+                console.warn('[AuthCallback] Direct ext message failed, falling back to postMessage:', chromeRuntime.lastError.message);
+                window.postMessage({ type: 'ANZEIGENBOOST_SET_TOKEN', token: accessToken }, '*');
+              } else {
+                console.log('[AuthCallback] Token sent directly to extension:', res);
+              }
             });
-          } catch (syncErr) {
-            console.warn('Initial sync failed, but login succeeded.', syncErr);
+          } else {
+            // Fallback: relay via content script postMessage
+            console.warn('[AuthCallback] No extension ID found, using postMessage relay');
+            window.postMessage({ type: 'ANZEIGENBOOST_SET_TOKEN', token: accessToken }, '*');
           }
 
-          // Redirect to the dashboard
+          setStatus('Sitzung erfolgreich verknüpft!');
+
+          // Trigger a best-effort prefetch — won't block navigation if extension
+          // WS isn't connected yet (backend now returns cached ads gracefully)
+          axios.post(`${apiUrl}/ads/sync`, {}, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            withCredentials: true
+          }).catch(err => console.warn('Prefetch sync failed (non-blocking):', err.message));
+
+          // Navigate immediately — Ads page will auto-sync once extension connects
           navigate('/meine-anzeigen', { replace: true });
         }
       } catch (err: any) {

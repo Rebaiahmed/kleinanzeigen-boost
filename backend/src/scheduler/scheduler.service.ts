@@ -4,6 +4,13 @@ import { FirebaseService } from '../firebase/firebase.service';
 import { AutomationService } from '../automation/automation.service';
 import { SessionService } from '../auth/session.service';
 import { AdStatus } from '../ads/dto/ad-status.enum';
+import { AdData } from '../ads/dto/ad-data.interface';
+import { SCHEDULER_CONFIG } from '../config/scheduler.constants';
+
+/** Consistent context prefix for scheduler logs: "[user=… ad=…]". */
+function logCtx(userId: string, adId?: string): string {
+  return adId ? `[user=${userId} ad=${adId}]` : `[user=${userId}]`;
+}
 
 @Injectable()
 export class SchedulerService {
@@ -112,7 +119,7 @@ export class SchedulerService {
       // Ads can get stuck in AdStatus.PENDING_REPOST if the worker crashes mid-task.
       // Any ad that has been in that state for more than 10 minutes is reverted
       // back to 'active' so the next cron tick can retry it.
-      const stuckCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+      const stuckCutoff = new Date(Date.now() - SCHEDULER_CONFIG.stuckTaskThresholdMinutes * 60 * 1000).toISOString();
       try {
         const usersForRecovery = await db.collection('users').get();
         for (const userDoc of usersForRecovery.docs) {
@@ -123,7 +130,7 @@ export class SchedulerService {
             .get();
 
           for (const stuckAd of stuckAds.docs) {
-            this.logger.warn(`Recovering stuck ad ${stuckAd.id} for user ${userDoc.id}`);
+            this.logger.warn(`${logCtx(userDoc.id, stuckAd.id)} Recovering stuck ad`);
             await stuckAd.ref.update({ status: AdStatus.ACTIVE, pendingRepostSince: null });
           }
         }
@@ -137,7 +144,7 @@ export class SchedulerService {
 
       // Process up to 5 users concurrently — automation tasks can take 120s each,
       // so serial processing would block for minutes with many users.
-      const USER_CONCURRENCY = 5;
+      const USER_CONCURRENCY = SCHEDULER_CONFIG.userConcurrency;
       const userChunks: (typeof usersSnapshot.docs[number])[][] = [];
       for (let i = 0; i < usersSnapshot.docs.length; i += USER_CONCURRENCY) {
         userChunks.push(usersSnapshot.docs.slice(i, i + USER_CONCURRENCY));
@@ -172,10 +179,10 @@ export class SchedulerService {
 
     for (const adDoc of adsSnapshot.docs) {
       const adId = adDoc.id;
-      const adData = adDoc.data();
-      const repostIntervalMinutes: number = adData.repostIntervalMinutes ?? 1440;
+      const adData = adDoc.data() as AdData;
+      const repostIntervalMinutes: number = adData.repostIntervalMinutes ?? SCHEDULER_CONFIG.defaultRepostIntervalMinutes;
 
-      this.logger.log(`Initiating automated repost for Ad: ${adId} (User: ${userId})`);
+      this.logger.log(`${logCtx(userId, adId)} Initiating automated repost`);
 
       // 1. Atomic state lock — also stamp time so stuck-task recovery can detect it
       await db.runTransaction(async (t) => {
@@ -216,10 +223,10 @@ export class SchedulerService {
             viewsAfter: null,
           });
 
-          this.logger.log(`Repost scheduled: next in ${repostIntervalMinutes} minutes`);
+          this.logger.log(`${logCtx(userId, adId)} Repost scheduled: next in ${repostIntervalMinutes} minutes`);
         }
       } catch (error: any) {
-        this.logger.error(`Repost failed for ${adId}: ${error.message}`);
+        this.logger.error(`${logCtx(userId, adId)} Repost failed: ${error.message}`);
 
         const adRef = db.collection('users').doc(userId).collection('ads').doc(adId);
 
@@ -230,17 +237,17 @@ export class SchedulerService {
 
           if (reallyExpired) {
             await db.collection('users').doc(userId).update({ accountStatus: 'expired' });
-            this.logger.warn(`Session confirmed expired for user ${userId} — halting remaining reposts`);
+            this.logger.warn(`${logCtx(userId)} Session confirmed expired — halting remaining reposts`);
             break; // All ads share these cookies; no point continuing.
           }
 
           // False positive — session still authenticates. Skip this ad, keep going.
-          this.logger.warn(`SESSION_EXPIRED for ${adId} not confirmed on re-check — continuing with other ads`);
+          this.logger.warn(`${logCtx(userId, adId)} SESSION_EXPIRED not confirmed on re-check — continuing with other ads`);
           continue;
         }
 
-        // Track consecutive failures per ad. After 3, disable auto-repost and notify.
-        const MAX_REPOST_FAILURES = 3;
+        // Track consecutive failures per ad. After N, disable auto-repost and notify.
+        const MAX_REPOST_FAILURES = SCHEDULER_CONFIG.maxRepostFailures;
         const failureCount = (adData.repostFailureCount || 0) + 1;
 
         if (failureCount >= MAX_REPOST_FAILURES) {
@@ -268,14 +275,14 @@ export class SchedulerService {
             this.logger.warn(`Failed to write notification for ${adId}: ${notifyErr.message}`);
           }
 
-          this.logger.warn(`Auto-Repost disabled for ${adId} after ${MAX_REPOST_FAILURES} failures`);
+          this.logger.warn(`${logCtx(userId, adId)} Auto-Repost disabled after ${MAX_REPOST_FAILURES} failures`);
         } else {
           await adRef.update({
             status: AdStatus.ACTIVE,
             pendingRepostSince: null,
             repostFailureCount: failureCount,
           });
-          this.logger.warn(`Repost failure ${failureCount}/${MAX_REPOST_FAILURES} for ${adId}`);
+          this.logger.warn(`${logCtx(userId, adId)} Repost failure ${failureCount}/${MAX_REPOST_FAILURES}`);
         }
       }
     }
@@ -354,7 +361,7 @@ export class SchedulerService {
                   this.logger.log(`Updated views for repostLog ${logDoc.id} of ad ${adId}: +${viewsGained} views`);
                 }
               } catch (e: any) {
-                this.logger.warn(`Failed to track views for ad ${adId}: ${e.message}`);
+                this.logger.warn(`${logCtx(userId, adId)} Failed to track views: ${e.message}`);
               }
             }
           }

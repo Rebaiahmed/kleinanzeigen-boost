@@ -1,0 +1,22 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "ads",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "autoRepost", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "nextRepostAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "ads",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "pendingRepostSince", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

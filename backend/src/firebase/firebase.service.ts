@@ -92,12 +92,21 @@ export class FirebaseService implements OnModuleInit {
       doc: (docPath: string) => makeDocRef(`${prefix}${docPath}`),
     });
 
-    const makeDocRef = (fullPath: string) => ({
+    const makeDocRef = (fullPath: string): any => ({
       id: fullPath.split('/').pop(),
+      // Mirror Firestore's ref.parent (collection) → ref.parent.parent (owning doc).
+      // Enables collectionGroup consumers to derive e.g. the userId of an ad.
+      get parent() {
+        const segs = fullPath.split('/');
+        return {
+          parent: segs.length >= 3 ? makeDocRef(segs.slice(0, -2).join('/')) : null,
+        };
+      },
       get: async () => ({
         exists: !!inMemoryStore[fullPath],
         id: fullPath.split('/').pop(),
         data: () => inMemoryStore[fullPath],
+        ref: makeDocRef(fullPath),
       }),
       set: async (data: any, options?: any) => {
         const existing = inMemoryStore[fullPath] || {};
@@ -115,12 +124,47 @@ export class FirebaseService implements OnModuleInit {
       collection: (subCol: string) => makeQueryable(`${fullPath}/${subCol}/`),
     });
 
+    // collectionGroup('ads') matches every doc whose second-to-last path segment
+    // equals the collection id (e.g. users/<uid>/ads/<adId>), across all parents.
+    const makeGroupQueryable = (collectionId: string, filterFns: ((data: any) => boolean)[] = []): any => ({
+      where: (field: string, op: string, value: any) => {
+        const fn = (data: any) => {
+          const v = data?.[field];
+          if (op === '==') return v === value;
+          if (op === '<=') return v <= value;
+          if (op === '>=') return v >= value;
+          if (op === '<')  return v < value;
+          if (op === '>')  return v > value;
+          return true;
+        };
+        return makeGroupQueryable(collectionId, [...filterFns, fn]);
+      },
+      get: async () => {
+        const docs = Object.keys(inMemoryStore)
+          .filter(k => {
+            const segs = k.split('/');
+            return segs.length >= 2 && segs[segs.length - 2] === collectionId;
+          })
+          .map(k => ({
+            id: k.split('/').pop(),
+            exists: true,
+            data: () => inMemoryStore[k],
+            ref: makeDocRef(k),
+          }))
+          .filter(doc => filterFns.every(fn => fn(doc.data())));
+        return { docs, empty: docs.length === 0 };
+      },
+    });
+
     return {
       collection: (colPath: string) => makeQueryable(`${colPath}/`),
+      collectionGroup: (collectionId: string) => makeGroupQueryable(collectionId),
       batch: () => {
         const ops: (() => Promise<void>)[] = [];
         return {
           set: (ref: any, data: any, options?: any) => { ops.push(() => ref.set(data, options)); },
+          update: (ref: any, data: any) => { ops.push(() => ref.update(data)); },
+          delete: (ref: any) => { ops.push(() => ref.delete()); },
           commit: async () => { for (const op of ops) await op(); },
         };
       },

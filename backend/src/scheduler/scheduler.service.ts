@@ -128,47 +128,65 @@ export class SchedulerService {
     try {
       // ── Stuck-task recovery ──────────────────────────────────────────────────
       // Ads can get stuck in AdStatus.PENDING_REPOST if the worker crashes mid-task.
-      // Any ad that has been in that state for more than 10 minutes is reverted
-      // back to 'active' so the next cron tick can retry it.
+      // One collectionGroup query finds them across all users; reverts are batched.
       const stuckCutoff = new Date(Date.now() - SCHEDULER_CONFIG.stuckTaskThresholdMinutes * 60 * 1000).toISOString();
       try {
-        const usersForRecovery = await db.collection('users').get();
-        for (const userDoc of usersForRecovery.docs) {
-          const stuckAds = await db
-            .collection('users').doc(userDoc.id).collection('ads')
-            .where('status', '==', AdStatus.PENDING_REPOST)
-            .where('pendingRepostSince', '<=', stuckCutoff)
-            .get();
+        const stuckAds = await db.collectionGroup('ads')
+          .where('status', '==', AdStatus.PENDING_REPOST)
+          .where('pendingRepostSince', '<=', stuckCutoff)
+          .get();
 
+        if (!stuckAds.empty) {
+          const batch = db.batch();
           for (const stuckAd of stuckAds.docs) {
-            this.logger.warn(`${logCtx(userDoc.id, stuckAd.id)} Recovering stuck ad`);
-            await stuckAd.ref.update({ status: AdStatus.ACTIVE, pendingRepostSince: null });
+            this.logger.warn(`${logCtx(stuckAd.ref.parent.parent?.id, stuckAd.id)} Recovering stuck ad`);
+            batch.update(stuckAd.ref, { status: AdStatus.ACTIVE, pendingRepostSince: null });
           }
+          await batch.commit();
         }
       } catch (e: any) {
         this.logger.warn(`Stuck-task recovery failed: ${e.message}`);
       }
       // ─────────────────────────────────────────────────────────────────────────
 
-      // Find all users, skipping those whose marketplace session is known-expired —
-      // every repost would fail with SESSION_EXPIRED until they re-login via the extension.
-      const usersSnapshot = await db.collection('users').get();
-      const activeUserDocs = usersSnapshot.docs.filter(d => d.data()?.accountStatus !== 'expired');
-      const skipped = usersSnapshot.docs.length - activeUserDocs.length;
-      if (skipped > 0) {
-        this.logger.log(`Skipping ${skipped} user(s) with expired session`);
+      // One collectionGroup query returns ONLY due ads across all users — avoids
+      // the previous N-queries-per-user scan. Requires a composite index on the
+      // 'ads' group (autoRepost, status, nextRepostAt) — see firestore.indexes.json.
+      const dueAdsSnap = await db.collectionGroup('ads')
+        .where('autoRepost', '==', true)
+        .where('status', '==', AdStatus.ACTIVE)
+        .where('nextRepostAt', '<=', now)
+        .get();
+
+      if (dueAdsSnap.empty) {
+        this.logger.log('No due reposts this run');
+        return { skipped: false };
       }
 
-      // Process up to N users concurrently — automation tasks can take 120s each,
-      // so serial processing would block for minutes with many users.
+      // Group due ads by their owning user (ad.ref.parent.parent.id).
+      const adsByUser = new Map<string, any[]>();
+      for (const adDoc of dueAdsSnap.docs) {
+        const uid = adDoc.ref.parent?.parent?.id;
+        if (!uid) continue;
+        (adsByUser.get(uid) ?? adsByUser.set(uid, []).get(uid)!).push(adDoc);
+      }
+
+      // Fetch only the user docs that actually have due ads, and skip expired sessions.
+      const userIds = [...adsByUser.keys()];
+      const activeUserIds: string[] = [];
+      for (const uid of userIds) {
+        const userDoc = await db.collection('users').doc(uid).get();
+        if (userDoc.data()?.accountStatus === 'expired') continue;
+        activeUserIds.push(uid);
+      }
+      const skipped = userIds.length - activeUserIds.length;
+      if (skipped > 0) this.logger.log(`Skipping ${skipped} user(s) with expired session`);
+
+      // Process up to N users concurrently — automation tasks can take 120s each.
       const USER_CONCURRENCY = SCHEDULER_CONFIG.userConcurrency;
-      const userChunks: (typeof activeUserDocs[number])[][] = [];
-      for (let i = 0; i < activeUserDocs.length; i += USER_CONCURRENCY) {
-        userChunks.push(activeUserDocs.slice(i, i + USER_CONCURRENCY));
-      }
-
-      for (const chunk of userChunks) {
-        await Promise.all(chunk.map(userDoc => this.processUserReposts(userDoc.id, now, triggeredBy)));
+      for (let i = 0; i < activeUserIds.length; i += USER_CONCURRENCY) {
+        const chunk = activeUserIds.slice(i, i + USER_CONCURRENCY);
+        await Promise.all(chunk.map(uid => this.processUserReposts(uid, adsByUser.get(uid)!, triggeredBy)));
       }
     } catch (error: any) {
       this.logger.error(`Cron iteration failed: ${error.message}`);
@@ -182,22 +200,15 @@ export class SchedulerService {
    * Processes all due reposts for a single user.
    * Extracted from the cron loop so it can run concurrently across users.
    */
-  private async processUserReposts(userId: string, now: string, triggeredBy: 'cron' | 'manual' = 'cron'): Promise<void> {
+  private async processUserReposts(userId: string, adDocs: any[], triggeredBy: 'cron' | 'manual' = 'cron'): Promise<void> {
     const db = this.firebaseService.firestore;
 
-    // Find due ads for this user
-    const adsSnapshot = await db.collection('users').doc(userId).collection('ads')
-      .where('autoRepost', '==', true)
-      .where('nextRepostAt', '<=', now)
-      .where('status', '==', AdStatus.ACTIVE)
-      .get();
-
-    if (adsSnapshot.empty) return;
+    if (!adDocs || adDocs.length === 0) return;
 
     // Fetch decrypted session cookies for view scraping
     const cookies = await this.sessionService.getDecryptedCookies(userId);
 
-    for (const adDoc of adsSnapshot.docs) {
+    for (const adDoc of adDocs) {
       const adId = adDoc.id;
       const adData = adDoc.data() as AdData;
       const repostIntervalMinutes: number = adData.repostIntervalMinutes ?? SCHEDULER_CONFIG.defaultRepostIntervalMinutes;
@@ -352,6 +363,8 @@ export class SchedulerService {
             if (executedAt <= targetDate) {
               try {
                 const viewsAfter = await this.scrapeViewsWithRetry(userId, cookies, adId, 'viewsAfter');
+                // Space out scrape calls to avoid hitting marketplace rate limits.
+                await new Promise((r) => setTimeout(r, SCHEDULER_CONFIG.scrapeDelayMs));
                 // Skip if the after-scrape failed, or if viewsBefore was never captured —
                 // computing a "gained" delta from a missing baseline would corrupt analytics.
                 if (viewsAfter !== null && typeof logData.viewsBefore === 'number') {

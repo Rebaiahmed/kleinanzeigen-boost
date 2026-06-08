@@ -14,4 +14,7 @@ export const SCHEDULER_CONFIG = {
 
   /** How many users are processed concurrently per cron tick. */
   userConcurrency: Number(process.env.SCHEDULER_USER_CONCURRENCY) || 5,
+
+  /** Delay between sequential scrape-views calls in view tracking, to avoid rate limits. */
+  scrapeDelayMs: Number(process.env.SCRAPE_VIEWS_DELAY_MS) || 300,
 };

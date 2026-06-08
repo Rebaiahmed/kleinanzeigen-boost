@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ReplyTemplate, ReplyTemplatesApi } from '../../api/reply-templates';
-import { Copy, Plus, Trash2, Edit2, CheckCircle2, Lock, Loader2, X, Wand2 } from 'lucide-react';
+import { Copy, Plus, Trash2, Edit2, CheckCircle2, Loader2, X, Wand2 } from 'lucide-react';
 import { AiTemplateModal } from './AiTemplateModal';
 
 const AI_TEMPLATES_ENABLED = (import.meta as any).env.VITE_FEATURE_AI_TEMPLATES === 'true';
@@ -14,23 +14,9 @@ const STARTER_TEMPLATES = [
 ];
 
 const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
-const FREE_LIMIT = 3;
 
 function getToken() {
   return localStorage.getItem('kb_session') || localStorage.getItem('token');
-}
-
-async function fetchPlan(): Promise<string> {
-  try {
-    const res = await fetch(`${API_URL}/ai/usage`, {
-      headers: { Authorization: `Bearer ${getToken()}` },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      return (data.plan || 'free').toLowerCase();
-    }
-  } catch {}
-  return 'free';
 }
 
 const ICON_OPTIONS = ['💬', '📦', '📮', '💰', '📏', '🚚', '✅', '🙏', '⏰', '🔔'];
@@ -38,7 +24,6 @@ const ICON_OPTIONS = ['💬', '📦', '📮', '💰', '📏', '🚚', '✅', '�
 export function ReplyTemplatesList() {
   const [templates, setTemplates] = useState<ReplyTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [plan, setPlan] = useState<string>('free');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isAddingStarter, setIsAddingStarter] = useState(false);
@@ -53,9 +38,8 @@ export function ReplyTemplatesList() {
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [data, userPlan] = await Promise.all([ReplyTemplatesApi.getAll(), fetchPlan()]);
+      const data = await ReplyTemplatesApi.getAll();
       setTemplates(data);
-      setPlan(userPlan);
     } catch (e) {
       console.error('Failed to load templates:', e);
     } finally {
@@ -65,8 +49,6 @@ export function ReplyTemplatesList() {
 
   useEffect(() => { load(); }, [load]);
 
-  const isFree = plan === 'free';
-  const atLimit = isFree && templates.length >= FREE_LIMIT;
 
   const openCreate = () => {
     setEditingId(null);
@@ -158,50 +140,22 @@ export function ReplyTemplatesList() {
           {AI_TEMPLATES_ENABLED && (
             <button
               onClick={() => setIsAiModalOpen(true)}
-              disabled={atLimit}
-              title={atLimit ? 'Limit erreicht — upgrade auf Pro' : 'KI-Vorlagen generieren'}
-              className="inline-flex items-center gap-2 border border-[#A8C300] text-[#A8C300] hover:bg-[#A8C300] hover:text-white disabled:border-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed font-semibold py-2 px-4 rounded text-[13px] transition-colors"
+              className="inline-flex items-center gap-2 border border-[#A8C300] text-[#A8C300] hover:bg-[#A8C300] hover:text-white font-semibold py-2 px-4 rounded text-[13px] transition-colors"
             >
               <Wand2 className="w-4 h-4" />
               KI-Vorlagen
             </button>
           )}
-          {atLimit ? (
-            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded px-3 py-2 text-[13px] text-amber-700 font-medium">
-              <Lock className="w-4 h-4 shrink-0" />
-              <span>Limit: {FREE_LIMIT}/{FREE_LIMIT}</span>
-            </div>
-          ) : (
-            <button
-              onClick={openCreate}
-              className="inline-flex items-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] text-white font-semibold py-2 px-4 rounded text-[13px] transition-colors shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              Neue Vorlage
-            </button>
-          )}
+          <button
+            onClick={openCreate}
+            className="inline-flex items-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] text-white font-semibold py-2 px-4 rounded text-[13px] transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Neue Vorlage
+          </button>
         </div>
       </div>
 
-      {/* Plan limit upgrade prompt */}
-      {atLimit && (
-        <div className="mb-5 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm">
-          <Lock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-          <div>
-            <p className="font-semibold text-amber-800">Kostenloses Limit erreicht</p>
-            <p className="text-amber-700 mt-0.5">
-              Du hast {FREE_LIMIT} von {FREE_LIMIT} kostenlosen Vorlagen erstellt.
-              Upgrade auf Pro für unbegrenzte Vorlagen.
-            </p>
-            <a
-              href="/einstellungen"
-              className="inline-block mt-2 text-amber-800 font-bold hover:underline"
-            >
-              Jetzt upgraden →
-            </a>
-          </div>
-        </div>
-      )}
 
       {/* Inline create/edit form */}
       {isFormOpen && (
@@ -396,11 +350,6 @@ export function ReplyTemplatesList() {
       )}
 
       {/* Plan counter for free users */}
-      {isFree && templates.length > 0 && (
-        <p className="text-[12px] text-gray-400 mt-2 text-center">
-          {templates.length}/{FREE_LIMIT} kostenlose Vorlagen verwendet
-        </p>
-      )}
 
       {/* AI generation modal */}
       {isAiModalOpen && (

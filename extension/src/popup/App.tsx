@@ -1,61 +1,120 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+const DASHBOARD = 'http://localhost:5173';
+
+function openTab(path: string) {
+  chrome.tabs.create({ url: `${DASHBOARD}${path}` });
+  window.close();
+}
 
 function App() {
-  const [isInitializing, setIsInitializing] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const url = tabs[0]?.url || '';
+      setIsLoggedIn(url.includes('kleinanzeigen.de'));
+    });
+  }, []);
+
+  return (
+    <div style={{ width: 280, fontFamily: 'system-ui, sans-serif', background: '#fff' }}>
+      {/* Header */}
+      <div style={{ background: '#A8C300', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontWeight: 700, fontSize: 15, color: '#fff' }}>kleinanzeigen</span>
+        <span style={{ fontWeight: 400, fontSize: 15, color: 'rgba(255,255,255,0.85)' }}>Boost</span>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <div style={{
+            width: 8, height: 8, borderRadius: '50%',
+            background: isLoggedIn ? '#fff' : 'rgba(255,255,255,0.4)',
+          }} />
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.9)' }}>
+            {isLoggedIn === null ? '…' : isLoggedIn ? 'Verbunden' : 'Nicht verbunden'}
+          </span>
+        </div>
+      </div>
+
+      {/* Quick actions */}
+      <div style={{ padding: '12px 12px 8px' }}>
+        <p style={{ fontSize: 11, color: '#999', margin: '0 0 8px 2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          Schnellzugriff
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <QuickButton icon="📄" label="Meine Anzeigen"    onClick={() => openTab('/meine-anzeigen')} />
+          <QuickButton icon="📋" label="Antwort-Vorlagen"  onClick={() => openTab('/vorlagen')} />
+          <QuickButton icon="🤖" label="Mit KI erstellen"  onClick={() => openTab('/neue-anzeige-mit-ki-erstellen')} />
+        </div>
+      </div>
+
+      <div style={{ height: 1, background: '#f0f0f0', margin: '4px 12px' }} />
+
+      {/* Session transfer */}
+      <div style={{ padding: '8px 12px 12px' }}>
+        <SessionButton />
+      </div>
+    </div>
+  );
+}
+
+function QuickButton({ icon, label, onClick }: { icon: string; label: string; onClick: () => void }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        width: '100%', padding: '9px 12px',
+        background: hovered ? '#f0f0f0' : '#f8f8f8',
+        border: '1px solid #e8e8e8', borderRadius: 6,
+        cursor: 'pointer', fontSize: 13, fontWeight: 500,
+        color: '#333', textAlign: 'left',
+      }}
+    >
+      <span style={{ fontSize: 16 }}>{icon}</span>
+      {label}
+      <span style={{ marginLeft: 'auto', color: '#bbb', fontSize: 12 }}>→</span>
+    </button>
+  );
+}
+
+function SessionButton() {
+  const [state, setState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [error, setError] = useState('');
 
-  const initiateHandshake = () => {
-    setIsInitializing(true);
+  const transfer = () => {
+    setState('loading');
     setError('');
-    
     chrome.runtime.sendMessage({ type: 'INIT_HANDSHAKE' }, (response) => {
-      setIsInitializing(false);
-      
-      if (chrome.runtime.lastError) {
-        setError('Erweiterungsfehler: ' + chrome.runtime.lastError.message);
-        return;
-      }
-      
-      if (response?.success) {
-        // Redirection to Web App happens in the background script automatically.
-        window.close(); // Close the popup since we redirected them to the web app
+      if (chrome.runtime.lastError || !response?.success) {
+        setState('error');
+        setError(chrome.runtime.lastError?.message || response?.error || 'Fehler beim Übertragen');
       } else {
-        setError(response?.error || 'Unbekannter Fehler beim Handshake.');
+        window.close();
       }
     });
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-full w-full bg-brand-light p-4">
-      <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-sm text-center">
-        <h1 className="text-2xl font-bold text-brand-dark mb-2">AnzeigenBoost</h1>
-        <p className="text-sm text-gray-600 mb-6">Verknüpfe deine aktuelle Kleinanzeigen.de Sitzung mit dem Web-Dashboard.</p>
-        
-        {error && (
-          <div className="bg-red-50 text-red-600 text-sm p-3 rounded mb-4 border border-red-200">
-            {error}
-          </div>
-        )}
-
-        <button 
-          className={`w-full text-white py-3 rounded font-medium transition-colors flex justify-center items-center ${isInitializing ? 'bg-gray-400' : 'bg-brand hover:bg-brand-dark'}`}
-          onClick={initiateHandshake}
-          disabled={isInitializing}
-        >
-          {isInitializing ? (
-            <span className="flex items-center">
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Sitzung wird übertragen...
-            </span>
-          ) : (
-            'Sitzung an Web App übertragen'
-          )}
-        </button>
-      </div>
-    </div>
+    <>
+      {error && (
+        <p style={{ fontSize: 11, color: '#e53e3e', margin: '0 0 6px' }}>{error}</p>
+      )}
+      <button
+        onClick={transfer}
+        disabled={state === 'loading'}
+        style={{
+          width: '100%', padding: '8px',
+          background: '#fff', border: '1px solid #ddd',
+          borderRadius: 6, fontSize: 12, color: '#666',
+          cursor: state === 'loading' ? 'default' : 'pointer',
+          opacity: state === 'loading' ? 0.6 : 1,
+        }}
+      >
+        {state === 'loading' ? 'Übertrage…' : '🔗 Sitzung übertragen'}
+      </button>
+    </>
   );
 }
 

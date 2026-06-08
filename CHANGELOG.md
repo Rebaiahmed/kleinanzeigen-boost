@@ -5,6 +5,11 @@ All notable changes to this project are documented here.
 ## [1.0.0] - 2026-06-08
 
 ### Added
+- redesign extension popup with quick-action buttons
+
+## [1.0.0] - 2026-06-08
+
+### Added
 - add Reply Templates feature with AI generation
 - disable Vinted integration for MVP — replace with coming-soon state
 - extract real username/email from cookies instead of mock

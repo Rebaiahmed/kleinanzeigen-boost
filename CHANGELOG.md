@@ -13,6 +13,21 @@ All notable changes to this project are documented here.
 - retry scrape-views with exponential backoff before falling back
 
 ### Changed
+- security: HTTPS guard for worker, repost audit trail, skip expired users
+- config constants, AdData type, structured log context
+- commit in-progress changes to auth, extension, and ads actions
+
+## [1.0.0] - 2026-06-08
+
+### Added
+- Vinted dual-template, language selector, feedback button + production-readiness fixes
+- redesign extension popup with quick-action buttons
+
+### Fixed
+- confirm session expiry before halting a user's whole repost batch
+- retry scrape-views with exponential backoff before falling back
+
+### Changed
 - config constants, AdData type, structured log context
 - commit in-progress changes to auth, extension, and ads actions
 

@@ -7,6 +7,14 @@ All notable changes to this project are documented here.
 ### Added
 - redesign extension popup with quick-action buttons
 
+### Changed
+- commit in-progress changes to auth, extension, and ads actions
+
+## [1.0.0] - 2026-06-08
+
+### Added
+- redesign extension popup with quick-action buttons
+
 ## [1.0.0] - 2026-06-08
 
 ### Added

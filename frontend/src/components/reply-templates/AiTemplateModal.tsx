@@ -1,211 +1,260 @@
-import React, { useState, useEffect } from 'react';
-import { Bot, Loader2, X } from 'lucide-react';
-import { ReplyTemplate, ReplyTemplatesApi } from '../../api/reply-templates';
+import React, { useState } from 'react';
+import { X, Loader2, Wand2, AlertTriangle, CheckSquare, Square } from 'lucide-react';
+import { ReplyTemplatesApi } from '../../api/reply-templates';
 
-export function AiTemplateModal({ isOpen, onClose, onSaved }: { isOpen: boolean, onClose: () => void, onSaved: () => void }) {
-  const [ads, setAds] = useState<any[]>([]);
-  const [selectedAdId, setSelectedAdId] = useState<string>('');
-  const [isLoadingAds, setIsLoadingAds] = useState(false);
+const ALL_TOPICS = [
+  { icon: '📦', key: 'Verfügbarkeit' },
+  { icon: '📮', key: 'Versand' },
+  { icon: '💰', key: 'Preis' },
+  { icon: '📏', key: 'Details' },
+  { icon: '🚚', key: 'Abholung' },
+];
+
+interface GeneratedTemplate {
+  icon: string;
+  title: string;
+  content: string;
+  isDuplicate: boolean;
+  selected: boolean;
+}
+
+interface Props {
+  existingTitles: string[];
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+export function AiTemplateModal({ existingTitles, onClose, onSaved }: Props) {
+  const [context, setContext] = useState('');
+  const [selectedTopics, setSelectedTopics] = useState<string[]>(ALL_TOPICS.map(t => t.key));
+
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedTemplates, setGeneratedTemplates] = useState<(Partial<ReplyTemplate> & { selected: boolean })[]>([]);
+  const [generated, setGenerated] = useState<GeneratedTemplate[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (isOpen) {
-      loadAds();
-      setGeneratedTemplates([]);
-      setSelectedAdId('');
-      setError('');
-    }
-  }, [isOpen]);
-
-  const loadAds = async () => {
-    setIsLoadingAds(true);
-    try {
-      const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
-      const token = localStorage.getItem('kb_session') || localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/ads`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (data.success && data.data) {
-        setAds(data.data);
-      }
-    } catch (e) {
-      console.error('Failed to load ads for modal', e);
-    } finally {
-      setIsLoadingAds(false);
-    }
+  const toggleTopic = (key: string) => {
+    setSelectedTopics(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
   };
 
   const handleGenerate = async () => {
-    if (!selectedAdId) return;
-    
-    const ad = ads.find(a => a.id === selectedAdId);
-    if (!ad) return;
-
+    if (selectedTopics.length === 0) return;
     setIsGenerating(true);
-    setError('');
-    
+    setError(null);
+    setGenerated(null);
     try {
-      const templates = await ReplyTemplatesApi.generateFromAd({
-        title: ad.title,
-        description: ad.description,
-        price: ad.price,
-        category: ad.category || 'Sonstiges',
-      });
-      
-      // Select first 3 by default
-      const withSelection = templates.map((t, index) => ({
-        ...t,
-        selected: index < 3
-      }));
-      setGeneratedTemplates(withSelection);
+      const templates = await ReplyTemplatesApi.generate(
+        context.trim() || undefined,
+        selectedTopics,
+      );
+      setGenerated(templates.map(t => ({
+        icon: t.icon || '💬',
+        title: t.title || '',
+        content: t.content || '',
+        isDuplicate: existingTitles.some(e => e.toLowerCase() === (t.title || '').toLowerCase()),
+        selected: true,
+      })));
     } catch (e: any) {
-      setError(e.message || 'Fehler bei der Generierung');
+      setError(e.message || 'KI-Generierung fehlgeschlagen. Bitte erneut versuchen.');
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleSave = async () => {
-    const toSave = generatedTemplates.filter(t => t.selected).map(({ selected, ...rest }) => rest);
-    if (toSave.length === 0) {
-      onClose();
-      return;
-    }
+  const toggleResultSelected = (idx: number) => {
+    setGenerated(prev => prev!.map((t, i) => i === idx ? { ...t, selected: !t.selected } : t));
+  };
 
+  const handleSave = async () => {
+    if (!generated) return;
+    const toSave = generated.filter(t => t.selected);
+    if (toSave.length === 0) return;
     setIsSaving(true);
+    setError(null);
     try {
-      await ReplyTemplatesApi.saveGenerated(toSave);
-      onSaved();
-      onClose();
+      const saved = await ReplyTemplatesApi.saveGenerated(
+        toSave.map(({ icon, title, content }) => ({ icon, title, content }))
+      );
+      if (saved.length < toSave.length) {
+        // Partial save — plan limit hit
+        setError(`Nur ${saved.length} von ${toSave.length} Vorlagen gespeichert — kostenloses Limit erreicht. Upgrade auf Pro für mehr.`);
+        setIsSaving(false);
+        onSaved(); // still reload the list
+      } else {
+        onSaved();
+      }
     } catch (e: any) {
-      setError(e.message || 'Fehler beim Speichern');
-    } finally {
+      setError(e.message || 'Speichern fehlgeschlagen.');
       setIsSaving(false);
     }
   };
 
-  const toggleSelection = (index: number) => {
-    const next = [...generatedTemplates];
-    next[index].selected = !next[index].selected;
-    setGeneratedTemplates(next);
-  };
-
-  if (!isOpen) return null;
-
-  const selectedCount = generatedTemplates.filter(t => t.selected).length;
+  const selectedCount = generated?.filter(t => t.selected).length ?? 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ka-gray-900/50 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl flex flex-col max-h-[90vh]">
-        
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-ka-gray-100">
-          <h2 className="text-xl font-bold flex items-center gap-2 text-ka-gray-900">
-            <Bot className="w-6 h-6 text-brand" /> 
+        <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100 shrink-0">
+          <h2 className="text-[15px] font-bold text-gray-800 flex items-center gap-2">
+            <Wand2 className="w-4 h-4 text-[#A8C300]" />
             KI-Vorlagen generieren
           </h2>
-          <button onClick={onClose} className="p-2 text-ka-gray-400 hover:text-ka-gray-600 rounded-full hover:bg-ka-gray-50 transition-colors">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 overflow-y-auto flex-1">
-          {error && (
-            <div className="mb-6 bg-red-50 text-red-600 p-3 rounded text-sm border border-red-200">
-              {error}
-            </div>
-          )}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
 
-          {generatedTemplates.length === 0 ? (
-            <div className="space-y-4">
-              <p className="font-medium text-ka-gray-900">Schritt 1: Wähle eine deiner Anzeigen</p>
-              
-              {isLoadingAds ? (
-                <div className="h-10 border rounded bg-gray-50 flex items-center px-3 text-sm text-gray-500">Lade Anzeigen...</div>
-              ) : (
-                <select 
-                  className="w-full border-gray-300 rounded-lg shadow-sm focus:border-brand focus:ring-brand text-sm"
-                  value={selectedAdId}
-                  onChange={(e) => setSelectedAdId(e.target.value)}
-                >
-                  <option value="">-- Anzeige auswählen --</option>
-                  {ads.map(ad => (
-                    <option key={ad.id} value={ad.id}>
-                      {ad.title} ({ad.price}) - {ad.viewCount || 0} Aufrufe
-                    </option>
-                  ))}
-                </select>
-              )}
+          {/* Step 1 — Topic selection (always visible until results) */}
+          {!generated && (
+            <>
+              <div>
+                <p className="text-[12px] font-semibold text-gray-600 mb-2">
+                  1. Welche Vorlagen soll die KI erstellen?
+                </p>
+                <div className="grid grid-cols-5 gap-2">
+                  {ALL_TOPICS.map(t => {
+                    const active = selectedTopics.includes(t.key);
+                    return (
+                      <button
+                        key={t.key}
+                        type="button"
+                        onClick={() => toggleTopic(t.key)}
+                        className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-lg border-2 transition-colors text-center cursor-pointer ${
+                          active
+                            ? 'border-[#A8C300] bg-[#A8C300]/10 text-gray-800'
+                            : 'border-gray-200 bg-white text-gray-400 hover:border-gray-300'
+                        }`}
+                      >
+                        <span className="text-xl">{t.icon}</span>
+                        <span className="text-[10px] font-semibold leading-tight">{t.key}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedTopics.length === 0 && (
+                  <p className="text-[11px] text-red-500 mt-1">Mindestens ein Thema auswählen</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[12px] font-semibold text-gray-600 mb-1">
+                  2. Was verkaufst du? <span className="font-normal text-gray-400">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={context}
+                  onChange={e => setContext(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && !isGenerating && selectedTopics.length > 0 && handleGenerate()}
+                  placeholder="z.B. Holzbett, Winterjacke, iPhone 13…"
+                  className="w-full border border-gray-300 rounded px-3 py-2.5 text-[13px] focus:outline-none focus:border-[#A8C300]"
+                />
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Je spezifischer, desto passendere Vorlagen erstellt die KI.
+                </p>
+              </div>
 
               <button
                 onClick={handleGenerate}
-                disabled={!selectedAdId || isGenerating}
-                className="w-full mt-4 flex items-center justify-center gap-2 bg-brand text-white py-3 rounded-lg font-medium hover:bg-brand-dark transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                disabled={isGenerating || selectedTopics.length === 0}
+                className="w-full inline-flex justify-center items-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] disabled:bg-gray-100 disabled:text-gray-400 text-white font-bold py-2.5 px-4 rounded text-[13px] transition-colors"
               >
-                {isGenerating ? (
-                  <><Loader2 className="w-5 h-5 animate-spin" /> Analysiere Anzeige...</>
-                ) : (
-                  'Generieren'
-                )}
+                {isGenerating
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /> KI generiert {selectedTopics.length} Vorlagen…</>
+                  : <><Wand2 className="w-4 h-4" /> {selectedTopics.length} Vorlagen generieren</>
+                }
               </button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <p className="font-medium text-ka-gray-900">Schritt 2: Wähle Vorlagen zum Speichern</p>
-              
-              <div className="space-y-3">
-                {generatedTemplates.map((template, idx) => (
-                  <div 
-                    key={idx} 
-                    className={`border rounded-lg p-4 cursor-pointer transition-colors flex gap-3 ${template.selected ? 'border-brand bg-brand/5' : 'border-gray-200 hover:border-gray-300'}`}
-                    onClick={() => toggleSelection(idx)}
+            </>
+          )}
+
+          {/* Error */}
+          {error && (
+            <p className="text-red-600 text-[12px] bg-red-50 border border-red-200 rounded px-3 py-2">
+              {error}
+            </p>
+          )}
+
+          {/* Step 3 — Results checklist */}
+          {generated && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[12px] font-semibold text-gray-600">
+                  Welche Vorlagen möchtest du speichern? ({selectedCount}/{generated.length})
+                </p>
+                <button
+                  onClick={() => setGenerated(prev => prev!.map(t => ({ ...t, selected: true })))}
+                  className="text-[11px] text-[#A8C300] hover:underline font-medium"
+                >
+                  Alle wählen
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {generated.map((t, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => toggleResultSelected(idx)}
+                    className={`w-full text-left border rounded-lg p-3 transition-colors ${
+                      t.selected ? 'border-[#A8C300] bg-green-50/50' : 'border-gray-200 bg-white'
+                    }`}
                   >
-                    <div className="pt-1">
-                      <input 
-                        type="checkbox" 
-                        className="w-4 h-4 text-brand border-gray-300 rounded focus:ring-brand"
-                        checked={template.selected}
-                        onChange={() => {}} // handled by parent div click
-                      />
+                    <div className="flex items-start gap-2">
+                      <span className="mt-0.5 shrink-0">
+                        {t.selected
+                          ? <CheckSquare className="w-4 h-4 text-[#A8C300]" />
+                          : <Square className="w-4 h-4 text-gray-300" />}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                          <span className="text-[13px] font-bold text-gray-800">{t.icon} {t.title}</span>
+                          {t.isDuplicate && (
+                            <span className="inline-flex items-center gap-1 text-[10px] bg-yellow-50 border border-yellow-300 text-yellow-700 px-1.5 py-0.5 rounded font-medium">
+                              <AlertTriangle className="w-2.5 h-2.5" /> Duplikat
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[12px] text-gray-500 line-clamp-2">{t.content}</p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900 text-sm flex items-center gap-2 mb-1">
-                        <span>{template.icon}</span> {template.title}
-                      </h4>
-                      <p className="text-sm text-gray-600 line-clamp-2">{template.content}</p>
-                    </div>
-                  </div>
+                  </button>
                 ))}
               </div>
+
+              <button
+                onClick={() => { setGenerated(null); setError(null); }}
+                className="mt-3 text-[12px] text-gray-400 hover:text-gray-600 hover:underline w-full text-center"
+              >
+                ↺ Neue Vorlagen generieren
+              </button>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        {generatedTemplates.length > 0 && (
-          <div className="p-6 border-t border-ka-gray-100 bg-ka-gray-50 flex justify-end gap-3 rounded-b-xl">
-            <button 
-              onClick={() => setGeneratedTemplates([])}
-              className="px-4 py-2 text-sm font-medium text-ka-gray-700 hover:bg-ka-gray-200 rounded-lg transition-colors"
+        {generated && (
+          <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2 shrink-0">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-[13px] font-medium text-gray-600 hover:text-gray-800"
             >
-              Zurück
+              Abbrechen
             </button>
-            <button 
+            <button
               onClick={handleSave}
-              disabled={isSaving || selectedCount === 0}
-              className="px-6 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand-dark transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+              disabled={selectedCount === 0 || isSaving}
+              className="inline-flex items-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold py-2 px-5 rounded text-[13px] transition-colors"
             >
-              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              Ausgewählte speichern ({selectedCount})
+              {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              {selectedCount} Vorlage{selectedCount !== 1 ? 'n' : ''} speichern
             </button>
           </div>
         )}
-
       </div>
     </div>
   );

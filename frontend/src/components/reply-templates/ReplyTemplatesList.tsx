@@ -1,56 +1,109 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ReplyTemplate, ReplyTemplatesApi } from '../../api/reply-templates';
-import { Copy, Plus, Trash2, Edit2, Bot, CheckCircle2 } from 'lucide-react';
+import { Copy, Plus, Trash2, Edit2, CheckCircle2, Lock, Loader2, X, Wand2 } from 'lucide-react';
 import { AiTemplateModal } from './AiTemplateModal';
-import { Toast } from '../Toast';
+
+const AI_TEMPLATES_ENABLED = (import.meta as any).env.VITE_FEATURE_AI_TEMPLATES === 'true';
+
+const STARTER_TEMPLATES = [
+  { icon: '📦', title: 'Verfügbarkeit', content: 'Ja, der Artikel ist noch verfügbar! Bei Interesse gerne melden.' },
+  { icon: '📮', title: 'Versand', content: 'Versand ist möglich. Die Versandkosten trägt der Käufer. Zahlung per PayPal oder Überweisung.' },
+  { icon: '💰', title: 'Preis', content: 'Der Preis ist mein letztes Wort — der Artikel ist den Preis wert. Bitte keine weiteren Preisanfragen.' },
+  { icon: '📏', title: 'Details', content: 'Der Artikel ist in gutem Zustand, wie auf den Fotos zu sehen. Alle weiteren Details gerne auf Anfrage.' },
+  { icon: '🚚', title: 'Abholung', content: 'Abholung nach Absprache möglich. Bitte vor dem Vorbeikommen eine kurze Nachricht schicken.' },
+];
+
+const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
+const FREE_LIMIT = 3;
+
+function getToken() {
+  return localStorage.getItem('kb_session') || localStorage.getItem('token');
+}
+
+async function fetchPlan(): Promise<string> {
+  try {
+    const res = await fetch(`${API_URL}/ai/usage`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return (data.plan || 'free').toLowerCase();
+    }
+  } catch {}
+  return 'free';
+}
+
+const ICON_OPTIONS = ['💬', '📦', '📮', '💰', '📏', '🚚', '✅', '🙏', '⏰', '🔔'];
 
 export function ReplyTemplatesList() {
   const [templates, setTemplates] = useState<ReplyTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [plan, setPlan] = useState<string>('free');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  
-  // Manual template form state
+  const [isAddingStarter, setIsAddingStarter] = useState(false);
+
+  // Form state
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ icon: '💬', title: '', content: '' });
+  const [isSaving, setIsSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const loadTemplates = async () => {
+  const load = useCallback(async () => {
+    setIsLoading(true);
     try {
-      const data = await ReplyTemplatesApi.getAll();
+      const [data, userPlan] = await Promise.all([ReplyTemplatesApi.getAll(), fetchPlan()]);
       setTemplates(data);
+      setPlan(userPlan);
     } catch (e) {
       console.error('Failed to load templates:', e);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadTemplates();
   }, []);
 
-  const showNotification = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 2000);
+  useEffect(() => { load(); }, [load]);
+
+  const isFree = plan === 'free';
+  const atLimit = isFree && templates.length >= FREE_LIMIT;
+
+  const openCreate = () => {
+    setEditingId(null);
+    setFormData({ icon: '💬', title: '', content: '' });
+    setFormError(null);
+    setIsFormOpen(true);
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    showNotification('✅ Kopiert!');
+  const openEdit = (t: ReplyTemplate) => {
+    setEditingId(t.id || null);
+    setFormData({ icon: t.icon, title: t.title, content: t.content });
+    setFormError(null);
+    setIsFormOpen(true);
   };
 
-  const handleCopy = async (template: ReplyTemplate) => {
+  const closeForm = () => {
+    setIsFormOpen(false);
+    setEditingId(null);
+    setFormError(null);
+  };
+
+  const handleSave = async () => {
+    if (!formData.title.trim() || !formData.content.trim()) return;
+    setIsSaving(true);
+    setFormError(null);
     try {
-      copyToClipboard(template.content);
-      setCopiedId(template.id || null);
-      if (template.id) {
-        ReplyTemplatesApi.copy(template.id).catch(console.error); // Track copy async
+      if (editingId) {
+        await ReplyTemplatesApi.update(editingId, formData);
+      } else {
+        await ReplyTemplatesApi.create(formData);
       }
-      setTimeout(() => setCopiedId(null), 2000);
-    } catch (err) {
-      console.error('Failed to copy text', err);
+      closeForm();
+      await load();
+    } catch (e: any) {
+      setFormError(e.message || 'Fehler beim Speichern');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -58,170 +111,305 @@ export function ReplyTemplatesList() {
     if (!confirm('Vorlage wirklich löschen?')) return;
     try {
       await ReplyTemplatesApi.delete(id);
-      await loadTemplates();
+      setTemplates(prev => prev.filter(t => t.id !== id));
     } catch (e) {
-      console.error('Failed to delete template:', e);
+      console.error('Failed to delete:', e);
     }
   };
 
-  const handleSaveForm = async () => {
+  const handleAddStarters = async () => {
+    setIsAddingStarter(true);
     try {
-      if (editingId) {
-        await ReplyTemplatesApi.update(editingId, formData);
-      } else {
-        await ReplyTemplatesApi.create(formData);
+      for (const t of STARTER_TEMPLATES) {
+        await ReplyTemplatesApi.create(t);
       }
-      setIsFormOpen(false);
-      setEditingId(null);
-      setFormData({ icon: '💬', title: '', content: '' });
-      await loadTemplates();
+      await load();
     } catch (e) {
-      console.error('Failed to save template:', e);
+      console.error('Failed to add starter templates:', e);
+    } finally {
+      setIsAddingStarter(false);
     }
   };
 
-  const openEdit = (t: ReplyTemplate) => {
-    setEditingId(t.id || null);
-    setFormData({ icon: t.icon, title: t.title, content: t.content });
-    setIsFormOpen(true);
+  const handleCopy = async (template: ReplyTemplate) => {
+    try {
+      await navigator.clipboard.writeText(template.content);
+      setCopiedId(template.id || null);
+      setTimeout(() => setCopiedId(null), 2000);
+      if (template.id) ReplyTemplatesApi.copy(template.id).catch(() => {});
+    } catch {}
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-ka-gray-100 p-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <h2 className="text-xl font-bold flex items-center gap-2 text-ka-gray-900">
-          📋 Meine Antwort-Vorlagen
-        </h2>
-        <div className="flex gap-3 w-full sm:w-auto">
-          <button 
-            onClick={() => { setIsFormOpen(true); setEditingId(null); setFormData({ icon: '💬', title: '', content: '' }); }}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-ka-gray-300 rounded-md text-sm font-medium text-ka-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <Plus className="w-4 h-4" /> Manuelle Vorlage
-          </button>
-          <button 
-            onClick={() => setIsAiModalOpen(true)}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-brand text-white rounded-md text-sm font-medium hover:bg-brand-dark transition-colors shadow-sm"
-          >
-            <Bot className="w-4 h-4" /> KI-Vorlagen generieren
-          </button>
+    <div className="bg-white border border-[#e5e5e5] rounded-lg shadow-sm p-6">
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-[#333] flex items-center gap-2">
+            📋 Meine Antwort-Vorlagen
+          </h2>
+          <p className="text-[13px] text-gray-500 mt-0.5">
+            Kopiere eine Vorlage und füge sie direkt im Kleinanzeigen-Chat ein.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          {AI_TEMPLATES_ENABLED && (
+            <button
+              onClick={() => setIsAiModalOpen(true)}
+              disabled={atLimit}
+              title={atLimit ? 'Limit erreicht — upgrade auf Pro' : 'KI-Vorlagen generieren'}
+              className="inline-flex items-center gap-2 border border-[#A8C300] text-[#A8C300] hover:bg-[#A8C300] hover:text-white disabled:border-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed font-semibold py-2 px-4 rounded text-[13px] transition-colors"
+            >
+              <Wand2 className="w-4 h-4" />
+              KI-Vorlagen
+            </button>
+          )}
+          {atLimit ? (
+            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded px-3 py-2 text-[13px] text-amber-700 font-medium">
+              <Lock className="w-4 h-4 shrink-0" />
+              <span>Limit: {FREE_LIMIT}/{FREE_LIMIT}</span>
+            </div>
+          ) : (
+            <button
+              onClick={openCreate}
+              className="inline-flex items-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] text-white font-semibold py-2 px-4 rounded text-[13px] transition-colors shadow-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Neue Vorlage
+            </button>
+          )}
         </div>
       </div>
 
+      {/* Plan limit upgrade prompt */}
+      {atLimit && (
+        <div className="mb-5 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm">
+          <Lock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold text-amber-800">Kostenloses Limit erreicht</p>
+            <p className="text-amber-700 mt-0.5">
+              Du hast {FREE_LIMIT} von {FREE_LIMIT} kostenlosen Vorlagen erstellt.
+              Upgrade auf Pro für unbegrenzte Vorlagen.
+            </p>
+            <a
+              href="/einstellungen"
+              className="inline-block mt-2 text-amber-800 font-bold hover:underline"
+            >
+              Jetzt upgraden →
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* Inline create/edit form */}
       {isFormOpen && (
-        <div className="mb-6 bg-ka-gray-50 p-4 rounded-lg border border-ka-gray-200">
-          <h3 className="font-semibold mb-4">{editingId ? 'Vorlage bearbeiten' : 'Neue Vorlage erstellen'}</h3>
-          <div className="grid grid-cols-12 gap-4 mb-4">
-            <div className="col-span-2 sm:col-span-1">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Icon</label>
-              <input 
-                type="text" 
-                value={formData.icon} 
-                onChange={(e) => setFormData({...formData, icon: e.target.value})}
-                className="w-full rounded border-gray-300 shadow-sm p-2 text-center" 
-                placeholder="📦"
-              />
-            </div>
-            <div className="col-span-10 sm:col-span-11">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Titel</label>
-              <input 
-                type="text" 
-                value={formData.title} 
-                onChange={(e) => setFormData({...formData, title: e.target.value})}
-                className="w-full rounded border-gray-300 shadow-sm p-2" 
-                placeholder="Verfügbarkeit..."
-              />
-            </div>
-            <div className="col-span-12">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Text (wird kopiert)</label>
-              <textarea 
-                value={formData.content} 
-                onChange={(e) => setFormData({...formData, content: e.target.value})}
-                className="w-full rounded border-gray-300 shadow-sm p-2 min-h-[80px]" 
-                placeholder="Ja, der Artikel ist noch da!..."
-              />
+        <div className="mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-[14px] font-bold text-gray-800">
+              {editingId ? 'Vorlage bearbeiten' : 'Neue Vorlage erstellen'}
+            </h3>
+            <button onClick={closeForm} className="text-gray-400 hover:text-gray-600">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Icon picker */}
+          <div className="mb-3">
+            <label className="block text-[12px] font-semibold text-gray-600 mb-1.5">Icon</label>
+            <div className="flex flex-wrap gap-1.5">
+              {ICON_OPTIONS.map(icon => (
+                <button
+                  key={icon}
+                  type="button"
+                  onClick={() => setFormData(f => ({ ...f, icon }))}
+                  className={`w-8 h-8 rounded text-base flex items-center justify-center transition-colors ${
+                    formData.icon === icon
+                      ? 'bg-[#A8C300]/20 border-2 border-[#A8C300]'
+                      : 'border border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                >
+                  {icon}
+                </button>
+              ))}
             </div>
           </div>
+
+          {/* Title */}
+          <div className="mb-3">
+            <label className="block text-[12px] font-semibold text-gray-600 mb-1">Titel</label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={e => setFormData(f => ({ ...f, title: e.target.value }))}
+              placeholder="z.B. Verfügbarkeit, Versand, Preis…"
+              maxLength={60}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#A8C300]"
+            />
+          </div>
+
+          {/* Content */}
+          <div className="mb-4">
+            <label className="block text-[12px] font-semibold text-gray-600 mb-1">Text (wird kopiert)</label>
+            <textarea
+              value={formData.content}
+              onChange={e => setFormData(f => ({ ...f, content: e.target.value }))}
+              placeholder="Ja, der Artikel ist noch verfügbar! Bei Interesse gerne melden."
+              rows={4}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#A8C300] resize-none"
+            />
+          </div>
+
+          {formError && (
+            <p className="text-red-600 text-[12px] mb-3">{formError}</p>
+          )}
+
           <div className="flex justify-end gap-2">
-            <button 
-              onClick={() => setIsFormOpen(false)}
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded"
+            <button
+              onClick={closeForm}
+              className="px-4 py-2 text-[13px] font-medium text-gray-600 hover:text-gray-800 transition-colors"
             >
               Abbrechen
             </button>
-            <button 
-              onClick={handleSaveForm}
-              className="px-4 py-2 text-sm font-medium bg-brand text-white hover:bg-brand-dark rounded"
-              disabled={!formData.title || !formData.content}
+            <button
+              onClick={handleSave}
+              disabled={!formData.title.trim() || !formData.content.trim() || isSaving}
+              className="inline-flex items-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold py-2 px-4 rounded text-[13px] transition-colors"
             >
+              {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Speichern
             </button>
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {isLoading ? (
-          <p className="text-gray-500 text-sm">Lade Vorlagen...</p>
-        ) : templates.length === 0 ? (
-          <p className="text-gray-500 text-sm col-span-full">
-            Noch keine Vorlagen vorhanden. Erstelle eine manuell oder nutze die KI!
-          </p>
-        ) : (
-          templates.map((template) => (
-            <div key={template.id} className="border border-ka-gray-200 rounded-lg p-4 hover:border-brand/30 transition-colors bg-white relative group">
+      {/* Template list */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="border border-gray-100 rounded-lg p-4 animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-1/2 mb-3" />
+              <div className="h-3 bg-gray-100 rounded w-full mb-2" />
+              <div className="h-3 bg-gray-100 rounded w-3/4 mb-4" />
+              <div className="h-8 bg-gray-100 rounded w-full" />
+            </div>
+          ))}
+        </div>
+      ) : templates.length === 0 ? (
+        <div className="space-y-4">
+          {/* Starter templates CTA */}
+          <div className="border border-dashed border-[#A8C300]/50 bg-green-50/30 rounded-lg p-5">
+            <p className="text-[14px] font-semibold text-gray-700 mb-1">🚀 Schnellstart mit 5 fertigen Vorlagen</p>
+            <p className="text-[13px] text-gray-500 mb-4">
+              Verfügbarkeit, Versand, Preis, Details & Abholung — sofort einsatzbereit, jederzeit anpassbar.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 mb-4">
+              {STARTER_TEMPLATES.map(t => (
+                <div key={t.title} className="bg-white border border-gray-200 rounded px-2 py-1.5 text-center">
+                  <p className="text-base">{t.icon}</p>
+                  <p className="text-[11px] font-semibold text-gray-600">{t.title}</p>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={handleAddStarters}
+              disabled={isAddingStarter}
+              className="inline-flex items-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold py-2 px-5 rounded text-[13px] transition-colors"
+            >
+              {isAddingStarter ? <><Loader2 className="w-4 h-4 animate-spin" /> Wird hinzugefügt…</> : '+ Alle 5 Vorlagen hinzufügen'}
+            </button>
+          </div>
+
+          <div className="text-center py-4 text-[13px] text-gray-400">
+            oder <button onClick={openCreate} className="text-[#A8C300] hover:underline font-medium">eigene Vorlage erstellen</button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {templates.map(template => (
+            <div
+              key={template.id}
+              className="border border-[#e5e5e5] rounded-lg p-4 hover:shadow-sm transition-shadow bg-white relative group flex flex-col"
+            >
+              {/* Card header */}
               <div className="flex justify-between items-start mb-2">
-                <h4 className="font-semibold text-ka-gray-900 flex items-center gap-2">
-                  <span className="text-xl">{template.icon}</span> {template.title}
+                <h4 className="text-[14px] font-bold text-gray-800 flex items-center gap-1.5">
+                  <span>{template.icon}</span>
+                  {template.title}
                 </h4>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => openEdit(template)} className="p-1.5 text-gray-400 hover:text-brand bg-gray-50 hover:bg-green-50 rounded">
+                  <button
+                    onClick={() => openEdit(template)}
+                    title="Bearbeiten"
+                    className="p-1.5 text-gray-400 hover:text-[#A8C300] hover:bg-green-50 rounded transition-colors"
+                  >
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
-                  <button onClick={() => handleDelete(template.id!)} className="p-1.5 text-gray-400 hover:text-red-600 bg-gray-50 hover:bg-red-50 rounded">
+                  <button
+                    onClick={() => handleDelete(template.id!)}
+                    title="Löschen"
+                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                  >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
-              <p className="text-sm text-gray-600 mb-4 line-clamp-3 min-h-[60px] whitespace-pre-wrap">
+
+              {/* Content preview */}
+              <p className="text-[13px] text-gray-600 line-clamp-3 flex-1 mb-4 whitespace-pre-wrap">
                 {template.content}
               </p>
-              
+
+              {/* Copy button */}
               <button
                 onClick={() => handleCopy(template)}
-                className={`w-full flex justify-center items-center gap-2 py-2 px-4 rounded text-sm font-medium transition-colors ${
+                className={`w-full flex justify-center items-center gap-2 py-2 px-3 rounded text-[13px] font-semibold transition-colors ${
                   copiedId === template.id
-                    ? 'bg-green-100 text-green-700 border border-green-200'
-                    : 'bg-ka-gray-50 text-ka-gray-700 hover:bg-gray-100 border border-ka-gray-200'
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100'
                 }`}
               >
                 {copiedId === template.id ? (
-                  <>
-                    <CheckCircle2 className="w-4 h-4" /> ✅ Kopiert!
-                  </>
+                  <><CheckCircle2 className="w-4 h-4" /> Kopiert!</>
                 ) : (
-                  <>
-                    📋 Kopieren
-                  </>
+                  <><Copy className="w-4 h-4" /> Kopieren</>
                 )}
               </button>
+
+              {/* Copy count badge */}
+              {template.copyCount > 0 && (
+                <p className="text-[10px] text-gray-400 text-center mt-1.5">
+                  {template.copyCount}× verwendet
+                </p>
+              )}
             </div>
-          ))
-        )}
-      </div>
-      
-      <p className="text-xs text-gray-500 mt-6 flex items-center gap-1.5">
-        <span className="inline-block px-1.5 py-0.5 bg-gray-100 rounded border border-gray-200 text-gray-600 font-mono">Tipp</span>
-        Klicke auf Kopieren und füge den Text mit Strg+V direkt im Kleinanzeigen-Chat ein.
-      </p>
+          ))}
+        </div>
+      )}
 
-      <AiTemplateModal 
-        isOpen={isAiModalOpen} 
-        onClose={() => setIsAiModalOpen(false)} 
-        onSaved={loadTemplates}
-      />
+      {/* Footer tip */}
+      {templates.length > 0 && (
+        <p className="text-[12px] text-gray-400 mt-5 text-center">
+          Klicke auf <strong>Kopieren</strong> und füge den Text mit <kbd className="px-1 py-0.5 bg-gray-100 rounded border border-gray-200 font-mono text-[11px]">Strg+V</kbd> direkt im Kleinanzeigen-Chat ein.
+        </p>
+      )}
 
-      <Toast message={toastMessage} type={null} />
+      {/* Plan counter for free users */}
+      {isFree && templates.length > 0 && (
+        <p className="text-[12px] text-gray-400 mt-2 text-center">
+          {templates.length}/{FREE_LIMIT} kostenlose Vorlagen verwendet
+        </p>
+      )}
+
+      {/* AI generation modal */}
+      {isAiModalOpen && (
+        <AiTemplateModal
+          existingTitles={templates.map(t => t.title)}
+          onClose={() => setIsAiModalOpen(false)}
+          onSaved={() => { setIsAiModalOpen(false); load(); }}
+        />
+      )}
     </div>
   );
 }

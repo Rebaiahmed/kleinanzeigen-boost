@@ -1,6 +1,6 @@
-import { Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, ForbiddenException, Logger, NotFoundException } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import axios from 'axios';
 
 export interface ReplyTemplate {
   id?: string;
@@ -12,14 +12,39 @@ export interface ReplyTemplate {
   updatedAt: number;
 }
 
+const TOPICS = [
+  { icon: '📦', key: 'Verfügbarkeit', instruction: 'bestätigen dass der Artikel noch verfügbar ist' },
+  { icon: '📮', key: 'Versand',       instruction: 'ob Versand möglich ist und wer die Kosten trägt' },
+  { icon: '💰', key: 'Preis',         instruction: 'freundlich aber bestimmt beim Preis bleiben' },
+  { icon: '📏', key: 'Details',       instruction: 'wichtigste Details oder Zustand des Artikels nennen' },
+  { icon: '🚚', key: 'Abholung',      instruction: 'Abholtermin vereinbaren' },
+];
+
+const buildPrompt = (context?: string, topics?: string[]) => {
+  const activeTopic = topics?.length ? TOPICS.filter(t => topics.includes(t.key)) : TOPICS;
+  const hint = context?.trim()
+    ? `Der Verkäufer verkauft: ${context.trim()}.`
+    : 'Der Verkäufer verkauft verschiedene Artikel auf Kleinanzeigen.';
+
+  const topicList = activeTopic.map((t, i) => `${i + 1}. ${t.key} – ${t.instruction}`).join('\n');
+  const exampleEntry = `{"icon":"${activeTopic[0].icon}","title":"${activeTopic[0].key}","content":"..."}`;
+
+  return `Du bist ein Assistent für Kleinanzeigen-Verkäufer in Deutschland. ${hint}
+
+Erstelle genau ${activeTopic.length} kurze, freundliche und direkt kopierbare Antwort-Vorlagen auf Deutsch.
+
+Die Vorlagen MÜSSEN diese Themen abdecken:
+${topicList}
+
+Antworte NUR mit einem JSON-Array ohne Markdown oder Erklärungen. Beispiel-Format:
+[${exampleEntry}]`;
+};
+
 @Injectable()
 export class ReplyTemplatesService {
-  private genAI: GoogleGenerativeAI;
   private readonly logger = new Logger(ReplyTemplatesService.name);
 
-  constructor(private readonly firebaseService: FirebaseService) {
-    this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'dummy_key');
-  }
+  constructor(private readonly firebaseService: FirebaseService) {}
 
   private getCollection(userId: string) {
     return this.firebaseService.firestore.collection(`users/${userId}/replyTemplates`);
@@ -28,14 +53,22 @@ export class ReplyTemplatesService {
   async getTemplates(userId: string): Promise<ReplyTemplate[]> {
     const snapshot = await this.getCollection(userId).get();
     if (snapshot.empty) return [];
-    
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as ReplyTemplate[];
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ReplyTemplate[];
   }
 
   async createTemplate(userId: string, data: Partial<ReplyTemplate>): Promise<ReplyTemplate> {
+    const userDoc = await this.firebaseService.firestore.collection('users').doc(userId).get();
+    const plan = (userDoc.data()?.tier || userDoc.data()?.plan || 'free').toLowerCase();
+    if (plan === 'free') {
+      const snapshot = await this.getCollection(userId).count().get();
+      if (snapshot.data().count >= 3) {
+        throw new ForbiddenException({
+          message: 'Kostenloses Limit erreicht (3 Vorlagen). Upgrade auf Pro für unbegrenzte Vorlagen.',
+          code: 'TEMPLATE_LIMIT_REACHED',
+        });
+      }
+    }
+
     const docRef = this.getCollection(userId).doc();
     const newTemplate: ReplyTemplate = {
       icon: data.icon || '💬',
@@ -45,7 +78,6 @@ export class ReplyTemplatesService {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
-    
     await docRef.set(newTemplate);
     return { id: docRef.id, ...newTemplate };
   }
@@ -53,19 +85,12 @@ export class ReplyTemplatesService {
   async updateTemplate(userId: string, templateId: string, data: Partial<ReplyTemplate>): Promise<ReplyTemplate> {
     const docRef = this.getCollection(userId).doc(templateId);
     const doc = await docRef.get();
-    
-    if (!doc.exists) {
-      throw new NotFoundException('Template not found');
-    }
+    if (!doc.exists) throw new NotFoundException('Template not found');
 
-    const updates = {
-      ...data,
-      updatedAt: Date.now(),
-    };
-    delete updates.id; // Prevent overwriting ID
-
+    const updates = { ...data, updatedAt: Date.now() };
+    delete updates.id;
     await docRef.update(updates);
-    
+
     const updatedDoc = await docRef.get();
     return { id: updatedDoc.id, ...updatedDoc.data() } as ReplyTemplate;
   }
@@ -78,67 +103,93 @@ export class ReplyTemplatesService {
     const docRef = this.getCollection(userId).doc(templateId);
     const doc = await docRef.get();
     if (doc.exists) {
-      const currentCount = doc.data().copyCount || 0;
-      await docRef.update({ copyCount: currentCount + 1, updatedAt: Date.now() });
+      await docRef.update({ copyCount: (doc.data().copyCount || 0) + 1, updatedAt: Date.now() });
     }
   }
 
   async saveGeneratedTemplates(userId: string, templates: Partial<ReplyTemplate>[]): Promise<ReplyTemplate[]> {
+    const userDoc = await this.firebaseService.firestore.collection('users').doc(userId).get();
+    const plan = (userDoc.data()?.tier || userDoc.data()?.plan || 'free').toLowerCase();
+
+    let toSave = templates;
+    if (plan === 'free') {
+      const snapshot = await this.getCollection(userId).count().get();
+      const existing = snapshot.data().count as number;
+      const available = Math.max(0, 3 - existing);
+      if (available === 0) {
+        throw new ForbiddenException({
+          message: 'Kostenloses Limit erreicht (3 Vorlagen). Upgrade auf Pro für unbegrenzte Vorlagen.',
+          code: 'TEMPLATE_LIMIT_REACHED',
+        });
+      }
+      toSave = templates.slice(0, available);
+    }
+
     const results: ReplyTemplate[] = [];
-    for (const t of templates) {
-      results.push(await this.createTemplate(userId, t));
+    for (const t of toSave) {
+      const docRef = this.getCollection(userId).doc();
+      const newTemplate: ReplyTemplate = {
+        icon: t.icon || '💬',
+        title: t.title || 'Neue Vorlage',
+        content: t.content || '',
+        copyCount: 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      await docRef.set(newTemplate);
+      results.push({ id: docRef.id, ...newTemplate });
     }
     return results;
   }
 
-  async generateTemplatesFromAd(userId: string, adData: { title: string, description: string, price: string, category: string }): Promise<Partial<ReplyTemplate>[]> {
-    try {
-      const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
-      
-      const isFree = adData.price?.toLowerCase().includes('verschenken') || adData.price === '0' || adData.price === 'Zu verschenken';
-      const isClothing = adData.category?.toLowerCase().includes('kleidung') || adData.category?.toLowerCase().includes('mode');
-
-      const prompt = `
-Du bist ein Assistent für eBay Kleinanzeigen Verkäufer.
-Erstelle 5 kurze, freundliche und direkt kopierbare Antwort-Vorlagen für folgende Anzeige.
-
-Titel: ${adData.title}
-Preis: ${adData.price}
-Kategorie: ${adData.category}
-Beschreibung: ${adData.description}
-
-Die 5 Vorlagen MÜSSEN diese Themen abdecken:
-1. Verfügbarkeit (Zusage, dass der Artikel noch da ist)
-2. Versand (Ob Versand möglich ist oder Abholung)
-3. Preis (Preisverhandlung. ${isFree ? 'Da es kostenlos ist, weise darauf hin, dass es nur bei echtem Interesse abzuholen ist.' : 'Bleibe beim Preis freundlich aber bestimmt.'})
-4. Details (${isClothing ? 'Erwähne Größe, Farbe und Zustand.' : 'Erwähne die wichtigsten Details oder den Zustand des Artikels.'})
-5. Abholung (Vereinbarung zur Abholung)
-
-Gib das Ergebnis EXAKT im folgenden JSON-Format zurück, ohne Markdown, ohne zusätzliche Erklärungen:
-[
-  { "icon": "📦", "title": "Verfügbarkeit", "content": "..." },
-  { "icon": "📮", "title": "Versand", "content": "..." },
-  { "icon": "💰", "title": "Preis", "content": "..." },
-  { "icon": "📏", "title": "Details", "content": "..." },
-  { "icon": "🚚", "title": "Abholung", "content": "..." }
-]
-`;
-
-      const result = await model.generateContent(prompt);
-      let text = result.response.text().trim();
-      
-      // Clean up markdown if Gemini wrapped it in ```json
-      if (text.startsWith('\`\`\`json')) {
-        text = text.replace(/^\`\`\`json/, '').replace(/\`\`\`$/, '').trim();
-      } else if (text.startsWith('\`\`\`')) {
-        text = text.replace(/^\`\`\`/, '').replace(/\`\`\`$/, '').trim();
-      }
-
-      const parsed = JSON.parse(text);
-      return parsed as Partial<ReplyTemplate>[];
-    } catch (e: any) {
-      this.logger.error('Error generating templates: ' + e.message);
-      throw new InternalServerErrorException('Failed to generate templates via AI.');
+  async generateTemplates(
+    userId: string,
+    body: { context?: string; topics?: string[] },
+  ): Promise<Partial<ReplyTemplate>[]> {
+    const openRouterKey = process.env.OPENROUTER_API_KEY;
+    if (!openRouterKey) {
+      throw new InternalServerErrorException('KI nicht konfiguriert.');
     }
+
+    const prompt = buildPrompt(body.context, body.topics);
+
+    try {
+      const response = await axios.post(
+        'https://openrouter.ai/api/v1/chat/completions',
+        {
+          model: 'google/gemma-4-31b-it:free',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7,
+          max_tokens: 1000,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${openRouterKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://kleinanzeigen-boost.web.app',
+          },
+          timeout: 30000,
+        },
+      );
+
+      const text: string = response.data.choices?.[0]?.message?.content?.trim() || '';
+      if (!text) throw new Error('Empty response from AI model');
+
+      return this.parseTemplatesJson(text);
+    } catch (e: any) {
+      const detail = e.response?.data ? JSON.stringify(e.response.data) : e.message;
+      this.logger.error(`Template generation failed: ${detail}`);
+      throw new InternalServerErrorException(
+        `KI-Generierung fehlgeschlagen: ${e.response?.data?.error?.message || e.message}`,
+      );
+    }
+  }
+
+  private parseTemplatesJson(text: string): Partial<ReplyTemplate>[] {
+    let cleaned = text.trim();
+    cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+    const match = cleaned.match(/\[[\s\S]*\]/);
+    if (!match) throw new Error(`No JSON array in AI response: ${cleaned.slice(0, 150)}`);
+    return JSON.parse(match[0]) as Partial<ReplyTemplate>[];
   }
 }

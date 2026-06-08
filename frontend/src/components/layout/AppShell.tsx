@@ -1,4 +1,5 @@
 import React from 'react';
+import { NavLink } from 'react-router-dom';
 import { TopBar } from './TopBar';
 import { useExtension } from '../../hooks/useExtension';
 import { AlertCircle } from 'lucide-react';
@@ -29,6 +30,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       )}
+
+      {/* Nav tabs */}
+      <div className="bg-white border-b border-[#e5e5e5]">
+        <div className="max-w-[900px] mx-auto px-4 sm:px-6 flex gap-1">
+          <NavLink
+            to="/meine-anzeigen"
+            className={({ isActive }) =>
+              `px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
+                isActive
+                  ? 'border-[#A8C300] text-[#A8C300]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`
+            }
+          >
+            📄 Meine Anzeigen
+          </NavLink>
+          <NavLink
+            to="/vorlagen"
+            className={({ isActive }) =>
+              `px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
+                isActive
+                  ? 'border-[#A8C300] text-[#A8C300]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`
+            }
+          >
+            📋 Antwort-Vorlagen
+          </NavLink>
+        </div>
+      </div>
 
       <main className="flex-1 w-full max-w-[900px] mx-auto px-4 sm:px-6 py-6 pb-24">
         {children}

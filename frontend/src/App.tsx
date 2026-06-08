@@ -8,6 +8,7 @@ import { AppShell } from './components/layout/AppShell';
 import { Landing } from './pages/Landing';
 import { AuthCallback } from './pages/AuthCallback';
 import { EbaySuccess } from './pages/EbaySuccess';
+import { ReplyTemplatesList } from './components/reply-templates/ReplyTemplatesList';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
         <Route path="/meine-anzeigen" element={<AppShell><Ads /></AppShell>} />
         <Route path="/neue-anzeige-mit-ki-erstellen" element={<AppShell><CreateWithAi /></AppShell>} />
         <Route path="/einstellungen" element={<AppShell><Settings /></AppShell>} />
+        <Route path="/vorlagen" element={<AppShell><ReplyTemplatesList /></AppShell>} />
         {/* Catch-all redirect to ads for the simplified view */}
         <Route path="*" element={<Navigate to="/meine-anzeigen" replace />} />
       </Routes>

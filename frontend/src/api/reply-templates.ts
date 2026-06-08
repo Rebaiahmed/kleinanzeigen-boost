@@ -34,7 +34,10 @@ export const ReplyTemplatesApi = {
       headers: getHeaders(),
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error('Failed to create template');
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body?.message || 'Failed to create template');
+    }
     return res.json();
   },
 
@@ -63,13 +66,16 @@ export const ReplyTemplatesApi = {
     });
   },
 
-  async generateFromAd(adData: { title: string; description: string; price: string; category: string }): Promise<Partial<ReplyTemplate>[]> {
+  async generate(context?: string, topics?: string[]): Promise<Partial<ReplyTemplate>[]> {
     const res = await fetch(`${API_URL}/reply-templates/generate`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify(adData),
+      body: JSON.stringify({ context, topics }),
     });
-    if (!res.ok) throw new Error('Failed to generate templates');
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body?.message || 'KI-Generierung fehlgeschlagen');
+    }
     return res.json();
   },
 
@@ -79,7 +85,10 @@ export const ReplyTemplatesApi = {
       headers: getHeaders(),
       body: JSON.stringify({ templates }),
     });
-    if (!res.ok) throw new Error('Failed to save generated templates');
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body?.message || 'Speichern fehlgeschlagen');
+    }
     return res.json();
   }
 };

@@ -35,8 +35,8 @@ export class ReplyTemplatesController {
   }
 
   @Post('generate')
-  async generateTemplates(@Req() req: any, @Body() body: { title: string, description: string, price: string, category: string }) {
-    return this.templatesService.generateTemplatesFromAd(req.user.userId, body);
+  async generateTemplates(@Req() req: any, @Body() body: { context?: string; topics?: string[] }) {
+    return this.templatesService.generateTemplates(req.user.userId, body);
   }
 
   @Post('save-generated')

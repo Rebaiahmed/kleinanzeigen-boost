@@ -134,7 +134,7 @@ export function useAdsActions(): AdsActionsReturn {
             window.postMessage({ type: 'TRIGGER_SYNC_REQUEST' }, '*');
           }),
           new Promise<any>((_, reject) =>
-            setTimeout(() => reject(new Error('Extension sync timed out')), 15000)
+            setTimeout(() => reject(new Error('Extension sync timed out')), 10000)
           ),
         ]);
 
@@ -151,12 +151,15 @@ export function useAdsActions(): AdsActionsReturn {
         console.warn('[Sync] Extension sync error:', e.message);
       }
 
-      // 3. Fallback: server-side sync (uses WS if connected, cached ads otherwise)
+      // 3. Fallback: server-side sync with 10s timeout
       try {
+        const controller = new AbortController();
+        const syncTimer = setTimeout(() => controller.abort(), 10000);
         const res = await fetch(`${API_URL}/ads/sync`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${getToken()}` },
-        });
+          signal: controller.signal,
+        }).finally(() => clearTimeout(syncTimer));
         if (res.status === 401) { handleUnauthorized(); return; }
         const data = await res.json();
         if (data.success) {

@@ -107,20 +107,32 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
       let username: string | null = null;
       if (message.platform === 'kleinanzeigen') {
         // Try to decode the 'up' cookie (base64 JSON user profile)
-        const upCookie = cookies.find(c => c.name === 'up');
-        if (upCookie) {
+        // 1. Try zpstorage identity cookie (contains {"email":"..."})
+        const identityCookie = cookies.find(c => c.name.includes('identity'));
+        if (identityCookie) {
           try {
-            const decoded = JSON.parse(decodeURIComponent(upCookie.value));
-            username = decoded.username || decoded.displayName || decoded.name || decoded.nickName || null;
-            console.log('[BG] up cookie keys:', Object.keys(decoded).join(', '), '| username:', username);
-          } catch {
+            const decoded = JSON.parse(atob(identityCookie.value));
+            username = decoded.email || decoded.username || decoded.displayName || null;
+            console.log('[BG] identity cookie decoded:', decoded, '| username:', username);
+          } catch { /* not decodable */ }
+        }
+
+        // 2. Try Kleinanzeigen access_token JWT payload
+        if (!username) {
+          const atCookie = cookies.find(c => c.name === 'access_token');
+          if (atCookie) {
             try {
-              const decoded = JSON.parse(atob(upCookie.value));
-              username = decoded.username || decoded.displayName || decoded.name || null;
+              const parts = atCookie.value.split('.');
+              if (parts.length === 3) {
+                const payload = JSON.parse(atob(parts[1]));
+                username = payload.username || payload.displayName || payload.name || payload.email || payload.sub || null;
+                console.log('[BG] access_token payload:', payload, '| username:', username);
+              }
             } catch { /* not decodable */ }
           }
         }
-        // Fallback: named username cookies
+
+        // 3. Fallback: named username cookies
         if (!username) {
           const nameCookie = cookies.find(c => ['user.username', 'username', 'ka_username'].includes(c.name));
           if (nameCookie) username = decodeURIComponent(nameCookie.value);

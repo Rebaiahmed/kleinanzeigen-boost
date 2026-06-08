@@ -60,44 +60,46 @@ export class AuthService {
     try {
       // 'up' = user profile cookie — stable Kleinanzeigen user identifier
       // 'access_token' can also be decoded to get user info
-      const upCookie = cookies.find((c: any) => c.name === 'up');
-      if (upCookie) {
+      // 1. zpstorage identity cookie — contains {"email":"..."}
+      const identityCookie = cookies.find((c: any) => c.name.includes('identity'));
+      if (identityCookie) {
         try {
-          // Try URL-encoded JSON first (Kleinanzeigen encodes the 'up' cookie this way)
-          const decoded = JSON.parse(decodeURIComponent(upCookie.value));
-          stableUserId = decoded.userId || decoded.id || decoded.sub || decoded.uid || null;
-          username = decoded.username || decoded.displayName || decoded.name || decoded.nickName || null;
-          this.logger.log(`Extracted from 'up' cookie (url-encoded) — userId: ${stableUserId}, username: ${username}`);
-          this.logger.log(`'up' cookie keys: ${Object.keys(decoded).join(', ')}`);
-        } catch {
+          const decoded = JSON.parse(Buffer.from(identityCookie.value, 'base64').toString('utf8'));
+          username = decoded.email || decoded.username || decoded.displayName || null;
+          this.logger.log(`identity cookie keys: ${Object.keys(decoded).join(', ')} | username: ${username}`);
+        } catch { /* not decodable */ }
+      }
+
+      // 2. Kleinanzeigen access_token JWT
+      if (!username) {
+        const atCookie = cookies.find((c: any) => c.name === 'access_token');
+        if (atCookie) {
           try {
-            // Fallback: try base64 JSON
-            const decoded = JSON.parse(Buffer.from(upCookie.value, 'base64').toString('utf8'));
-            stableUserId = decoded.userId || decoded.id || decoded.sub || null;
-            username = decoded.username || decoded.displayName || decoded.name || null;
-            this.logger.log(`Extracted from 'up' cookie (base64) — userId: ${stableUserId}, username: ${username}`);
-          } catch {
-            // Raw value as stable ID
-            stableUserId = upCookie.value;
-          }
+            const parts = atCookie.value.split('.');
+            if (parts.length === 3) {
+              const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+              username = payload.username || payload.displayName || payload.name || payload.email || null;
+              stableUserId = payload.sub || stableUserId;
+              this.logger.log(`access_token payload keys: ${Object.keys(payload).join(', ')} | username: ${username}`);
+            }
+          } catch { /* not decodable */ }
         }
-        if (!stableUserId) stableUserId = upCookie.value;
       }
 
-      // Fallback: try common userId cookie names
-      if (!stableUserId) {
-        const userIdCookie = cookies.find((c: any) =>
-          ['user.id', 'aid', 'kb_user_id', 'user_id', 'userId'].includes(c.name)
-        );
-        if (userIdCookie) stableUserId = userIdCookie.value;
-      }
-
-      // Username fallback
+      // 3. Named username cookies fallback
       if (!username) {
         const usernameCookie = cookies.find((c: any) =>
           ['user.username', 'username', 'ka_username'].includes(c.name)
         );
         if (usernameCookie) username = decodeURIComponent(usernameCookie.value);
+      }
+
+      // Stable user ID fallback
+      if (!stableUserId) {
+        const userIdCookie = cookies.find((c: any) =>
+          ['user.id', 'aid', 'kb_user_id', 'user_id', 'userId'].includes(c.name)
+        );
+        if (userIdCookie) stableUserId = userIdCookie.value;
       }
 
       // Log available cookie names for debugging

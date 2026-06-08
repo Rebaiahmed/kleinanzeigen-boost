@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useAdsActions } from '../hooks/useAdsActions';
 import { useAiUsage } from '../hooks/useAiUsage';
+import { PriceSuggestion } from '../components/ads/PriceSuggestion';
 
 const CATEGORIES = [
   "Auto, Rad & Boot",
@@ -85,7 +86,7 @@ interface UploadedPhoto {
 
 export function CreateWithAi() {
   const navigate = useNavigate();
-  const { saveDraft, handleVintedCrossPost, handleEbayCrossPost } = useAdsActions();
+  const { saveDraft, handleVintedCrossPost, handleEbayCrossPost, handlePriceCheck } = useAdsActions();
   const { callsCount, limit, remaining, pct, isWarning, isBlocked, incrementUsage } = useAiUsage();
 
   // Navigation step
@@ -235,19 +236,26 @@ export function CreateWithAi() {
 
     try {
       const token = localStorage.getItem('kb_session') || localStorage.getItem('token');
-      const res = await fetch('http://localhost:3000/api/ai/analyze-photos', {
+      const apiBase = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
+      const res = await fetch(`${apiBase}/ai/analyze-photos`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`
-        },
-        body: formData
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
       });
 
       const data = await res.json();
 
       if (res.status === 429) {
-        setErrorMessage(data.message || 'Dein monatliches KI-Limit wurde erreicht.');
-        setUpgradeLink(data.upgradeLink || '/einstellungen');
+        const code = data.code || '';
+        if (code === 'PLAN_LIMIT_REACHED') {
+          // User has exhausted their paid monthly quota → show upgrade prompt
+          setErrorMessage(data.message || 'Dein monatliches KI-Limit wurde erreicht.');
+          setUpgradeLink(data.upgradeLink || '/einstellungen');
+        } else {
+          // Temporary API quota (Gemini / all providers busy) → soft message, no upgrade prompt
+          setErrorMessage('Die KI-Dienste sind momentan ausgelastet. Bitte versuche es in wenigen Minuten erneut.');
+          setUpgradeLink(null);
+        }
         setIsLoading(false);
         return;
       }
@@ -462,14 +470,18 @@ export function CreateWithAi() {
       </div>
 
       {errorMessage && (
-        <div className="mb-6 p-4 bg-[#fff0f0] border border-red-200 text-red-600 rounded-lg text-sm flex gap-3 items-start animate-in fade-in duration-200">
+        <div className={`mb-6 p-4 border rounded-lg text-sm flex gap-3 items-start animate-in fade-in duration-200 ${
+          upgradeLink
+            ? 'bg-[#fff0f0] border-red-200 text-red-600'
+            : 'bg-orange-50 border-orange-200 text-orange-700'
+        }`}>
           <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="font-semibold">Fehler aufgetreten</p>
+            <p className="font-semibold">{upgradeLink ? 'Limit erreicht' : 'KI-Dienst vorübergehend ausgelastet'}</p>
             <p className="mt-0.5">{errorMessage}</p>
             {upgradeLink && (
-              <button 
-                onClick={() => navigate(upgradeLink)} 
+              <button
+                onClick={() => navigate(upgradeLink)}
                 className="mt-2 inline-flex items-center font-bold text-red-700 hover:underline"
               >
                 Jetzt upgraden →
@@ -682,6 +694,15 @@ export function CreateWithAi() {
                 <span className="block text-[11px] text-gray-400 italic mt-1 leading-normal">
                   * KI-Schätzung basierend auf sichtbaren Merkmalen.
                 </span>
+                <div className="mt-2">
+                  <PriceSuggestion
+                    adId="new"
+                    adTitle={title}
+                    currentPrice={`${price}`}
+                    onCheck={async (_adId, adTitle) => handlePriceCheck('new', adTitle)}
+                    aiBlocked={isBlocked}
+                  />
+                </div>
               </div>
             </div>
 

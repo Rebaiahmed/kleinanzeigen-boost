@@ -113,22 +113,30 @@ export class AiService {
             throw new Error('OPENROUTER_API_KEY is not configured or empty');
           }
           
-          // Prepare messages: system prompt + user text contents
+          // Prepare messages: system prompt + user contents (text + images)
           const messages: any[] = [];
           if (finalSystemInstruction) {
             messages.push({ role: 'system', content: finalSystemInstruction });
           }
 
-          // OpenRouter fallback models are text-only, so extract text parts only
-          const textParts: string[] = [];
+          // Build multimodal content array for OpenRouter (supports vision models)
+          const userContent: any[] = [];
           for (const item of contents) {
             if (typeof item === 'string') {
-              textParts.push(item);
+              userContent.push({ type: 'text', text: item });
+            } else if (item?.inlineData?.data && item?.inlineData?.mimeType) {
+              // Convert Gemini inlineData format → OpenRouter image_url format
+              userContent.push({
+                type: 'image_url',
+                image_url: {
+                  url: `data:${item.inlineData.mimeType};base64,${item.inlineData.data}`,
+                },
+              });
             }
           }
-          
-          if (textParts.length > 0) {
-            messages.push({ role: 'user', content: textParts.join('\n') });
+
+          if (userContent.length > 0) {
+            messages.push({ role: 'user', content: userContent });
           }
 
           const requestBody: any = {
@@ -214,7 +222,10 @@ export class AiService {
 
     console.error('[AI Service] All models in the fallback chain are exhausted.', lastError);
     throw new HttpException(
-      'Der Server ist ausgelastet. Bitte klicke auf \'Erneut versuchen\' oder passe deine Beschreibung an.',
+      {
+        message: 'Alle KI-Anbieter sind momentan ausgelastet. Bitte versuche es in wenigen Minuten erneut.',
+        code: 'ALL_PROVIDERS_BUSY',
+      },
       HttpStatus.TOO_MANY_REQUESTS
     );
   }
@@ -318,7 +329,10 @@ export class AiService {
 
     if (usageData.callsCount >= limit) {
       throw new HttpException(
-        'Du hast dein monatliches Limit für KI-Analysen erreicht. Bitte führe ein Upgrade auf ein höheres Paket unter /settings durch.',
+        {
+          message: 'Du hast dein monatliches Limit für KI-Analysen erreicht. Bitte führe ein Upgrade auf ein höheres Paket unter /settings durch.',
+          code: 'PLAN_LIMIT_REACHED',
+        },
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
@@ -358,6 +372,7 @@ export class AiService {
       promptTokenCount = fallbackResult.promptTokenCount;
       candidatesTokenCount = fallbackResult.candidatesTokenCount;
     } catch (error: any) {
+      if (error instanceof HttpException) throw error;
       const errMsg = error.message || '';
       if (errMsg.includes('API key not valid') || errMsg.includes('API_KEY_INVALID')) {
         throw new HttpException(

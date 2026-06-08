@@ -16,6 +16,9 @@ function logCtx(userId: string, adId?: string): string {
 export class SchedulerService {
   private readonly logger = new Logger(SchedulerService.name);
 
+  /** Guards against overlapping runs when a cron tick takes longer than the interval. */
+  private isRunning = false;
+
   constructor(
     private readonly firebaseService: FirebaseService,
     private readonly automationService: AutomationService,
@@ -102,6 +105,14 @@ export class SchedulerService {
 
   @Cron('*/15 * * * *') // Runs every 15 minutes in production
   async handleRepostCron(triggeredBy: 'cron' | 'manual' = 'cron') {
+    // Mutex: if a previous run is still in progress (e.g. many slow worker calls),
+    // skip this tick rather than processing the same due ads twice concurrently.
+    if (this.isRunning) {
+      this.logger.warn(`Repost run skipped — previous run still in progress (triggeredBy=${triggeredBy})`);
+      return { skipped: true, reason: 'already_running' };
+    }
+    this.isRunning = true;
+
     this.logger.log(`Running scheduled repost check... (triggeredBy=${triggeredBy})`);
     const db = this.firebaseService.firestore;
     const now = new Date().toISOString();
@@ -161,7 +172,10 @@ export class SchedulerService {
       }
     } catch (error: any) {
       this.logger.error(`Cron iteration failed: ${error.message}`);
+    } finally {
+      this.isRunning = false;
     }
+    return { skipped: false };
   }
 
   /**
@@ -190,11 +204,22 @@ export class SchedulerService {
 
       this.logger.log(`${logCtx(userId, adId)} Initiating automated repost`);
 
-      // 1. Atomic state lock — also stamp time so stuck-task recovery can detect it
-      await db.runTransaction(async (t) => {
+      // 1. Atomic state lock — read first so we skip gracefully if the ad was
+      //    deleted, or its status/autoRepost changed, between the query and now.
+      const locked = await db.runTransaction(async (t) => {
         const ref = db.collection('users').doc(userId).collection('ads').doc(adId);
+        const snap = await t.get(ref);
+        if (!snap.exists) return false; // deleted since the query
+        const cur = snap.data() as AdData;
+        if (cur.status !== AdStatus.ACTIVE || cur.autoRepost !== true) return false; // no longer eligible
         t.update(ref, { status: AdStatus.PENDING_REPOST, pendingRepostSince: new Date().toISOString() });
+        return true;
       });
+
+      if (!locked) {
+        this.logger.log(`${logCtx(userId, adId)} Skipped — ad deleted or no longer eligible`);
+        continue;
+      }
 
       // 2. Fetch viewsBefore (retries with backoff; null = scrape failed, not 0 views)
       let viewsBefore: number | null = null;

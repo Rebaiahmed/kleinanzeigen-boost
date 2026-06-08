@@ -20,6 +20,39 @@ export class SchedulerService {
     return this.handleRepostCron();
   }
 
+  /**
+   * Scrapes an ad's view count with up to 3 attempts and exponential backoff
+   * (1s, 2s, 4s). Returns the view count on success, or null if every attempt
+   * fails — callers must distinguish null (scrape failed) from 0 (real value)
+   * to avoid corrupting analytics.
+   */
+  private async scrapeViewsWithRetry(
+    userId: string,
+    cookies: any[],
+    adId: string,
+    label: string,
+  ): Promise<number | null> {
+    const MAX_ATTEMPTS = 3;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        const result = await this.automationService.callAutomationWorker('scrape-views', { userId, cookies, adId });
+        if (result.success && typeof result.views === 'number') {
+          return result.views;
+        }
+        throw new Error(result.error || 'scrape-views returned no view count');
+      } catch (e: any) {
+        if (attempt === MAX_ATTEMPTS) {
+          this.logger.warn(`${label} for ${adId} failed after ${MAX_ATTEMPTS} attempts: ${e.message}`);
+          return null;
+        }
+        const backoffMs = 1000 * Math.pow(2, attempt - 1); // 1s, 2s, 4s
+        this.logger.warn(`${label} for ${adId} attempt ${attempt}/${MAX_ATTEMPTS} failed: ${e.message}. Retrying in ${backoffMs}ms`);
+        await new Promise((resolve) => setTimeout(resolve, backoffMs));
+      }
+    }
+    return null;
+  }
+
   async getStatus() {
     const db = this.firebaseService.firestore;
     const doc = await db.collection('meta').doc('schedulerMeta').get();
@@ -120,17 +153,10 @@ export class SchedulerService {
         t.update(ref, { status: AdStatus.PENDING_REPOST, pendingRepostSince: new Date().toISOString() });
       });
 
-      // 2. Fetch viewsBefore
-      let viewsBefore = 0;
+      // 2. Fetch viewsBefore (retries with backoff; null = scrape failed, not 0 views)
+      let viewsBefore: number | null = null;
       if (cookies.length > 0) {
-        try {
-          const viewsResult = await this.automationService.callAutomationWorker('scrape-views', { userId, cookies, adId });
-          if (viewsResult.success && typeof viewsResult.views === 'number') {
-            viewsBefore = viewsResult.views;
-          }
-        } catch (e: any) {
-          this.logger.warn(`Failed to get viewsBefore for ${adId}: ${e.message}`);
-        }
+        viewsBefore = await this.scrapeViewsWithRetry(userId, cookies, adId, 'viewsBefore');
       }
 
       const startTime = Date.now();
@@ -246,10 +272,11 @@ export class SchedulerService {
             // Check if it has been 24 hours
             if (executedAt <= targetDate) {
               try {
-                const viewsResult = await this.automationService.callAutomationWorker('scrape-views', { userId, cookies, adId });
-                if (viewsResult.success && typeof viewsResult.views === 'number') {
-                  const viewsAfter = viewsResult.views;
-                  const viewsBefore = logData.viewsBefore || 0;
+                const viewsAfter = await this.scrapeViewsWithRetry(userId, cookies, adId, 'viewsAfter');
+                // Skip if the after-scrape failed, or if viewsBefore was never captured —
+                // computing a "gained" delta from a missing baseline would corrupt analytics.
+                if (viewsAfter !== null && typeof logData.viewsBefore === 'number') {
+                  const viewsBefore = logData.viewsBefore;
                   const viewsGained = Math.max(0, viewsAfter - viewsBefore);
 
                   await logDoc.ref.update({

@@ -9,11 +9,11 @@ export function sendTokenToExtension() {
 export function useExtension() {
   const [isConnected, setIsConnected] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
+  const [contextInvalidated, setContextInvalidated] = useState(false);
 
-  // Clear stale mocked username from previous sessions
+  // Clear any stale kb_username that may have been stored in previous sessions
   useEffect(() => {
-    const name = localStorage.getItem('kb_username');
-    if (name && name.endsWith('_user')) localStorage.removeItem('kb_username');
+    localStorage.removeItem('kb_username');
   }, []);
 
   const triggerHandshake = useCallback(() => {
@@ -34,14 +34,15 @@ export function useExtension() {
         window.postMessage({ type: 'CHECK_PLATFORM_LOGIN', platform: 'kleinanzeigen' }, '*');
       }
 
+      if (event.data?.type === 'EXTENSION_CONTEXT_INVALIDATED') {
+        setIsConnected(false);
+        setIsChecking(false);
+        setContextInvalidated(true);
+      }
+
       if (event.data?.type === 'PLATFORM_LOGIN_STATUS') {
         setIsChecking(false);
         setIsConnected(!!event.data.isLoggedIn);
-        // Never store a mocked username — real name comes from the JWT
-        if (event.data.username && !event.data.username.endsWith('_user')) {
-          localStorage.setItem('kb_username', event.data.username);
-          window.dispatchEvent(new Event('kb_username_changed'));
-        }
       }
     };
 
@@ -54,5 +55,5 @@ export function useExtension() {
     };
   }, []);
 
-  return { isConnected, isChecking, triggerHandshake };
+  return { isConnected, isChecking, contextInvalidated, triggerHandshake };
 }

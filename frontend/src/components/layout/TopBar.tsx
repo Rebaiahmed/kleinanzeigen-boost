@@ -22,8 +22,7 @@ function getUserFromToken(): { email: string; initials: string; fullEmail: strin
       return { email: name, initials, fullEmail: name };
     }
 
-    // Fallback: show generic label — username will be found after next handshake
-    return { email: 'Mein Konto', initials: 'KA', fullEmail: '' };
+    return null;
   } catch {
     return null;
   }
@@ -33,18 +32,9 @@ export function TopBar() {
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [extensionUsername, setExtensionUsername] = useState<string | null>(
-    localStorage.getItem('kb_username')
-  );
   const [user, setUser] = useState(() => getUserFromToken());
 
   useEffect(() => {
-    const handleUsernameChange = () => {
-      setExtensionUsername(localStorage.getItem('kb_username'));
-      setUser(getUserFromToken());
-    };
-    window.addEventListener('kb_username_changed', handleUsernameChange);
-    
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
@@ -61,7 +51,6 @@ export function TopBar() {
       document.addEventListener('keydown', handleKeyDown);
     }
     return () => {
-      window.removeEventListener('kb_username_changed', handleUsernameChange);
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
@@ -100,9 +89,11 @@ export function TopBar() {
           
           {/* Right: Profile & Logout */}
           <div className="flex items-center gap-3 border-l border-[#d4d4d4] pl-4 relative" ref={dropdownRef}>
-            <span className="text-[13px] font-medium text-gray-600 flex items-center gap-1">
-              👤 {extensionUsername || user?.email || 'Nicht eingeloggt'}
-            </span>
+            {user && (
+              <span className="text-[13px] font-medium text-gray-600 flex items-center gap-1">
+                👤 {user.email}
+              </span>
+            )}
             <span className="text-[#d4d4d4] hidden sm:inline">|</span>
             <button
               onClick={handleLogout}
@@ -111,13 +102,13 @@ export function TopBar() {
               Logout
             </button>
             <span className="text-[#d4d4d4] hidden sm:inline">|</span>
-            {(user || extensionUsername) ? (
+            {user ? (
               <>
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className="h-8 w-8 rounded-full bg-[#A8C300] flex items-center justify-center text-white text-[11px] font-bold focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#A8C300] transition-shadow"
                 >
-                  {extensionUsername ? extensionUsername.slice(0, 2).toUpperCase() : user!.initials}
+                  {user!.initials}
                 </button>
               </>
             ) : (

@@ -1,9 +1,9 @@
 name: Generate Changelog
 
+# Manual-only: auto-push-to-main on every commit kept failing (non-fast-forward)
+# and created churn. Run on demand instead.
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch: {}
 
 # Never run on the bot commits this workflow pushes back
 jobs:

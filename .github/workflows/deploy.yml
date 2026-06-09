@@ -1,8 +1,10 @@
 name: Production Monorepo Deployment Pipeline
 
+# DISABLED on push — superseded by the granular deploy-frontend / deploy-backend /
+# deploy-automation workflows. Manual-only. (Used a deprecated FIREBASE_TOKEN and
+# duplicated the newer workflows.)
 on:
-  push:
-    branches: [ main ]
+  workflow_dispatch: {}
 
 jobs:
   audit-and-validate:

@@ -6,19 +6,19 @@ Task #,Title,Part,Epic,Status,Priority,Notes
 1.5,Test landing page deployment,DevOps & Infrastructure,,Pending,High,Landing is the / route of the frontend SPA; ships with 1.4
 1.6,Deploy backend to VPS,DevOps & Infrastructure,,Pending,High,validateEnv blocks boot without prod secrets
 1.7,Deploy frontend to Firebase,DevOps & Infrastructure,,Pending,High,Set VITE_API_URL to https backend first
-1.8,Command to cleanup Firestore data for testing,DevOps & Infrastructure,,Pending,Medium,
+1.8,Command to cleanup Firestore data for testing,DevOps & Infrastructure,,Done,Medium,npm run cleanup:firestore -- --user <id> or --all --yes; works in real + mock mode
 2.1,Publish Chrome extension to Chrome Web Store,Chrome Extension,,Pending,High,Update ENDPOINTS to prod URLs first; listing copy drafted
 2.2,Generate logo for the extension (icon + branding),Chrome Extension,,Pending,High,
 2.3,Prepare Kleinanzeigen profile for testing/demo,Chrome Extension,,Pending,Medium,
-3.1,Add pagination for ads synchronization,Frontend & UX,,Pending,Medium,
+3.1,Add pagination for ads synchronization,Frontend & UX,,Done,Medium,Client-side pagination 12/page (commit 047f917f)
 3.2,Add better loading spinner during sync,Frontend & UX,,Pending,Medium,Small corner spinner exists; polish pass
-4.1,Document AI credits/limits per plan,Documentation & Monetization,,Pending,High,Implemented in config/ai-limits.constants.ts; needs user-facing doc
-4.2,Document which AI models are used,Documentation & Monetization,,Pending,High,Implemented in ai.service.ts; needs doc
-4.3,Document payment setup (Stripe/PayPal),Documentation & Monetization,,Pending,High,No payment integration yet
-4.4,Define monetization strategy,Documentation & Monetization,,Pending,High,Limits + upgrade-prompt scaffolding partially built
-5.1,Add category-specific posting guides,POST-SMARTER,POST-SMARTER,Pending,Medium,
-5.2,Add AI photo feedback,POST-SMARTER,POST-SMARTER,Pending,Medium,Photo-to-listing analysis exists; feedback is new
-5.3,Add pricing recommendations from similar sold items,POST-SMARTER,POST-SMARTER,Pending,Medium,suggestPrice exists; sold-comps is new
-5.4,Add Why upgrade to Pro educational prompts,POST-SMARTER,POST-SMARTER,Pending,Medium,
-6.1,Integrate IP proxy rotation to prevent bans,Security & Anti-Ban,,Pending,Medium,
+4.1,Document AI credits/limits per plan,Documentation & Monetization,,Done,High,docs/AI_AND_MONETIZATION.md; gated by MONETIZATION_ENABLED flag (default off)
+4.2,Document which AI models are used,Documentation & Monetization,,Done,High,docs/AI_AND_MONETIZATION.md (free-first Gemini + OpenRouter chain)
+4.3,Document payment setup (Stripe/PayPal),Documentation & Monetization,,In Progress,High,Stripe integration plan documented; not yet implemented
+4.4,Define monetization strategy,Documentation & Monetization,,In Progress,High,Proposed tiers/pricing/prompts documented; MONETIZATION_ENABLED flag built; pricing not validated
+5.1,Add category-specific posting guides,POST-SMARTER,POST-SMARTER,Deferred,Medium,Static tips low value (commodity); POC removed
+5.2,Add AI photo feedback,POST-SMARTER,POST-SMARTER,Deferred,Medium,Photo-quality coaching is the only non-redundant slice; revisit if users ask
+5.3,Add pricing recommendations from similar sold items,POST-SMARTER,POST-SMARTER,Deferred,Medium,Redundant with existing suggestPrice
+5.4,Add Why upgrade to Pro educational prompts,POST-SMARTER,POST-SMARTER,Deferred,Medium,Marketing prompt; revisit post-launch
+6.1,Integrate IP proxy rotation to prevent bans,Security & Anti-Ban,,Deferred,Medium,Not needed at low volume; per-user sticky German residential IPs when bans appear (see issue #22)
 6.2,Manual testing of main features before production,Security & Anti-Ban,,Pending,High,Test scenarios reviewed in dev; needs formal pass

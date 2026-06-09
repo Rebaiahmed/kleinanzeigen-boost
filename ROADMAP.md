@@ -51,14 +51,16 @@ Priority: **High** · **Medium** · **Low**
 
 | #   | Task | Status | Priority | Notes |
 |-----|------|--------|----------|-------|
-| 5.1 | Category-specific posting guides (furniture, electronics, clothing…) | Pending | Medium | — |
-| 5.2 | AI photo feedback (analyze photos, suggest improvements) | Pending | Medium | Photo→listing analysis exists; "feedback/improvement" is new |
-| 5.3 | Pricing recommendations from similar sold items | Pending | Medium | `suggestPrice` exists (AI estimate); "sold comps" is new |
-| 5.4 | "Why upgrade to Pro?" educational prompts in dashboard | Pending | Medium | — |
+| 5.1 | Category-specific posting guides (furniture, electronics, clothing…) | **Deferred** | Medium | Static tips = commodity (ChatGPT can do it); POC built + removed |
+| 5.2 | AI photo feedback (analyze photos, suggest improvements) | **Deferred** | Medium | Photo-quality coaching is the only non-redundant slice; revisit if users ask |
+| 5.3 | Pricing recommendations from similar sold items | **Deferred** | Medium | Redundant with existing `suggestPrice` |
+| 5.4 | "Why upgrade to Pro?" educational prompts in dashboard | **Deferred** | Medium | Marketing prompt; revisit post-launch |
+
+> **Epic deferred:** most of POST-SMARTER overlaps existing features (AI generation, KI-Opt, suggestPrice). Critiquing AI-generated ads is circular; the only genuinely new slice is photo-quality coaching — revisit only if users request it.
 
 ## Part 6 — Security & Anti-Ban
 
 | #   | Task | Status | Priority | Notes |
 |-----|------|--------|----------|-------|
-| 6.1 | IP proxy rotation to prevent bans (automation) | Pending | Medium | — |
+| 6.1 | IP proxy rotation to prevent bans (automation) | **Deferred** | Medium | Not needed at low volume; per-user sticky German residential IPs when bans appear (see issue #22) |
 | 6.2 | Manual testing of main features before production | Pending | High | Test scenarios reviewed earlier in dev; needs a formal pass |

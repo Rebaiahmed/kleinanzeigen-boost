@@ -35,19 +35,25 @@ export function Landing() {
               {/* Left Column (Copy) */}
               <div className="max-w-xl">
                 <div className="inline-flex items-center px-2.5 py-1 rounded-full border border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-600 mb-6 uppercase tracking-wider">
-                  Utility-Tool für Power-User
+                  Für Vielverkäufer auf Kleinanzeigen
                 </div>
                 <h1 className="text-3xl sm:text-[32px] font-bold tracking-tight text-slate-800 mb-5 leading-tight">
-                  Automatisiertes Anzeigen-Management für Kleinanzeigen.
+                  Kleinanzeigen automatisch nach oben schieben – und per Foto erstellen.
                 </h1>
                 <p className="text-base text-slate-600 mb-8 leading-relaxed">
-                  Vergiss manuelles Löschen und Neueinstellen. KleinanzeigenBoost steuert deine Inserate im Hintergrund über einen sicheren Cloud-Browser, während du dich auf deine Verkäufe konzentrierst.
+                  Schluss mit manuellem Löschen und Neu-Einstellen. AnzeigenBoost schiebt deine Inserate automatisch wieder nach oben – auch nachts. Und die KI erstellt aus einem Foto Titel, Beschreibung und Preis in Sekunden. Mehr Aufrufe, schnellere Verkäufe, weniger Aufwand.
                 </p>
-                <div>
+                <div className="flex flex-col sm:flex-row gap-3 items-start">
                   <Link to="/auth" className="inline-flex items-center justify-center bg-[#A8C300] hover:bg-[#96ae00] text-white font-bold py-3 px-6 rounded-full text-[15px] shadow-sm transition-all transform hover:-translate-y-0.5">
-                    Mit Kleinanzeigen-Konto anmelden
+                    Kostenlos starten
                   </Link>
+                  <a href="#security" className="inline-flex items-center justify-center border border-slate-300 hover:border-slate-400 text-slate-700 font-semibold py-3 px-6 rounded-full text-[15px] transition-colors">
+                    Wie sicher ist das?
+                  </a>
                 </div>
+                <p className="text-[12px] text-slate-400 mt-3">
+                  Automatisches Reposting · KI-Anzeigen per Foto · Antwort-Vorlagen
+                </p>
               </div>
 
               {/* Right Column (Visual Proof Console) */}

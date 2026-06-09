@@ -1,0 +1,35 @@
+name: Deploy Automation Worker to VPS
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'automation/**'
+      - '.github/workflows/deploy-automation.yml'
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    name: Deploy automation worker over SSH
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            cd /root/kleinanzeigen-boost
+            git fetch origin main
+            git reset --hard origin/main
+            cd automation
+            npm ci
+            # Ensure the Playwright browser is present (no-op if already installed)
+            npx playwright install --with-deps chromium || true
+            npm run build
+            pm2 restart anzeigenboost-automation --update-env || pm2 start dist/index.js --name anzeigenboost-automation
+            pm2 save
+            echo "✅ Automation worker deployed."

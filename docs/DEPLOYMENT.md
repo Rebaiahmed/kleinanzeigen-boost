@@ -88,6 +88,30 @@ ufw --force enable
 
 ---
 
+## 2b. Automation worker (Playwright, port 3001)
+
+Runs as a second PM2 process on the same VPS. Auto-deployed by
+[`deploy-automation.yml`](../.github/workflows/deploy-automation.yml) on pushes to
+`automation/**`. One-time setup:
+
+```bash
+cd /root/kleinanzeigen-boost/automation
+npm ci
+npx playwright install --with-deps chromium   # browser + system libs
+# .env — must share INTERNAL_SECRET with the backend so they authenticate each other
+cat > .env << 'EOF'
+PORT=3001
+INTERNAL_SECRET=__same_value_as_backend__
+EOF
+npm run build
+pm2 start dist/index.js --name anzeigenboost-automation
+pm2 save
+```
+
+The backend reaches it via `AUTOMATION_WORKER_URL` (e.g. `http://127.0.0.1:3001`
+if same box, or an https URL if separate). Port 3001 should **not** be public —
+keep it behind localhost/nginx.
+
 ## 3. Manual deploy (when not using the workflow)
 
 ```bash

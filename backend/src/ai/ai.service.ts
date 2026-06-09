@@ -38,6 +38,19 @@ export class AiService {
     );
   }
 
+  /** Throws only if NO AI provider is configured. Either Gemini or OpenRouter
+   *  is sufficient — the model fallback chain uses whichever key(s) exist. */
+  private assertAiConfigured() {
+    const hasGemini = !!process.env.GEMINI_API_KEY?.trim();
+    const hasOpenRouter = !!process.env.OPENROUTER_API_KEY?.trim();
+    if (!hasGemini && !hasOpenRouter) {
+      throw new HttpException(
+        'KI-Dienst nicht konfiguriert. Bitte trage GEMINI_API_KEY oder OPENROUTER_API_KEY in der backend/.env Datei ein.',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   private async executeWithFallback(contents: any[], systemInstruction: string, generationConfig: any): Promise<{ responseText: string, promptTokenCount: number, candidatesTokenCount: number, modelName: string }> {
     // Free-first: $0 models are tried before any paid model. Free tiers have tight
     // rate limits, so under load we fall through to paid — that reduces cost, not
@@ -349,13 +362,7 @@ export class AiService {
     }
 
     // 4. Pre-check API Key configuration
-    const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey || geminiKey.trim() === '') {
-      throw new HttpException(
-        'KI-Analysedienst nicht konfiguriert. Bitte trage einen gültigen GEMINI_API_KEY in der backend/.env Datei ein.',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    this.assertAiConfigured();
 
     const imageParts = files.map((file) => ({
       inlineData: {
@@ -446,14 +453,7 @@ export class AiService {
 
   async optimizeExistingAd(userId: string, title: string, description: string, category: string) {
     this.logger.log(`[KI-Opt] optimizeExistingAd START — userId: ${userId}, title: "${title?.slice(0, 40)}"`);
-    const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey || geminiKey.trim() === '') {
-      this.logger.error('[KI-Opt] No GEMINI_API_KEY configured');
-      throw new HttpException(
-        'KI-Analysedienst nicht konfiguriert. Bitte trage einen gültigen GEMINI_API_KEY in der backend/.env Datei ein.',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    this.assertAiConfigured();
 
     
 
@@ -544,13 +544,7 @@ export class AiService {
   }
 
   async suggestPrice(userId: string, title: string) {
-    const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey || geminiKey.trim() === '') {
-      throw new HttpException(
-        'KI-Analysedienst nicht konfiguriert. Bitte trage einen gültigen GEMINI_API_KEY in der backend/.env Datei ein.',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    this.assertAiConfigured();
 
     
 

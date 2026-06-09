@@ -1,0 +1,24 @@
+Task #,Title,Part,Epic,Status,Priority,Notes
+1.1,Create VPS server and add credentials to GitHub Actions secrets,DevOps & Infrastructure,,Pending,High,
+1.2,Buy domain name (anzeigenboost.de),DevOps & Infrastructure,,Pending,High,Referenced in README and landing OG/canonical tags
+1.3,Test GitHub Actions deployment workflow,DevOps & Infrastructure,,Pending,High,Workflows exist in .github/workflows; need a live run
+1.4,Test Firebase deployment (frontend),DevOps & Infrastructure,,Pending,High,deploy-frontend.yml and frontend/firebase.json configured
+1.5,Test landing page deployment,DevOps & Infrastructure,,Pending,High,Landing is the / route of the frontend SPA; ships with 1.4
+1.6,Deploy backend to VPS,DevOps & Infrastructure,,Pending,High,validateEnv blocks boot without prod secrets
+1.7,Deploy frontend to Firebase,DevOps & Infrastructure,,Pending,High,Set VITE_API_URL to https backend first
+1.8,Command to cleanup Firestore data for testing,DevOps & Infrastructure,,Pending,Medium,
+2.1,Publish Chrome extension to Chrome Web Store,Chrome Extension,,Pending,High,Update ENDPOINTS to prod URLs first; listing copy drafted
+2.2,Generate logo for the extension (icon + branding),Chrome Extension,,Pending,High,
+2.3,Prepare Kleinanzeigen profile for testing/demo,Chrome Extension,,Pending,Medium,
+3.1,Add pagination for ads synchronization,Frontend & UX,,Pending,Medium,
+3.2,Add better loading spinner during sync,Frontend & UX,,Pending,Medium,Small corner spinner exists; polish pass
+4.1,Document AI credits/limits per plan,Documentation & Monetization,,Pending,High,Implemented in config/ai-limits.constants.ts; needs user-facing doc
+4.2,Document which AI models are used,Documentation & Monetization,,Pending,High,Implemented in ai.service.ts; needs doc
+4.3,Document payment setup (Stripe/PayPal),Documentation & Monetization,,Pending,High,No payment integration yet
+4.4,Define monetization strategy,Documentation & Monetization,,Pending,High,Limits + upgrade-prompt scaffolding partially built
+5.1,Add category-specific posting guides,POST-SMARTER,POST-SMARTER,Pending,Medium,
+5.2,Add AI photo feedback,POST-SMARTER,POST-SMARTER,Pending,Medium,Photo-to-listing analysis exists; feedback is new
+5.3,Add pricing recommendations from similar sold items,POST-SMARTER,POST-SMARTER,Pending,Medium,suggestPrice exists; sold-comps is new
+5.4,Add Why upgrade to Pro educational prompts,POST-SMARTER,POST-SMARTER,Pending,Medium,
+6.1,Integrate IP proxy rotation to prevent bans,Security & Anti-Ban,,Pending,Medium,
+6.2,Manual testing of main features before production,Security & Anti-Ban,,Pending,High,Test scenarios reviewed in dev; needs formal pass

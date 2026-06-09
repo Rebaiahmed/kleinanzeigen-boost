@@ -3,6 +3,8 @@
 **AnzeigenBoost** (anzeigenboost.de) — a German-market SaaS that automates Kleinanzeigen.de ad reposting.
 "Deine Kleinanzeigen immer ganz oben — vollautomatisch."
 
+📋 **Project roadmap & task status:** [`ROADMAP.md`](ROADMAP.md) (importable: [`roadmap.csv`](roadmap.csv))
+
 ![AnzeigenBoost Screenshot Placeholder](https://via.placeholder.com/800x400?text=AnzeigenBoost+Dashboard)
 
 ## Features

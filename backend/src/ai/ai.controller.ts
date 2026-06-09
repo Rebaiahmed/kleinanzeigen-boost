@@ -2,6 +2,7 @@ import { Controller, Post, Get, Body, UseGuards, UseInterceptors, UploadedFiles,
 import { AiService } from './ai.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
+import { MAX_PHOTOS, MAX_PHOTO_BYTES } from '../common/constants/upload.constants';
 
 @Controller('api/ai')
 export class AiController {
@@ -78,8 +79,8 @@ export class AiController {
 
   @UseGuards(JwtAuthGuard)
   @Post('analyze-photos')
-  @UseInterceptors(FilesInterceptor('images', 8, {
-    limits: { fileSize: 4 * 1024 * 1024 } // 4MB
+  @UseInterceptors(FilesInterceptor('images', MAX_PHOTOS, {
+    limits: { fileSize: MAX_PHOTO_BYTES },
   }))
   async analyzePhotos(
     @UploadedFiles() files: any[],

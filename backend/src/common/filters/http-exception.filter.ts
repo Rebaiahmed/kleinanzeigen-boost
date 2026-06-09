@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { MAX_PHOTOS, MAX_PHOTO_SIZE_MB } from '../constants/upload.constants';
 
 /**
  * Global HTTP exception filter.
@@ -32,6 +33,18 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
         typeof res === 'string'
           ? res
           : (res as any).message || message;
+    } else if ((exception as any)?.name === 'MulterError') {
+      // File-upload errors (e.g. a photo over the size limit) — give a clear,
+      // actionable German message instead of a generic 500.
+      status = HttpStatus.BAD_REQUEST;
+      const code = (exception as any).code;
+      if (code === 'LIMIT_FILE_SIZE') {
+        message = `Maximale Dateigröße pro Foto: ${MAX_PHOTO_SIZE_MB}MB`;
+      } else if (code === 'LIMIT_FILE_COUNT' || code === 'LIMIT_UNEXPECTED_FILE') {
+        message = `Zu viele Dateien — maximal ${MAX_PHOTOS} Fotos.`;
+      } else {
+        message = 'Datei-Upload fehlgeschlagen. Bitte überprüfe deine Fotos.';
+      }
     } else {
       // Unexpected errors — log the full error server-side only
       this.logger.error(

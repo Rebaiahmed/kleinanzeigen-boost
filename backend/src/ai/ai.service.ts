@@ -44,18 +44,28 @@ export class AiService {
   private async executeWithFallback(contents: any[], systemInstruction: string, generationConfig: any): Promise<{ responseText: string, promptTokenCount: number, candidatesTokenCount: number, modelName: string }> {
     // Free-first: $0 models are tried before any paid model. Free tiers have tight
     // rate limits, so under load we fall through to paid — that reduces cost, not
-    // eliminates it. Text-only free models simply fail on image input and fall through.
-    const modelChain = [
+    // eliminates it. `vision` marks models that accept image input; text-only models
+    // are filtered out when the request contains images (see hasImages below).
+    const fullModelChain = [
       // ── Free ($0) ──
-      { type: 'google', name: 'gemini-2.0-flash' },                       // Gemini free tier, handles vision
-      { type: 'openrouter', name: 'google/gemma-4-31b-it:free' },         // free text
-      { type: 'openrouter', name: 'meta-llama/llama-3.3-70b-instruct:free' }, // free text
+      { type: 'google', name: 'gemini-2.0-flash', vision: true },                       // Gemini free tier, handles vision
+      { type: 'openrouter', name: 'google/gemma-4-31b-it:free', vision: false },         // free, text-only
+      { type: 'openrouter', name: 'meta-llama/llama-3.3-70b-instruct:free', vision: false }, // free, text-only
       // ── Paid fallback ──
-      { type: 'google', name: 'gemini-2.5-flash' },
-      { type: 'openrouter', name: 'x-ai/grok-3-mini' },
-      { type: 'openrouter', name: 'openai/gpt-4o-mini' },
-      { type: 'openrouter', name: 'deepseek/deepseek-chat' },
+      { type: 'google', name: 'gemini-2.5-flash', vision: true },
+      { type: 'openrouter', name: 'openai/gpt-4o-mini', vision: true },
+      { type: 'openrouter', name: 'x-ai/grok-3-mini', vision: false },
+      { type: 'openrouter', name: 'deepseek/deepseek-chat', vision: false },
     ];
+
+    // Detect image input: image parts are objects with inlineData/image_url, not strings.
+    const hasImages = contents.some(
+      (c) => c && typeof c === 'object' && (c.inlineData || c.image_url || c.type === 'image_url'),
+    );
+    const modelChain = hasImages ? fullModelChain.filter((m) => m.vision) : fullModelChain;
+    if (hasImages) {
+      console.log(`[AI Service] Image input detected — using vision models only: ${modelChain.map(m => m.name).join(', ')}`);
+    }
 
     // Append JSON instruction if JSON response is requested
     let finalSystemInstruction = systemInstruction;

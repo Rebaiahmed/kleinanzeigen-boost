@@ -79,6 +79,8 @@ Monthly token limits are enforced based on the user's subscription tier.
 
 ## VPS Deployment
 
+> Full backend deploy guide (automated GitHub Action + manual commands + nginx): [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+
 ### Domain
 Register `anzeigenboost.de` at Hetzner or IONOS.
 

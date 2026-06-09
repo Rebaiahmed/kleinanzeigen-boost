@@ -20,10 +20,15 @@ const TOPICS = [
   { icon: '🚚', key: 'Abholung',      instruction: 'Abholtermin vereinbaren' },
 ];
 
+/** Max characters of free-text context accepted from the user (token-waste guard). */
+const MAX_CONTEXT_CHARS = 200;
+
 const buildPrompt = (context?: string, topics?: string[]) => {
-  const activeTopic = topics?.length ? TOPICS.filter(t => topics.includes(t.key)) : TOPICS;
-  const hint = context?.trim()
-    ? `Der Verkäufer verkauft: ${context.trim()}.`
+  const filtered = topics?.length ? TOPICS.filter(t => topics.includes(t.key)) : TOPICS;
+  const activeTopic = filtered.length ? filtered : TOPICS; // never empty
+  const trimmedContext = context?.trim().slice(0, MAX_CONTEXT_CHARS);
+  const hint = trimmedContext
+    ? `Der Verkäufer verkauft: ${trimmedContext}.`
     : 'Der Verkäufer verkauft verschiedene Artikel auf Kleinanzeigen.';
 
   const topicList = activeTopic.map((t, i) => `${i + 1}. ${t.key} – ${t.instruction}`).join('\n');
@@ -177,19 +182,38 @@ export class ReplyTemplatesService {
 
       return this.parseTemplatesJson(text);
     } catch (e: any) {
+      // Log the real detail server-side; never leak raw model output / parse
+      // errors / provider payloads to the client.
       const detail = e.response?.data ? JSON.stringify(e.response.data) : e.message;
       this.logger.error(`Template generation failed: ${detail}`);
       throw new InternalServerErrorException(
-        `KI-Generierung fehlgeschlagen: ${e.response?.data?.error?.message || e.message}`,
+        'Die KI-Vorlagen konnten nicht erstellt werden. Bitte versuche es in Kürze erneut.',
       );
     }
   }
 
   private parseTemplatesJson(text: string): Partial<ReplyTemplate>[] {
-    let cleaned = text.trim();
-    cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+    const cleaned = text
+      .trim()
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
+
     const match = cleaned.match(/\[[\s\S]*\]/);
-    if (!match) throw new Error(`No JSON array in AI response: ${cleaned.slice(0, 150)}`);
-    return JSON.parse(match[0]) as Partial<ReplyTemplate>[];
+    if (!match) {
+      throw new Error(`No JSON array found in AI response. Raw start: ${cleaned.slice(0, 150)}`);
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(match[0]);
+    } catch (err: any) {
+      throw new Error(`Malformed JSON from AI: ${err.message}. Raw: ${match[0].slice(0, 150)}`);
+    }
+    if (!Array.isArray(parsed)) {
+      throw new Error('AI response JSON was not an array of templates.');
+    }
+    return parsed as Partial<ReplyTemplate>[];
   }
 }

@@ -2,6 +2,7 @@ import { Controller, Post, Get, Body, UseGuards, UseInterceptors, UploadedFiles,
 import { AiService } from './ai.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import { MAX_PHOTOS, MAX_PHOTO_BYTES } from '../common/constants/upload.constants';
 
 @Controller('api/ai')
@@ -77,6 +78,8 @@ export class AiController {
     return this.aiService.suggestRepostTime(req.user.userId, body.adId);
   }
 
+  // Rate-limit the expensive vision endpoint: max 10 requests/minute per IP.
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @UseGuards(JwtAuthGuard)
   @Post('analyze-photos')
   @UseInterceptors(FilesInterceptor('images', MAX_PHOTOS, {
@@ -92,17 +95,5 @@ export class AiController {
       throw new HttpException('Mindestens ein Foto muss hochgeladen werden.', HttpStatus.BAD_REQUEST);
     }
     return this.aiService.analyzePhotos(req.user.userId, files, hint, language);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post('reply-suggestions')
-  async replySuggestions(
-    @Req() req: any,
-    @Body() body: { messageHistory: string[] }
-  ) {
-    if (!body.messageHistory || !Array.isArray(body.messageHistory)) {
-      throw new HttpException('messageHistory Array ist erforderlich.', HttpStatus.BAD_REQUEST);
-    }
-    return this.aiService.suggestReply(req.user.userId, body.messageHistory);
   }
 }

@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Req, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ReplyTemplatesService, ReplyTemplate } from './reply-templates.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -34,6 +35,8 @@ export class ReplyTemplatesController {
     return { success: true };
   }
 
+  // Rate-limit AI generation: max 10 requests/minute per IP to curb spam/cost.
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('generate')
   async generateTemplates(@Req() req: any, @Body() body: { context?: string; topics?: string[] }) {
     return this.templatesService.generateTemplates(req.user.userId, body);

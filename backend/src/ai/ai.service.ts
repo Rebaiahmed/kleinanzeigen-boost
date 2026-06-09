@@ -1,18 +1,19 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { FirebaseService } from '../firebase/firebase.service';
 import { getEffectiveLimit, estimateCostUsd } from '../config/ai-limits.constants';
+import { AI_CONFIG } from '../config/ai.constants';
 import * as fs from 'fs';
 import * as path from 'path';
 import axios from 'axios';
 
 @Injectable()
 export class AiService {
+  private readonly logger = new Logger(AiService.name);
   private genAI: GoogleGenerativeAI | null = null;
   private analyzePhotosPrompt: string;
   private optimizeAdPrompt: string;
   private priceCheckPrompt: string;
-  private replySuggestionsPrompt: string;
 
   constructor(private readonly firebaseService: FirebaseService) {
     // Construct the Gemini client only when a key is actually configured.
@@ -33,10 +34,6 @@ export class AiService {
     );
     this.priceCheckPrompt = fs.readFileSync(
       path.join(__dirname, 'prompts/price-check.system.txt'),
-      'utf-8',
-    );
-    this.replySuggestionsPrompt = fs.readFileSync(
-      path.join(__dirname, 'prompts/reply-suggestions.system.txt'),
       'utf-8',
     );
   }
@@ -64,7 +61,7 @@ export class AiService {
     );
     const modelChain = hasImages ? fullModelChain.filter((m) => m.vision) : fullModelChain;
     if (hasImages) {
-      console.log(`[AI Service] Image input detected — using vision models only: ${modelChain.map(m => m.name).join(', ')}`);
+      this.logger.log(`[AI Service] Image input detected — using vision models only: ${modelChain.map(m => m.name).join(', ')}`);
     }
 
     // Append JSON instruction if JSON response is requested
@@ -95,7 +92,7 @@ export class AiService {
             },
             // requestOptions — the SDK aborts the request after `timeout` ms.
             // (timeout belongs here, NOT in generationConfig, where it's ignored.)
-            { timeout: 30000 },
+            { timeout: AI_CONFIG.geminiTimeoutMs },
           );
 
           let result = await model.generateContent(contents);
@@ -109,7 +106,7 @@ export class AiService {
             try {
               JSON.parse(cleanAndExtractJson(responseText));
             } catch (jsonErr: any) {
-              console.warn(`[AI Service] Gemini JSON parse failed. Retrying... Error: ${jsonErr.message}`);
+              this.logger.warn(`[AI Service] Gemini JSON parse failed. Retrying... Error: ${jsonErr.message}`);
               const retryPrompt = `Your previous response was not valid JSON. Error: ${jsonErr.message}. You MUST return ONLY valid JSON. No explanation before or after. Start with { and end with }. Original request: ${JSON.stringify(contents.filter(c => typeof c === 'string'))}`;
               result = await model.generateContent([...contents, retryPrompt]);
               response = await result.response;
@@ -167,7 +164,7 @@ export class AiService {
             max_tokens: generationConfig.maxOutputTokens || 400,
           };
 
-          console.log(`[AI Service] Attempting fallback with OpenRouter model: ${modelInfo.name}`);
+          this.logger.log(`[AI Service] Attempting fallback with OpenRouter model: ${modelInfo.name}`);
           let response = await axios.post(
             'https://openrouter.ai/api/v1/chat/completions',
             requestBody,
@@ -178,7 +175,7 @@ export class AiService {
                 'HTTP-Referer': 'https://anzeigenboost.de',
                 'X-Title': 'AnzeigenBoost',
               },
-              timeout: 15000,
+              timeout: AI_CONFIG.openRouterTimeoutMs,
             }
           );
 
@@ -195,7 +192,7 @@ export class AiService {
             try {
               JSON.parse(cleanAndExtractJson(responseText));
             } catch (jsonErr: any) {
-              console.warn(`[AI Service] OpenRouter JSON parse failed. Retrying... Error: ${jsonErr.message}`);
+              this.logger.warn(`[AI Service] OpenRouter JSON parse failed. Retrying... Error: ${jsonErr.message}`);
               messages.push({ role: 'assistant', content: responseText });
               messages.push({
                 role: 'user',
@@ -212,7 +209,7 @@ export class AiService {
                     'HTTP-Referer': 'https://anzeigenboost.de',
                     'X-Title': 'AnzeigenBoost',
                   },
-                  timeout: 15000,
+                  timeout: AI_CONFIG.openRouterTimeoutMs,
                 }
               );
 
@@ -236,13 +233,13 @@ export class AiService {
           };
         }
       } catch (error: any) {
-        console.warn(`[AI Service] ${modelInfo.name} failed: ${error.message}. Falling back...`);
+        this.logger.warn(`[AI Service] ${modelInfo.name} failed: ${error.message}. Falling back...`);
         lastError = error;
         continue;
       }
     }
 
-    console.error('[AI Service] All models in the fallback chain are exhausted.', lastError);
+    this.logger.error('[AI Service] All models in the fallback chain are exhausted.', lastError);
     throw new HttpException(
       {
         message: 'Alle KI-Anbieter sind momentan ausgelastet. Bitte versuche es in wenigen Minuten erneut.',
@@ -295,7 +292,7 @@ export class AiService {
 
       await usageRef.set(usageData, { merge: true });
     } catch (err: any) {
-      console.warn('Failed to log AI usage to Firestore:', err.message);
+      this.logger.warn('Failed to log AI usage to Firestore:', err.message);
     }
   }
 
@@ -409,8 +406,8 @@ export class AiService {
       const cleaned = cleanAndExtractJson(responseText);
       parsedJson = JSON.parse(cleaned);
     } catch (parseError) {
-      console.error('Failed to parse Gemini response on first attempt. Raw response:', responseText);
-      console.error('Parse error:', parseError);
+      this.logger.error('Failed to parse Gemini response on first attempt. Raw response:', responseText);
+      this.logger.error('Parse error:', parseError);
       const retryPrompt = `${langInstruction}\nDeine vorherige Antwort war kein valides JSON. Bitte generiere ein striktes, valides JSON.`;
       try {
         const fallbackResult = await this.executeWithFallback(
@@ -427,8 +424,8 @@ export class AiService {
         const cleanedRetry = cleanAndExtractJson(responseText);
         parsedJson = JSON.parse(cleanedRetry);
       } catch (retryError) {
-        console.error('Failed to parse Gemini response on second attempt. Raw response:', responseText);
-        console.error('Retry parse error:', retryError);
+        this.logger.error('Failed to parse Gemini response on second attempt. Raw response:', responseText);
+        this.logger.error('Retry parse error:', retryError);
         throw new HttpException(
           'Die KI-Antwort konnte nicht als valides JSON verarbeitet werden. Bitte lade die Seite neu und versuche es erneut.',
           HttpStatus.UNPROCESSABLE_ENTITY,
@@ -448,10 +445,10 @@ export class AiService {
   }
 
   async optimizeExistingAd(userId: string, title: string, description: string, category: string) {
-    console.log(`[KI-Opt] optimizeExistingAd START — userId: ${userId}, title: "${title?.slice(0, 40)}"`);
+    this.logger.log(`[KI-Opt] optimizeExistingAd START — userId: ${userId}, title: "${title?.slice(0, 40)}"`);
     const geminiKey = process.env.GEMINI_API_KEY;
     if (!geminiKey || geminiKey.trim() === '') {
-      console.error('[KI-Opt] No GEMINI_API_KEY configured');
+      this.logger.error('[KI-Opt] No GEMINI_API_KEY configured');
       throw new HttpException(
         'KI-Analysedienst nicht konfiguriert. Bitte trage einen gültigen GEMINI_API_KEY in der backend/.env Datei ein.',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -472,7 +469,7 @@ export class AiService {
     let parsedJson: any = null;
 
     try {
-      console.log('[KI-Opt] Calling Gemini API (attempt 1)...');
+      this.logger.log('[KI-Opt] Calling Gemini API (attempt 1)...');
       const fallbackResult = await this.executeWithFallback(
         [userPrompt],
         this.optimizeAdPrompt,
@@ -495,10 +492,10 @@ export class AiService {
       // Surface quota errors immediately — no point retrying
       const quotaErr = extractQuotaError(error);
       if (quotaErr) {
-        console.error('[KI-Opt] Quota exceeded:', quotaErr.message);
+        this.logger.error('[KI-Opt] Quota exceeded:', quotaErr.message);
         throw new HttpException(quotaErr.message, HttpStatus.TOO_MANY_REQUESTS);
       }
-      console.error('[KI-Opt] Attempt 1 failed:', error.message);
+      this.logger.error('[KI-Opt] Attempt 1 failed:', error.message);
 
       // Retry with ultra-short constraints to guarantee the JSON fits in 400 tokens
       const retryPrompt =
@@ -507,7 +504,7 @@ export class AiService {
         `Ad title: ${title}\nAd category: ${category}`;
 
       try {
-        console.log('[KI-Opt] Calling Gemini API (retry attempt 2)...');
+        this.logger.log('[KI-Opt] Calling Gemini API (retry attempt 2)...');
         const fallbackResult = await this.executeWithFallback(
           [retryPrompt],
           this.optimizeAdPrompt,
@@ -529,10 +526,10 @@ export class AiService {
         // Surface quota errors from retry
         const quotaErr = extractQuotaError(retryError);
         if (quotaErr) {
-          console.error('[KI-Opt] Quota exceeded on retry:', quotaErr.message);
+          this.logger.error('[KI-Opt] Quota exceeded on retry:', quotaErr.message);
           throw new HttpException(quotaErr.message, HttpStatus.TOO_MANY_REQUESTS);
         }
-        console.error('[KI-Opt] Retry failed:', retryError.message, '| raw:', responseText.slice(0, 120));
+        this.logger.error('[KI-Opt] Retry failed:', retryError.message, '| raw:', responseText.slice(0, 120));
         throw new HttpException(
           `Fehler bei der KI-Optimierung: Die Antwort konnte nicht verarbeitet werden. Bitte versuche es erneut.`,
           HttpStatus.INTERNAL_SERVER_ERROR,
@@ -581,8 +578,8 @@ export class AiService {
       const cleaned = cleanAndExtractJson(responseText);
       parsedJson = JSON.parse(cleaned);
     } catch (error: any) {
-      console.error('Gemini Price Valuate failed on first attempt. Raw response:', responseText);
-      console.error('Parse error:', error);
+      this.logger.error('Gemini Price Valuate failed on first attempt. Raw response:', responseText);
+      this.logger.error('Parse error:', error);
       try {
         const retryPrompt = `${userPrompt}\nReturn ONLY a valid JSON object matching the requested schema. Do not include markdown code fences, do not include surrounding text.`;
         const fallbackResult = await this.executeWithFallback(
@@ -599,8 +596,8 @@ export class AiService {
         const cleaned = cleanAndExtractJson(responseText);
         parsedJson = JSON.parse(cleaned);
       } catch (retryError: any) {
-        console.error('Gemini Price Valuate retry failed. Raw response:', responseText);
-        console.error('Retry parse error:', retryError);
+        this.logger.error('Gemini Price Valuate retry failed. Raw response:', responseText);
+        this.logger.error('Retry parse error:', retryError);
         throw new HttpException(
           `Fehler bei der Preisanalyse: Die Antwort konnte nicht verarbeitet werden. Bitte versuche es erneut.`,
           HttpStatus.INTERNAL_SERVER_ERROR,
@@ -614,75 +611,6 @@ export class AiService {
     return { suggestedPrice: parsedJson.suggestedPrice, reasoning: parsedJson.reasoning };
   }
 
-  async suggestReply(userId: string, messageHistory: string[]) {
-    const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey || geminiKey.trim() === '') {
-      throw new HttpException(
-        'KI-Analysedienst nicht konfiguriert. Bitte trage einen gültigen GEMINI_API_KEY in der backend/.env Datei ein.',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-
-
-    const userPrompt = `
-Message history (latest messages at the end):
-${messageHistory.map((m, idx) => `[Message ${idx + 1}]: ${m}`).join('\n')}
-`;
-
-    let responseText = '';
-    let modelUsed = '';
-    let promptTokenCount = 0;
-    let candidatesTokenCount = 0;
-    let parsedJson: any = null;
-
-    try {
-      const fallbackResult = await this.executeWithFallback(
-        [userPrompt],
-        this.replySuggestionsPrompt,
-        {
-          responseMimeType: 'application/json',
-          maxOutputTokens: 300,
-        }
-      );
-      responseText = fallbackResult.responseText;
-      modelUsed = fallbackResult.modelName;
-      promptTokenCount = fallbackResult.promptTokenCount;
-      candidatesTokenCount = fallbackResult.candidatesTokenCount;
-      const cleaned = cleanAndExtractJson(responseText);
-      parsedJson = JSON.parse(cleaned);
-    } catch (error: any) {
-      console.error('Gemini Reply Suggestions failed on first attempt. Raw response:', responseText);
-      console.error('Parse error:', error);
-      try {
-        const retryPrompt = `${userPrompt}\nReturn ONLY a valid JSON object matching the requested schema. Do not include markdown code fences, do not include surrounding text.`;
-        const fallbackResult = await this.executeWithFallback(
-          [retryPrompt],
-          this.replySuggestionsPrompt,
-          {
-            responseMimeType: 'application/json',
-            maxOutputTokens: 300,
-          }
-        );
-        responseText = fallbackResult.responseText;
-        promptTokenCount += fallbackResult.promptTokenCount;
-        candidatesTokenCount += fallbackResult.candidatesTokenCount;
-        const cleaned = cleanAndExtractJson(responseText);
-        parsedJson = JSON.parse(cleaned);
-      } catch (retryError: any) {
-        console.error('Gemini Reply Suggestions retry failed. Raw response:', responseText);
-        console.error('Retry parse error:', retryError);
-        throw new HttpException(
-          `Fehler bei den Antwortvorschlägen: Die Antwort konnte nicht verarbeitet werden. Bitte versuche es erneut.`,
-          HttpStatus.INTERNAL_SERVER_ERROR,
-        );
-      }
-    }
-
-    // Log Usage to Firestore (Rule Six)
-    await this.logUsage(userId, modelUsed, promptTokenCount, candidatesTokenCount, false);
-
-    return parsedJson;
-  }
   async suggestRepostTime(userId: string, adId: string) {
     const db = this.firebaseService.firestore;
     

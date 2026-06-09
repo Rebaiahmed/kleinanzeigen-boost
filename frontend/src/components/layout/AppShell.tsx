@@ -8,18 +8,46 @@ const FEEDBACK_FORM_URL =
   (import.meta as any).env.VITE_FEEDBACK_FORM_URL ||
   'https://docs.google.com/forms/d/e/1FAIpQLScNP_PSe3pRAKCwS8vIMd2GVB_trsRKwi3XTb8CRSmqUwprkA/viewform';
 
+// The extension is a Chrome/Chromium MV3 extension — it can't be installed in
+// Firefox or Safari. Chromium browsers (Chrome, Edge, Brave, Opera) report
+// "Chrome" in the UA; Firefox/Safari do not.
+const isChromiumBrowser =
+  typeof navigator !== 'undefined' &&
+  /chrome|chromium|crios/i.test(navigator.userAgent) &&
+  !/firefox|fxios/i.test(navigator.userAgent);
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { isConnected, isChecking } = useExtension();
 
-  // Only show the banner when we're certain the extension is missing —
-  // not while checking (avoids flash on every page load) and not if the
-  // user has a valid JWT (they can still use cached ads without the extension).
+  // Only show the "not connected" banner when we're certain the extension is
+  // missing — not while checking (avoids flash) and not if the user has a valid
+  // JWT (cached ads still work). Suppress it entirely on non-Chromium browsers,
+  // where installing the extension is impossible — they get a dedicated message.
   const hasSession = !!(localStorage.getItem('token') || localStorage.getItem('kb_session'));
-  const showBanner = !isChecking && !isConnected && !hasSession;
+  const showBanner = isChromiumBrowser && !isChecking && !isConnected && !hasSession;
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] flex flex-col relative font-sans text-[#333]">
       <TopBar />
+
+      {!isChromiumBrowser && (
+        <div className="bg-amber-50 border-b border-amber-200 py-3 px-4">
+          <div className="max-w-[900px] mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 text-amber-800 text-sm font-medium">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <span>Die AnzeigenBoost-Erweiterung funktioniert nur in Google Chrome (oder Chromium-Browsern wie Edge & Brave).</span>
+            </div>
+            <a
+              href="https://www.google.com/chrome/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-amber-900 text-xs font-bold underline hover:no-underline whitespace-nowrap"
+            >
+              Chrome öffnen →
+            </a>
+          </div>
+        </div>
+      )}
 
       {showBanner && (
         <div className="bg-red-50 border-b border-red-200 py-3 px-4">

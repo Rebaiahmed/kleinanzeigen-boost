@@ -29,6 +29,8 @@ export function Ads() {
   const { ads, invalidateAds, isLoading, isFetching, isError, error } = useAds();
   const [syncError, setSyncError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'views-desc' | 'views-asc'>('views-desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ADS_PER_PAGE = 12;
   const [isBackgroundSyncing, setIsBackgroundSyncing] = useState(false);
   const [scheduleModalAd, setScheduleModalAd] = useState<string | null>(null);
   const [isEbayConnected, setIsEbayConnected] = useState(false);
@@ -121,6 +123,16 @@ export function Ads() {
     const viewsB = typeof b.views === 'number' ? b.views : parseInt(b.views) || 0;
     return sortBy === 'views-desc' ? viewsB - viewsA : viewsA - viewsB;
   });
+
+  // Client-side pagination — keeps the dashboard fast for large accounts (100+ ads).
+  const totalPages = Math.max(1, Math.ceil(sortedAds.length / ADS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedAds = sortedAds.slice((safePage - 1) * ADS_PER_PAGE, safePage * ADS_PER_PAGE);
+
+  // Reset to page 1 when the sort order changes.
+  useEffect(() => { setCurrentPage(1); }, [sortBy]);
+  // Clamp if the list shrank (e.g. an ad was deleted) and the current page no longer exists.
+  useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages); }, [totalPages, currentPage]);
 
   return (
     <div className="w-full relative">
@@ -244,8 +256,9 @@ export function Ads() {
           </button>
         </div>
       ) : (
+        <>
         <AdGrid
-          ads={sortedAds}
+          ads={paginatedAds}
           onAction={(action, adId, successMsg) => handleAction(action, adId, successMsg, refreshAds)}
           onAIOptimize={(adId) => {
             const targetAd = ads.find((a: any) => a.id === adId);
@@ -260,6 +273,30 @@ export function Ads() {
           aiBlocked={isBlocked}
           aiWarning={isWarning}
         />
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-6">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={safePage === 1}
+              className="px-3 py-1.5 text-[13px] font-medium rounded border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              ← Zurück
+            </button>
+            <span className="text-[13px] text-gray-500 px-2">
+              Seite {safePage} von {totalPages}
+              <span className="text-gray-400"> · {sortedAds.length} Anzeigen</span>
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={safePage === totalPages}
+              className="px-3 py-1.5 text-[13px] font-medium rounded border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Weiter →
+            </button>
+          </div>
+        )}
+        </>
       )}
 
       {/* Scheduler Footer Indicator */}

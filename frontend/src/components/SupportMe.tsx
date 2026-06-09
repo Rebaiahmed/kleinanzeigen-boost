@@ -1,33 +1,21 @@
-import React, { useEffect, useState } from 'react';
-import { Heart } from 'lucide-react';
+import React from 'react';
 
-interface SupportConfig {
-  paypalDonateUrl?: string;
-}
+// Buy Me a Coffee link — overridable via env, defaults to the project's page.
+const BMAC_URL =
+  (import.meta as any).env.VITE_BUYMEACOFFEE_URL ||
+  'https://buymeacoffee.com/ahmedbouhmy';
 
 export function SupportMe() {
-  const [config, setConfig] = useState<SupportConfig | null>(null);
-
-  useEffect(() => {
-    const apiBase = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
-    const origin = apiBase.replace(/\/api\/?$/, ''); // support route has no /api prefix
-    fetch(`${origin}/support/config`)
-      .then((res) => res.json())
-      .then((data) => setConfig(data))
-      .catch((err) => console.error('Failed to fetch support config', err));
-  }, []);
-
-  if (!config?.paypalDonateUrl) return null;
-
   return (
     <a
-      href={config.paypalDonateUrl}
+      href={BMAC_URL}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center justify-center gap-2 bg-[#003087] hover:bg-[#002260] text-white font-medium py-2.5 px-5 rounded-md transition-colors shadow-sm text-sm"
+      title="Buy Me a Coffee"
+      className="group inline-flex items-center justify-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] text-white font-semibold py-2.5 px-5 rounded-md shadow-sm text-sm transition-all duration-150 hover:shadow-md hover:-translate-y-0.5"
     >
-      <Heart className="w-4 h-4" />
-      Support AdsBoost
+      <span className="text-base transition-transform duration-150 group-hover:scale-110">☕</span>
+      Spendier mir einen Kaffee
     </a>
   );
 }

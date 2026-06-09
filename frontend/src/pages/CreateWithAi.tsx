@@ -90,7 +90,7 @@ interface UploadedPhoto {
 export function CreateWithAi() {
   const navigate = useNavigate();
   const { saveDraft, handleEbayCrossPost, handlePriceCheck } = useAdsActions();
-  const { callsCount, limit, remaining, pct, isWarning, isBlocked, incrementUsage } = useAiUsage();
+  const { callsCount, limit, remaining, pct, isWarning, isBlocked, unlimited, incrementUsage } = useAiUsage();
 
   // Navigation step
   const [step, setStep] = useState<'upload' | 'result'>('upload');
@@ -581,23 +581,29 @@ export function CreateWithAi() {
             </div>
           </div>
 
-          {/* AI Usage indicator */}
-          <div className={`mt-4 rounded-lg px-4 py-2.5 flex items-center gap-3 text-[13px] ${
-            isBlocked ? 'bg-red-50 border border-red-200' :
-            isWarning ? 'bg-yellow-50 border border-yellow-200' :
-            'bg-gray-50 border border-gray-200'
-          }`}>
-            <span className={`font-medium whitespace-nowrap ${isBlocked ? 'text-red-600' : isWarning ? 'text-yellow-700' : 'text-gray-500'}`}>
-              {isBlocked ? '🚫 Tageslimit erreicht' : isWarning ? `⚠️ Noch ${remaining} KI-Anfragen` : `✨ ${remaining} von ${limit} verfügbar`}
-            </span>
-            <div className="flex-1 bg-gray-200 rounded-full h-1.5 overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${isBlocked ? 'bg-red-500' : isWarning ? 'bg-yellow-400' : 'bg-green-400'}`}
-                style={{ width: `${Math.min(100, pct)}%` }}
-              />
+          {/* AI Usage indicator — hidden bar/counter when usage is unlimited */}
+          {unlimited ? (
+            <div className="mt-4 rounded-lg px-4 py-2.5 flex items-center gap-2 text-[13px] bg-gray-50 border border-gray-200">
+              <span className="font-medium text-gray-500">✨ Unbegrenzte KI-Analysen</span>
             </div>
-            <span className="text-gray-400 font-mono whitespace-nowrap">{callsCount}/{limit}</span>
-          </div>
+          ) : (
+            <div className={`mt-4 rounded-lg px-4 py-2.5 flex items-center gap-3 text-[13px] ${
+              isBlocked ? 'bg-red-50 border border-red-200' :
+              isWarning ? 'bg-yellow-50 border border-yellow-200' :
+              'bg-gray-50 border border-gray-200'
+            }`}>
+              <span className={`font-medium whitespace-nowrap ${isBlocked ? 'text-red-600' : isWarning ? 'text-yellow-700' : 'text-gray-500'}`}>
+                {isBlocked ? '🚫 Tageslimit erreicht' : isWarning ? `⚠️ Noch ${remaining} KI-Anfragen` : `✨ ${remaining} von ${limit} verfügbar`}
+              </span>
+              <div className="flex-1 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${isBlocked ? 'bg-red-500' : isWarning ? 'bg-yellow-400' : 'bg-green-400'}`}
+                  style={{ width: `${Math.min(100, pct)}%` }}
+                />
+              </div>
+              <span className="text-gray-400 font-mono whitespace-nowrap">{callsCount}/{limit}</span>
+            </div>
+          )}
 
           {/* Action button */}
           <button

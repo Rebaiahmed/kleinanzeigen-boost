@@ -27,11 +27,13 @@ export function useAiUsage() {
   });
 
   const callsCount = data?.callsCount ?? 0;
-  const limit = data?.limit ?? 50;
-  const remaining = Math.max(0, limit - callsCount);
-  const pct = limit > 0 ? Math.round((callsCount / limit) * 100) : 0;
-  const isWarning = pct >= 80 && pct < 100;   // ≥ 80% → yellow
-  const isBlocked = callsCount >= limit;        // 100% → blocked
+  // unlimited = monetization disabled or an unlimited (pro) plan → no caps/warnings/blocks.
+  const unlimited = data?.unlimited === true || data?.limit == null;
+  const limit = unlimited ? Infinity : (data?.limit ?? 50);
+  const remaining = unlimited ? Infinity : Math.max(0, limit - callsCount);
+  const pct = unlimited ? 0 : (limit > 0 ? Math.round((callsCount / limit) * 100) : 0);
+  const isWarning = !unlimited && pct >= 80 && pct < 100;   // ≥ 80% → yellow
+  const isBlocked = !unlimited && callsCount >= limit;       // 100% → blocked
 
   // Call after each successful optimization to update cache immediately
   const incrementUsage = useCallback(() => {
@@ -45,5 +47,5 @@ export function useAiUsage() {
     queryClient.invalidateQueries({ queryKey: ['ai-usage'] });
   }, [queryClient]);
 
-  return { callsCount, limit, remaining, pct, isWarning, isBlocked, incrementUsage, refetchUsage };
+  return { callsCount, limit, remaining, pct, isWarning, isBlocked, unlimited, incrementUsage, refetchUsage };
 }

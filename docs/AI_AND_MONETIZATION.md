@@ -7,7 +7,18 @@ Covers roadmap tasks 4.1–4.4.
 
 ---
 
-## 4.1 — AI Credits / Limits per Plan ✅ implemented
+## 🔌 Monetization feature flag (`MONETIZATION_ENABLED`)
+
+All plan limits and paywalls are gated behind one backend env flag:
+
+- **`MONETIZATION_ENABLED=false`** (default) — every plan is **unlimited**. No quota enforcement, no "limit reached" walls, no upgrade prompts. The app runs free-for-all. The `/ai/usage` API reports `unlimited: true` and the UI shows "Unbegrenzte KI-Analysen".
+- **`MONETIZATION_ENABLED=true`** — plan limits (§4.1) and template caps are enforced; upgrade prompts appear automatically.
+
+This lets you launch free now and switch monetization on later by flipping one env var — no code change or redeploy of logic. The frontend reacts purely to the `unlimited` flag the API returns, so there's a single source of truth.
+
+---
+
+## 4.1 — AI Credits / Limits per Plan ✅ implemented (gated by the flag above)
 
 **What counts against the limit:** only **photo analysis** (`/ai/analyze-photos`) is *metered*. Cheap text operations (ad optimization, price suggestion, reply-template generation) are tracked for analytics but **do not consume** the monthly quota.
 

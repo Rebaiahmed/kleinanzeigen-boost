@@ -3,6 +3,14 @@
  * Replaces the previously duplicated (and conflicting) hardcoded limits.
  */
 
+/**
+ * Master monetization switch. While OFF (default), all plan limits are treated
+ * as unlimited — no quota enforcement, no upgrade prompts — so the app runs
+ * free-for-all during the launch phase. Flip MONETIZATION_ENABLED=true to
+ * activate plan limits and paywalls when you're ready to charge.
+ */
+export const MONETIZATION_ENABLED = process.env.MONETIZATION_ENABLED === 'true';
+
 /** Monthly metered AI calls per plan. Only photo analysis is metered today. */
 export const AI_PLAN_LIMITS: Record<string, number> = {
   free: Number(process.env.AI_LIMIT_FREE) || 15,
@@ -19,8 +27,10 @@ export function getPlanLimit(plan?: string): number {
   return AI_PLAN_LIMITS[key] ?? AI_PLAN_LIMITS.free;
 }
 
-/** Effective limit = plan limit + per-user permanent monthly bonus. */
+/** Effective limit = plan limit + per-user permanent monthly bonus.
+ *  Returns Infinity (unlimited) while monetization is disabled. */
 export function getEffectiveLimit(plan?: string, bonus = 0): number {
+  if (!MONETIZATION_ENABLED) return Infinity;
   const base = getPlanLimit(plan);
   return base === Infinity ? Infinity : base + (Number(bonus) || 0);
 }

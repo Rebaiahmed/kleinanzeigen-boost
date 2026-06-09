@@ -1,6 +1,6 @@
 import { Injectable, InternalServerErrorException, ForbiddenException, Logger, NotFoundException } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
-import { FREE_TEMPLATE_LIMIT } from '../config/ai-limits.constants';
+import { FREE_TEMPLATE_LIMIT, MONETIZATION_ENABLED } from '../config/ai-limits.constants';
 import axios from 'axios';
 
 export interface ReplyTemplate {
@@ -83,7 +83,7 @@ export class ReplyTemplatesService {
   async createTemplate(userId: string, data: Partial<ReplyTemplate>): Promise<ReplyTemplate> {
     const userDoc = await this.firebaseService.firestore.collection('users').doc(userId).get();
     const plan = (userDoc.data()?.tier || userDoc.data()?.plan || 'free').toLowerCase();
-    if (plan === 'free') {
+    if (MONETIZATION_ENABLED && plan === 'free') {
       const snapshot = await this.getCollection(userId).count().get();
       if (snapshot.data().count >= FREE_TEMPLATE_LIMIT) {
         throw new ForbiddenException({
@@ -137,7 +137,7 @@ export class ReplyTemplatesService {
     const plan = (userDoc.data()?.tier || userDoc.data()?.plan || 'free').toLowerCase();
 
     let toSave = templates;
-    if (plan === 'free') {
+    if (MONETIZATION_ENABLED && plan === 'free') {
       const snapshot = await this.getCollection(userId).count().get();
       const existing = snapshot.data().count as number;
       const available = Math.max(0, FREE_TEMPLATE_LIMIT - existing);

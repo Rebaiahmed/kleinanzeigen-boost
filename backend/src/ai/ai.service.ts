@@ -677,7 +677,7 @@ ${JSON.stringify(dataset)}`;
     }
   }
 
-  async getUserUsage(userId: string): Promise<{ plan: string; callsCount: number; limit: number }> {
+  async getUserUsage(userId: string): Promise<{ plan: string; callsCount: number; limit: number | null; unlimited: boolean }> {
     const db = this.firebaseService.firestore;
 
     // 1. Fetch user tier/plan + per-user bonus
@@ -698,13 +698,16 @@ ${JSON.stringify(dataset)}`;
       }
     }
 
-    // 3. Effective limit = plan limit + per-user bonus (single source of truth)
+    // 3. Effective limit = plan limit + per-user bonus (single source of truth).
+    //    Infinity can't be represented in JSON, so report unlimited explicitly.
     const limit = getEffectiveLimit(plan, bonus);
+    const unlimited = limit === Infinity;
 
     return {
       plan,
       callsCount,
-      limit,
+      limit: unlimited ? null : limit,
+      unlimited,
     };
   }
 

@@ -29,7 +29,10 @@ function validateEnv() {
   if (!process.env.GEMINI_API_KEY && !process.env.OPENROUTER_API_KEY) {
     critical.push('No AI provider key configured (need GEMINI_API_KEY or OPENROUTER_API_KEY).');
   }
-  if (isProd && (process.env.AUTOMATION_WORKER_URL || '').startsWith('http://')) {
+  const workerUrl = process.env.AUTOMATION_WORKER_URL || '';
+  const workerIsLoopback = /^http:\/\/(127\.0\.0\.1|localhost)([:/]|$)/.test(workerUrl);
+  if (isProd && workerUrl.startsWith('http://') && !workerIsLoopback) {
+    // Loopback (same-box) http is fine — traffic never leaves the machine.
     critical.push('AUTOMATION_WORKER_URL is non-HTTPS in production (session cookies would transit unencrypted).');
   }
   if (!process.env.AUTOMATION_WORKER_URL) {

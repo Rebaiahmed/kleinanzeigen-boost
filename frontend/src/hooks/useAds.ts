@@ -20,7 +20,7 @@ async function fetchAdsFromServer(): Promise<any[]> {
     if (res.status === 401) {
       localStorage.removeItem('kb_session');
       localStorage.removeItem('token');
-      window.location.href = '/auth';
+      window.location.href = '/login';
       return [];
     }
     const data = await res.json();

@@ -140,7 +140,7 @@ export function AuthCallback() {
                 </button>
               )}
               <button
-                onClick={() => navigate('/auth')}
+                onClick={() => navigate('/login')}
                 className="w-full py-3 px-4 rounded-full text-[14px] font-semibold text-[#666] border border-[#dcdcdc] hover:border-[#aaa] hover:text-[#333] transition-colors"
               >
                 Zurück zum Login

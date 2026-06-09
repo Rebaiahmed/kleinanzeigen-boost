@@ -15,7 +15,9 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/auth" element={<Auth />} />
+        <Route path="/login" element={<Auth />} />
+        {/* Backward-compat: old /auth links redirect to /login */}
+        <Route path="/auth" element={<Navigate to="/login" replace />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/ebay/callback/success" element={<EbaySuccess />} />
         {/* Authenticated Routes wrapped in AppShell */}

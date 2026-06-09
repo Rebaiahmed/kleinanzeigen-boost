@@ -64,7 +64,7 @@ export function TopBar() {
       localStorage.removeItem('token');
       localStorage.removeItem('kb_username');
       sessionStorage.clear();
-      navigate('/auth');
+      navigate('/login');
     }
   };
 

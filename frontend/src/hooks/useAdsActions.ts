@@ -10,7 +10,7 @@ function getToken(): string | null {
 function handleUnauthorized() {
   localStorage.removeItem('kb_session');
   localStorage.removeItem('token');
-  window.location.href = '/auth';
+  window.location.href = '/login';
 }
 
 export type ToastType = 'success' | 'error' | null;

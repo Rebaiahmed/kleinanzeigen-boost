@@ -18,7 +18,7 @@ export function Landing() {
               <a href="#security" className="text-[13px] font-medium text-slate-500 hover:text-slate-800 transition-colors hidden sm:block">
                 Sicherheit & Open-Source Doku
               </a>
-              <Link to="/auth" className="bg-transparent hover:bg-slate-50 text-slate-700 font-semibold py-1.5 px-4 rounded-sm border border-slate-300 text-[14px] transition-colors">
+              <Link to="/login" className="bg-transparent hover:bg-slate-50 text-slate-700 font-semibold py-1.5 px-4 rounded-sm border border-slate-300 text-[14px] transition-colors">
                 Einloggen
               </Link>
             </div>
@@ -44,7 +44,7 @@ export function Landing() {
                   Schluss mit manuellem Löschen und Neu-Einstellen. AnzeigenBoost schiebt deine Inserate automatisch wieder nach oben – auch nachts. Und die KI erstellt aus einem Foto Titel, Beschreibung und Preis in Sekunden. Mehr Aufrufe, schnellere Verkäufe, weniger Aufwand.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 items-start">
-                  <Link to="/auth" className="inline-flex items-center justify-center bg-[#A8C300] hover:bg-[#96ae00] text-white font-bold py-3 px-6 rounded-full text-[15px] shadow-sm transition-all transform hover:-translate-y-0.5">
+                  <Link to="/login" className="inline-flex items-center justify-center bg-[#A8C300] hover:bg-[#96ae00] text-white font-bold py-3 px-6 rounded-full text-[15px] shadow-sm transition-all transform hover:-translate-y-0.5">
                     Kostenlos starten
                   </Link>
                   <a href="#security" className="inline-flex items-center justify-center border border-slate-300 hover:border-slate-400 text-slate-700 font-semibold py-3 px-6 rounded-full text-[15px] transition-colors">

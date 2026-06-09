@@ -38,7 +38,7 @@ export class ReplyTemplatesController {
   // Rate-limit AI generation: max 10 requests/minute per IP to curb spam/cost.
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('generate')
-  async generateTemplates(@Req() req: any, @Body() body: { context?: string; topics?: string[] }) {
+  async generateTemplates(@Req() req: any, @Body() body: { context?: string; topics?: string[]; language?: string }) {
     return this.templatesService.generateTemplates(req.user.userId, body);
   }
 

@@ -11,6 +11,9 @@ export const AI_PLAN_LIMITS: Record<string, number> = {
   unlimited: Infinity,
 };
 
+/** Max reply templates a free-plan user may store. */
+export const FREE_TEMPLATE_LIMIT = Number(process.env.FREE_TEMPLATE_LIMIT) || 3;
+
 export function getPlanLimit(plan?: string): number {
   const key = (plan || 'free').toLowerCase();
   return AI_PLAN_LIMITS[key] ?? AI_PLAN_LIMITS.free;

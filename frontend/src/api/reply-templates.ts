@@ -66,11 +66,11 @@ export const ReplyTemplatesApi = {
     });
   },
 
-  async generate(context?: string, topics?: string[]): Promise<Partial<ReplyTemplate>[]> {
+  async generate(context?: string, topics?: string[], language?: 'de' | 'en'): Promise<Partial<ReplyTemplate>[]> {
     const res = await fetch(`${API_URL}/reply-templates/generate`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ context, topics }),
+      body: JSON.stringify({ context, topics, language }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));

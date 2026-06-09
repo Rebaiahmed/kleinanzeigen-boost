@@ -26,6 +26,7 @@ interface Props {
 
 export function AiTemplateModal({ existingTitles, onClose, onSaved }: Props) {
   const [context, setContext] = useState('');
+  const [language, setLanguage] = useState<'de' | 'en'>('de');
   const [selectedTopics, setSelectedTopics] = useState<string[]>(ALL_TOPICS.map(t => t.key));
 
   const [isGenerating, setIsGenerating] = useState(false);
@@ -48,6 +49,7 @@ export function AiTemplateModal({ existingTitles, onClose, onSaved }: Props) {
       const templates = await ReplyTemplatesApi.generate(
         context.trim() || undefined,
         selectedTopics,
+        language,
       );
       setGenerated(templates.map(t => ({
         icon: t.icon || '💬',
@@ -157,6 +159,24 @@ export function AiTemplateModal({ existingTitles, onClose, onSaved }: Props) {
                 <p className="text-[11px] text-gray-400 mt-1">
                   Je spezifischer, desto passendere Vorlagen erstellt die KI.
                 </p>
+              </div>
+
+              <div>
+                <label className="block text-[12px] font-semibold text-gray-600 mb-1.5">3. Sprache</label>
+                <div className="inline-flex border border-gray-200 rounded overflow-hidden">
+                  {([['de', '🇩🇪 Deutsch'], ['en', '🇬🇧 English']] as const).map(([code, label]) => (
+                    <button
+                      key={code}
+                      type="button"
+                      onClick={() => setLanguage(code)}
+                      className={`px-4 py-2 text-[13px] font-semibold transition-colors ${
+                        language === code ? 'bg-[#A8C300] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <button

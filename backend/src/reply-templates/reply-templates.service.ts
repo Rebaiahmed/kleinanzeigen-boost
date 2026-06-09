@@ -1,5 +1,6 @@
 import { Injectable, InternalServerErrorException, ForbiddenException, Logger, NotFoundException } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
+import { FREE_TEMPLATE_LIMIT } from '../config/ai-limits.constants';
 import axios from 'axios';
 
 export interface ReplyTemplate {
@@ -13,24 +14,42 @@ export interface ReplyTemplate {
 }
 
 const TOPICS = [
-  { icon: '📦', key: 'Verfügbarkeit', instruction: 'bestätigen dass der Artikel noch verfügbar ist' },
-  { icon: '📮', key: 'Versand',       instruction: 'ob Versand möglich ist und wer die Kosten trägt' },
-  { icon: '💰', key: 'Preis',         instruction: 'freundlich aber bestimmt beim Preis bleiben' },
-  { icon: '📏', key: 'Details',       instruction: 'wichtigste Details oder Zustand des Artikels nennen' },
-  { icon: '🚚', key: 'Abholung',      instruction: 'Abholtermin vereinbaren' },
+  { icon: '📦', key: 'Verfügbarkeit', en: 'Availability', instruction: 'bestätigen dass der Artikel noch verfügbar ist', instructionEn: 'confirm the item is still available' },
+  { icon: '📮', key: 'Versand',       en: 'Shipping',     instruction: 'ob Versand möglich ist und wer die Kosten trägt', instructionEn: 'whether shipping is possible and who pays' },
+  { icon: '💰', key: 'Preis',         en: 'Price',        instruction: 'freundlich aber bestimmt beim Preis bleiben', instructionEn: 'stay friendly but firm on the price' },
+  { icon: '📏', key: 'Details',       en: 'Details',      instruction: 'wichtigste Details oder Zustand des Artikels nennen', instructionEn: 'state the key details or condition of the item' },
+  { icon: '🚚', key: 'Abholung',      en: 'Pickup',       instruction: 'Abholtermin vereinbaren', instructionEn: 'arrange a pickup time' },
 ];
 
 /** Max characters of free-text context accepted from the user (token-waste guard). */
 const MAX_CONTEXT_CHARS = 200;
 
-const buildPrompt = (context?: string, topics?: string[]) => {
+const buildPrompt = (context?: string, topics?: string[], language?: string) => {
+  const isEn = (language || 'de').toLowerCase().startsWith('en');
   const filtered = topics?.length ? TOPICS.filter(t => topics.includes(t.key)) : TOPICS;
   const activeTopic = filtered.length ? filtered : TOPICS; // never empty
   const trimmedContext = context?.trim().slice(0, MAX_CONTEXT_CHARS);
+
+  if (isEn) {
+    const hint = trimmedContext
+      ? `The seller is selling: ${trimmedContext}.`
+      : 'The seller sells various items on a classifieds marketplace.';
+    const topicList = activeTopic.map((t, i) => `${i + 1}. ${t.en} – ${t.instructionEn}`).join('\n');
+    const exampleEntry = `{"icon":"${activeTopic[0].icon}","title":"${activeTopic[0].en}","content":"..."}`;
+    return `You are an assistant for classifieds sellers. ${hint}
+
+Create exactly ${activeTopic.length} short, friendly, ready-to-copy reply templates in ENGLISH.
+
+The templates MUST cover these topics:
+${topicList}
+
+Reply ONLY with a JSON array, no markdown or explanations. Example format:
+[${exampleEntry}]`;
+  }
+
   const hint = trimmedContext
     ? `Der Verkäufer verkauft: ${trimmedContext}.`
     : 'Der Verkäufer verkauft verschiedene Artikel auf Kleinanzeigen.';
-
   const topicList = activeTopic.map((t, i) => `${i + 1}. ${t.key} – ${t.instruction}`).join('\n');
   const exampleEntry = `{"icon":"${activeTopic[0].icon}","title":"${activeTopic[0].key}","content":"..."}`;
 
@@ -66,9 +85,9 @@ export class ReplyTemplatesService {
     const plan = (userDoc.data()?.tier || userDoc.data()?.plan || 'free').toLowerCase();
     if (plan === 'free') {
       const snapshot = await this.getCollection(userId).count().get();
-      if (snapshot.data().count >= 3) {
+      if (snapshot.data().count >= FREE_TEMPLATE_LIMIT) {
         throw new ForbiddenException({
-          message: 'Kostenloses Limit erreicht (3 Vorlagen). Upgrade auf Pro für unbegrenzte Vorlagen.',
+          message: `Kostenloses Limit erreicht (${FREE_TEMPLATE_LIMIT} Vorlagen). Upgrade auf Pro für unbegrenzte Vorlagen.`,
           code: 'TEMPLATE_LIMIT_REACHED',
         });
       }
@@ -102,6 +121,7 @@ export class ReplyTemplatesService {
 
   async deleteTemplate(userId: string, templateId: string): Promise<void> {
     await this.getCollection(userId).doc(templateId).delete();
+    this.logger.log(`Template deleted — user=${userId} template=${templateId}`);
   }
 
   async incrementCopyCount(userId: string, templateId: string): Promise<void> {
@@ -120,10 +140,10 @@ export class ReplyTemplatesService {
     if (plan === 'free') {
       const snapshot = await this.getCollection(userId).count().get();
       const existing = snapshot.data().count as number;
-      const available = Math.max(0, 3 - existing);
+      const available = Math.max(0, FREE_TEMPLATE_LIMIT - existing);
       if (available === 0) {
         throw new ForbiddenException({
-          message: 'Kostenloses Limit erreicht (3 Vorlagen). Upgrade auf Pro für unbegrenzte Vorlagen.',
+          message: `Kostenloses Limit erreicht (${FREE_TEMPLATE_LIMIT} Vorlagen). Upgrade auf Pro für unbegrenzte Vorlagen.`,
           code: 'TEMPLATE_LIMIT_REACHED',
         });
       }
@@ -149,14 +169,14 @@ export class ReplyTemplatesService {
 
   async generateTemplates(
     userId: string,
-    body: { context?: string; topics?: string[] },
+    body: { context?: string; topics?: string[]; language?: string },
   ): Promise<Partial<ReplyTemplate>[]> {
     const openRouterKey = process.env.OPENROUTER_API_KEY;
     if (!openRouterKey) {
       throw new InternalServerErrorException('KI nicht konfiguriert.');
     }
 
-    const prompt = buildPrompt(body.context, body.topics);
+    const prompt = buildPrompt(body.context, body.topics, body.language);
 
     try {
       const response = await axios.post(

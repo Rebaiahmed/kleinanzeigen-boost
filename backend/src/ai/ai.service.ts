@@ -87,11 +87,16 @@ export class AiService {
             throw new Error('GEMINI_API_KEY is not configured or empty');
           }
 
-          const model = this.genAI.getGenerativeModel({
-            model: modelInfo.name,
-            systemInstruction: finalSystemInstruction,
-            generationConfig,
-          });
+          const model = this.genAI.getGenerativeModel(
+            {
+              model: modelInfo.name,
+              systemInstruction: finalSystemInstruction,
+              generationConfig,
+            },
+            // requestOptions — the SDK aborts the request after `timeout` ms.
+            // (timeout belongs here, NOT in generationConfig, where it's ignored.)
+            { timeout: 30000 },
+          );
 
           let result = await model.generateContent(contents);
           let response = await result.response;

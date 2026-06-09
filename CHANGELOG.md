@@ -5,6 +5,38 @@ All notable changes to this project are documented here.
 ## [1.0.0] - 2026-06-09
 
 ### Added
+- add robots.txt and sitemap.xml for SEO
+- German keyword-optimized store name & description
+- landing page SEO + benefit-led German hero
+- working Buy Me a Coffee button in support section
+- EN/DE language support + config cleanup
+- AI usage admin API, configurable per-user limits, free-first models
+- Vinted dual-template, language selector, feedback button + production-readiness fixes
+- redesign extension popup with quick-action buttons
+
+### Fixed
+- allow AI text ops to run on OpenRouter when Gemini key is absent
+- fail fast in production when JWT_SECRET is missing or the dev default
+- cleanup batch + reply-template hardening
+- clear German error when a photo exceeds the 4MB limit
+- add 30s timeout to Gemini API calls
+- skip text-only models when request has images
+- remove dummy_key fallback that masked missing GEMINI_API_KEY
+- mutex lock, graceful skip of deleted/changed ads, env fail-fast
+- confirm session expiry before halting a user's whole repost batch
+- retry scrape-views with exponential backoff before falling back
+
+### Changed
+- document Firestore index deploy for scheduler collectionGroup queries
+- root Firebase config to deploy Firestore indexes
+- collectionGroup queries, batched writes, scrape rate-limiting
+- security: HTTPS guard for worker, repost audit trail, skip expired users
+- config constants, AdData type, structured log context
+- commit in-progress changes to auth, extension, and ads actions
+
+## [1.0.0] - 2026-06-09
+
+### Added
 - German keyword-optimized store name & description
 - landing page SEO + benefit-led German hero
 - working Buy Me a Coffee button in support section

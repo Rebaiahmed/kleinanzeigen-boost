@@ -23,6 +23,9 @@ function validateEnv() {
   if (!process.env.INTERNAL_SECRET || process.env.INTERNAL_SECRET === 'dev_secret_key') {
     critical.push('INTERNAL_SECRET is missing or set to the insecure dev default (used to encrypt session cookies and authenticate the worker).');
   }
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'fallback_secret_for_dev') {
+    critical.push('JWT_SECRET is missing or set to the insecure dev default — auth tokens could be forged. Generate one with: openssl rand -hex 64');
+  }
   if (!process.env.GEMINI_API_KEY && !process.env.OPENROUTER_API_KEY) {
     critical.push('No AI provider key configured (need GEMINI_API_KEY or OPENROUTER_API_KEY).');
   }

@@ -185,42 +185,27 @@ export function Settings() {
               <div className="flex-1 min-w-0">
                 <h3 className="text-lg font-bold text-gray-800 flex flex-wrap items-center gap-1.5">
                   eBay
-                  {ebayConnected ? (
-                    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-green-50 text-green-700 px-2 py-0.5 rounded-full border border-green-200">
-                      <span className="w-1 h-1 rounded-full bg-green-500" /> Verbunden
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-gray-150 text-gray-600 px-2 py-0.5 rounded-full border border-gray-200">
-                      Nicht verbunden
-                    </span>
-                  )}
+                  <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded-full border border-yellow-200">
+                    🚧 In Kürze
+                  </span>
                 </h3>
                 <p className="text-sm text-gray-500 mt-1 mb-2">
                   Veröffentliche deine Anzeigen als Festpreis-Artikel auf dem offiziellen eBay-Marktplatz.
                 </p>
-                <div className="text-sm font-semibold text-gray-800">
-                  Status: {ebayConnected ? `🟢 Verbunden als: ${ebayUsername}` : '🔴 Nicht verbunden'}
+                <div className="text-sm font-semibold text-gray-400">
+                  eBay-Integration kommt in Kürze
                 </div>
               </div>
             </div>
-            
+
             <div className="mt-6">
-              {ebayConnected ? (
-                <button
-                  onClick={handleDisconnectEbay}
-                  className="w-full bg-white border border-gray-300 hover:border-gray-400 text-gray-700 font-bold py-2 px-4 rounded-sm text-[13px] transition-colors text-center"
-                >
-                  Getrennt
-                </button>
-              ) : (
-                <button
-                  onClick={() => checkEbayStatus(false)}
-                  disabled={isCheckingStatus}
-                  className="w-full bg-[#A8C300] hover:bg-[#96ae00] disabled:bg-[#c4d65e] text-white font-bold py-2 px-4 rounded-sm text-[13px] transition-colors text-center"
-                >
-                  {isCheckingStatus ? 'Wird geprüft...' : 'Verbinden'}
-                </button>
-              )}
+              <button
+                disabled
+                title="eBay-Integration kommt in Kürze"
+                className="w-full bg-gray-100 border border-gray-200 text-gray-400 font-bold py-2 px-4 rounded-sm text-[13px] cursor-not-allowed text-center"
+              >
+                Kommt bald
+              </button>
             </div>
           </div>
 

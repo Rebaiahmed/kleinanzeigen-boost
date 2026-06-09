@@ -912,18 +912,14 @@ export function CreateWithAi() {
                   <span>Vinted 🚧</span>
                 </button>
 
-                {/* Post eBay */}
+                {/* Post eBay — coming soon */}
                 <button
-                  onClick={handlePostEbay}
-                  disabled={isPostingEbay || isSaving || title.length === 0 || description.length < 80 || title.length > 60}
-                  className="flex justify-center items-center gap-1.5 text-xs font-semibold text-blue-700 border border-blue-200 hover:border-blue-300 hover:bg-blue-50/20 disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200 rounded py-2.5 transition-colors"
+                  disabled
+                  title="eBay-Integration kommt in Kürze"
+                  className="flex justify-center items-center gap-1.5 text-xs font-semibold text-gray-400 border border-gray-200 bg-gray-100 rounded py-2.5 cursor-not-allowed"
                 >
-                  {isPostingEbay ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
-                  ) : (
-                    <EbayLogo />
-                  )}
-                  <span>{isPostingEbay ? 'Inseriert...' : 'Auf eBay inserieren'}</span>
+                  <EbayLogo />
+                  <span>eBay 🚧 (kommt bald)</span>
                 </button>
               </div>
             </div>

@@ -53,7 +53,9 @@ const EbayLogo = () => (
 
 const DE_DAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
 
+// value 0 = "Jetzt" (immediate one-time repost, not a recurring interval)
 const INTERVAL_OPTIONS = [
+  { label: 'Jetzt', value: 0 },
   { label: '12h', value: 720 },
   { label: '24h', value: 1440 },
   { label: '2 Tage', value: 2880 },
@@ -227,6 +229,13 @@ export function AdCard({
   };
 
   const handleSaveInterval = async () => {
+    // "Jetzt" → trigger a one-time immediate repost; don't schedule a recurring interval.
+    if (selectedInterval === 0) {
+      setIsPopoverOpen(false);
+      setAutoRepostChecked(ad.autoRepost || false); // revert optimistic check (one-time, not recurring)
+      onAction('repost', ad.id, 'Repost wird ausgeführt…');
+      return;
+    }
     if (!onUpdateFields) return;
     setIsSavingInterval(true);
     try {
@@ -508,7 +517,7 @@ export function AdCard({
               </div>
 
               {/* Segmented Button control */}
-              <div className="grid grid-cols-5 gap-1 bg-gray-100 p-0.5 rounded-sm mb-4">
+              <div className="grid grid-cols-3 gap-1 bg-gray-100 p-0.5 rounded-sm mb-4">
                 {INTERVAL_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
@@ -527,12 +536,16 @@ export function AdCard({
 
               {/* Next repost preview */}
               <div className="text-[11px] text-gray-500 bg-gray-50 border border-gray-200 rounded-sm px-2.5 py-1.5 mb-3">
-                Nächster Repost: <span className="font-semibold text-gray-700">
-                  {formatNextRepostGerman(
-                    new Date(Date.now() + selectedInterval * 60 * 1000).toISOString(),
-                    true
-                  )}
-                </span>
+                {selectedInterval === 0 ? (
+                  <>Repost: <span className="font-semibold text-gray-700">Sofort ausführen</span></>
+                ) : (
+                  <>Nächster Repost: <span className="font-semibold text-gray-700">
+                    {formatNextRepostGerman(
+                      new Date(Date.now() + selectedInterval * 60 * 1000).toISOString(),
+                      true
+                    )}
+                  </span></>
+                )}
               </div>
 
               {/* Buttons */}
@@ -550,7 +563,7 @@ export function AdCard({
                   disabled={isSavingInterval}
                   className="px-3 py-1.5 bg-[#A8C300] hover:bg-[#96ae00] disabled:bg-gray-300 text-white font-bold rounded-sm text-[11px] transition-colors"
                 >
-                  {isSavingInterval ? 'Speichern...' : 'Speichern'}
+                  {isSavingInterval ? 'Speichern...' : selectedInterval === 0 ? 'Jetzt reposten' : 'Speichern'}
                 </button>
               </div>
 
@@ -644,51 +657,19 @@ export function AdCard({
             </div>
           </div>
 
-          {/* eBay */}
+          {/* eBay — coming soon */}
           <div className="relative flex-1 group">
             <button
-              onClick={handleEbayClick}
-              disabled={isPostingEbay}
-              title={!ebayConnected ? "Verwende die Schaltfläche oben, um dieses Portal zu verbinden." : isEbayPosted ? "Auf eBay ansehen →" : "Klicken, um diese Anzeige sofort auf dieses Portal zu spiegeln."}
-              className={`w-full border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors relative ${
-                !ebayConnected
-                  ? "border-gray-200 text-gray-400 bg-gray-50 hover:bg-gray-100 cursor-pointer"
-                  : isEbayPosted
-                    ? "border-green-500 text-green-700 bg-green-50/20 hover:bg-green-50 cursor-pointer"
-                    : "border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 cursor-pointer"
-              }`}
+              disabled
+              title="eBay-Integration kommt in Kürze"
+              className="w-full border border-gray-200 rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 text-gray-400 bg-gray-50 cursor-not-allowed"
             >
-              {isPostingEbay ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
-              ) : (
-                <div className="relative flex items-center">
-                  <EbayLogo />
-                  {!ebayConnected && (
-                    <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
-                      <Lock className="w-2 h-2 text-gray-500" />
-                    </div>
-                  )}
-                  {isEbayPosted && (
-                    <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full border border-white" />
-                  )}
-                </div>
-              )}
-              <span className={!ebayConnected ? 'text-gray-400 opacity-80' : ''}>
-                {isEbayPosted ? 'Gepostet' : 'eBay'}
-              </span>
+              <EbayLogo />
+              <span>eBay 🚧</span>
             </button>
-
-            {ebayError && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-red-600 text-white text-[10px] py-1.5 px-2.5 rounded-sm shadow-xl z-20 w-48 text-center animate-in fade-in slide-in-from-bottom-1">
-                <span>{ebayError}</span>
-                <button 
-                  onClick={() => setEbayError(null)} 
-                  className="absolute top-0.5 right-1 font-bold text-white hover:text-red-200"
-                >
-                  ×
-                </button>
-              </div>
-            )}
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block bg-gray-800 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap z-10 pointer-events-none">
+              eBay-Integration kommt in Kürze
+            </div>
           </div>
         </div>
 
@@ -752,29 +733,14 @@ export function AdCard({
               <span className="text-xs font-normal">(kommt bald)</span>
             </button>
 
-            {/* eBay */}
+            {/* eBay — coming soon */}
             <button
-              onClick={(e) => {
-                setIsBottomSheetOpen(false);
-                handleEbayClick(e);
-              }}
-              disabled={!ebayConnected}
-              className={`flex items-center justify-center gap-2.5 w-full py-3 px-4 border rounded-lg font-semibold text-sm transition-colors ${
-                !ebayConnected
-                  ? "border-gray-200 text-gray-300 bg-gray-50/50 cursor-not-allowed"
-                  : isEbayPosted
-                    ? "border-green-500 text-green-700 bg-green-50/30 hover:bg-green-50"
-                    : "border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50"
-              }`}
+              disabled
+              title="eBay-Integration kommt in Kürze"
+              className="flex items-center justify-center gap-2.5 w-full py-3 px-4 border border-gray-200 text-gray-300 bg-gray-50/50 rounded-lg font-semibold text-sm cursor-not-allowed"
             >
               <EbayLogo />
-              <span>
-                {!ebayConnected 
-                  ? "eBay (nicht verbunden)" 
-                  : isEbayPosted 
-                    ? "Auf eBay (Gepostet)" 
-                    : "Auf eBay cross-posten"}
-              </span>
+              <span>eBay 🚧 <span className="text-xs font-normal">(kommt bald)</span></span>
             </button>
 
             {/* Cancel Trigger */}

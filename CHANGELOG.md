@@ -5,6 +5,31 @@ All notable changes to this project are documented here.
 ## [1.0.0] - 2026-06-09
 
 ### Added
+- EN/DE language support + config cleanup
+- AI usage admin API, configurable per-user limits, free-first models
+- Vinted dual-template, language selector, feedback button + production-readiness fixes
+- redesign extension popup with quick-action buttons
+
+### Fixed
+- cleanup batch + reply-template hardening
+- clear German error when a photo exceeds the 4MB limit
+- add 30s timeout to Gemini API calls
+- skip text-only models when request has images
+- remove dummy_key fallback that masked missing GEMINI_API_KEY
+- mutex lock, graceful skip of deleted/changed ads, env fail-fast
+- confirm session expiry before halting a user's whole repost batch
+- retry scrape-views with exponential backoff before falling back
+
+### Changed
+- root Firebase config to deploy Firestore indexes
+- collectionGroup queries, batched writes, scrape rate-limiting
+- security: HTTPS guard for worker, repost audit trail, skip expired users
+- config constants, AdData type, structured log context
+- commit in-progress changes to auth, extension, and ads actions
+
+## [1.0.0] - 2026-06-09
+
+### Added
 - AI usage admin API, configurable per-user limits, free-first models
 - Vinted dual-template, language selector, feedback button + production-readiness fixes
 - redesign extension popup with quick-action buttons

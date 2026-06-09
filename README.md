@@ -110,6 +110,26 @@ docker-compose -f docker-compose.prod.yml run --rm certbot certonly \
   --email your@email.com --agree-tos
 ```
 
+### Firestore Indexes (required)
+
+The repost scheduler runs two `collectionGroup('ads')` queries (due-ad lookup and
+stuck-task recovery). Firestore **rejects** these queries until their composite
+indexes exist, so they must be deployed once before the scheduler runs in production.
+
+The index definitions live in [`backend/firestore.indexes.json`](backend/firestore.indexes.json)
+and are wired up by the root `firebase.json` / `.firebaserc`. Deploy them with:
+
+```bash
+firebase deploy --only firestore:indexes --project kleinanzeigen-app
+```
+
+Notes:
+- Run this **once**, and again whenever you add a new index to `backend/firestore.indexes.json`.
+- Index builds can take a few minutes; until they finish the scheduler logs an index
+  error and simply skips that tick (no crash) — it recovers automatically once the
+  build completes.
+- Local development uses an in-memory Firestore mock, so no index deploy is needed there.
+
 ## Setting up PayPal Donate button
 
 1. Go to https://www.paypal.com/donate/buttons

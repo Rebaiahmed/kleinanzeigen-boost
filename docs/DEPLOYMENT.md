@@ -40,6 +40,12 @@ ssh-copy-id -i deploy_key.pub root@178.105.216.147
 
 ## 2. One-time server setup
 
+> 💡 **Shortcut:** run [`scripts/provision-vps.sh`](../scripts/provision-vps.sh) on a
+> fresh Ubuntu/Debian VPS to install Node 20, PM2, nginx, Google Chrome, the
+> browser libraries, and the firewall in one go. Then do the clone + `.env` +
+> build/start steps below.
+
+
 ```bash
 ssh root@178.105.216.147
 

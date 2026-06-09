@@ -12,14 +12,16 @@ Priority: **High** · **Medium** · **Low**
 
 | #   | Task | Status | Priority | Notes |
 |-----|------|--------|----------|-------|
-| 1.1 | Create VPS server + add credentials to GitHub Actions secrets | Pending | High | — |
-| 1.2 | Buy domain (e.g. anzeigenboost.de) | Pending | High | Referenced in README + landing canonical/OG tags |
-| 1.3 | Test GitHub Actions deployment workflow | Pending | High | Workflows exist: `.github/workflows/deploy-*.yml` — need a live run |
-| 1.4 | Test Firebase deployment (frontend) | Pending | High | `deploy-frontend.yml` + `frontend/firebase.json` already configured |
-| 1.5 | Test landing page deployment | Pending | High | Landing is the `/` route of the frontend SPA; ships with 1.4 |
-| 1.6 | Deploy backend to VPS | Pending | High | `validateEnv` will block boot without prod secrets (JWT_SECRET, etc.) |
-| 1.7 | Deploy frontend to Firebase | Pending | High | Set `VITE_API_URL` to the https backend before deploy |
+| 1.1 | Create VPS server + add credentials to GitHub Actions secrets | **Done** | High | VPS `178.105.216.147`; VPS_HOST/USER/SSH_KEY + FIREBASE_SERVICE_ACCOUNT secrets set |
+| 1.2 | Buy domain (e.g. anzeigenboost.de) | Pending | High | Use **anzeigenboost.de** (NOT kleinanzeigen-* — trademark). Then A `api`→VPS + Firebase custom domain + certbot |
+| 1.3 | Test GitHub Actions deployment workflow | **Done** | High | All 3 deploy workflows green (backend/automation/frontend) |
+| 1.4 | Test Firebase deployment (frontend) | **Done** | High | Action succeeds; also deployed manually |
+| 1.5 | Test landing page deployment | **Done** | High | Live: https://kleinanzeigen-app.web.app |
+| 1.6 | Deploy backend to VPS | **Done** | High | PM2 `anzeigenboost-api` (3000) + nginx :80; Firestore connected; health OK |
+| 1.7 | Deploy frontend to Firebase | **Done** | High | Live (landing works; dashboard needs https API = domain) |
 | 1.8 | Command to clean up Firestore data (for testing) | **Done** | Medium | `npm run cleanup:firestore -- --user <id>` or `--all --yes` (works in real + mock mode) |
+| 1.9 | VPS provisioning script (deps for any new VPS) | **Done** | Medium | `scripts/provision-vps.sh` (Node 20, PM2, nginx, Chrome, browser libs, ufw) |
+| 1.10 | Migrate deployment to Docker + docker-compose | Pending | Low | Future — see issue #24. Current PM2 setup works |
 
 ## Part 2 — Chrome Extension
 

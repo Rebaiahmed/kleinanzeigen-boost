@@ -19,7 +19,7 @@ Priority: **High** · **Medium** · **Low**
 | 1.5 | Test landing page deployment | Pending | High | Landing is the `/` route of the frontend SPA; ships with 1.4 |
 | 1.6 | Deploy backend to VPS | Pending | High | `validateEnv` will block boot without prod secrets (JWT_SECRET, etc.) |
 | 1.7 | Deploy frontend to Firebase | Pending | High | Set `VITE_API_URL` to the https backend before deploy |
-| 1.8 | Command to clean up Firestore data (for testing) | Pending | Medium | — |
+| 1.8 | Command to clean up Firestore data (for testing) | **Done** | Medium | `npm run cleanup:firestore -- --user <id>` or `--all --yes` (works in real + mock mode) |
 
 ## Part 2 — Chrome Extension
 

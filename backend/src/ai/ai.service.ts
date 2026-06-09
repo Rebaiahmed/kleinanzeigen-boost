@@ -61,8 +61,10 @@ export class AiService {
       { type: 'google', name: 'gemini-2.0-flash', vision: true },                       // Gemini free tier, handles vision
       { type: 'openrouter', name: 'google/gemma-4-31b-it:free', vision: false },         // free, text-only
       { type: 'openrouter', name: 'meta-llama/llama-3.3-70b-instruct:free', vision: false }, // free, text-only
-      // ── Paid fallback ──
-      { type: 'google', name: 'gemini-2.5-flash', vision: true },
+      // ── Paid fallback (cheapest capable first) ──
+      { type: 'openrouter', name: 'google/gemini-2.5-flash-lite', vision: true },  // ~$0.10/$0.40, reliable German + vision
+      { type: 'openrouter', name: 'qwen/qwen3-235b-a22b-2507', vision: false },    // ~$0.09/$0.10, strong cheap text
+      { type: 'google', name: 'gemini-2.5-flash', vision: true },                  // higher-quality vision
       { type: 'openrouter', name: 'openai/gpt-4o-mini', vision: true },
       { type: 'openrouter', name: 'x-ai/grok-3-mini', vision: false },
       { type: 'openrouter', name: 'deepseek/deepseek-chat', vision: false },

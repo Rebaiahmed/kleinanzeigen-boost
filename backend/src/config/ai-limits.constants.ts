@@ -33,6 +33,8 @@ export function getEffectiveLimit(plan?: string, bonus = 0): number {
 export const MODEL_PRICING: Record<string, { in: number; out: number }> = {
   'gemini-2.0-flash': { in: 0, out: 0 },          // free tier
   'gemini-2.5-flash': { in: 0.30, out: 2.50 },
+  'google/gemini-2.5-flash-lite': { in: 0.10, out: 0.40 },
+  'qwen/qwen3-235b-a22b-2507': { in: 0.09, out: 0.10 },
   'google/gemma-4-31b-it:free': { in: 0, out: 0 },
   'meta-llama/llama-3.3-70b-instruct:free': { in: 0, out: 0 },
   'x-ai/grok-3-mini': { in: 0.30, out: 0.50 },

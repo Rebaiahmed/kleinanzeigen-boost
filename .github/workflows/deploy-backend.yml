@@ -30,6 +30,7 @@ jobs:
             echo "▶ Installing dependencies…"
             npm ci
             echo "▶ Building…"
+            rm -rf dist
             npm run build
             echo "▶ Restarting PM2 process…"
             pm2 restart anzeigenboost-api --update-env || pm2 start dist/main.js --name anzeigenboost-api

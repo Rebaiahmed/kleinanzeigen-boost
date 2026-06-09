@@ -9,8 +9,10 @@ export class AutomationService {
 
   constructor() {
     // Session cookies are POSTed to the worker. In production that transport
-    // MUST be HTTPS so the cookies are never sent in clear text.
-    if (process.env.NODE_ENV === 'production' && this.workerUrl.startsWith('http://')) {
+    // MUST be HTTPS — unless it's a same-box loopback URL, which never leaves
+    // the machine and so needs no TLS.
+    const isLoopback = /^http:\/\/(127\.0\.0\.1|localhost)([:/]|$)/.test(this.workerUrl);
+    if (process.env.NODE_ENV === 'production' && this.workerUrl.startsWith('http://') && !isLoopback) {
       this.logger.error(
         `SECURITY: AUTOMATION_WORKER_URL is non-HTTPS (${this.workerUrl}) in production. ` +
         `Session cookies would be sent unencrypted. Set an https:// URL.`,

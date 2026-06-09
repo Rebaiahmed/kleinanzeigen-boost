@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /$
+Allow: /index.html
+
+# App routes are behind login and not useful in search — keep crawl budget on the landing page
+Disallow: /auth
+Disallow: /meine-anzeigen
+Disallow: /einstellungen
+Disallow: /vorlagen
+Disallow: /neue-anzeige-mit-ki-erstellen
+
+Sitemap: https://anzeigenboost.de/sitemap.xml

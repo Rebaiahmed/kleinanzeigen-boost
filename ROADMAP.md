@@ -33,7 +33,7 @@ Priority: **High** · **Medium** · **Low**
 
 | #   | Task | Status | Priority | Notes |
 |-----|------|--------|----------|-------|
-| 3.1 | Add pagination for ads synchronization | Pending | Medium | — |
+| 3.1 | Add pagination for ads synchronization | **Done** | Medium | Client-side, 12/page (commit 047f917f) |
 | 3.2 | Better loading spinner during sync | Pending | Medium | Small corner spinner exists; this is a polish pass |
 
 ## Part 4 — Documentation & Monetization

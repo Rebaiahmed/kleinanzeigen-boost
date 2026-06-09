@@ -40,10 +40,10 @@ Priority: **High** · **Medium** · **Low**
 
 | #   | Task | Status | Priority | Notes |
 |-----|------|--------|----------|-------|
-| 4.1 | Document AI credits/limits per plan (free/starter/pro) | Pending | High | Implemented: free 15 / starter 500 / pro ∞ AI calls; free templates = 3 (`config/ai-limits.constants.ts`). Needs user-facing doc |
-| 4.2 | Document which AI models are used | Pending | High | Implemented: Gemini direct (free tier) + OpenRouter free-first chain (`ai.service.ts`). Needs doc |
-| 4.3 | Document payment setup (Stripe/PayPal) | Pending | High | No payment integration yet — decision needed |
-| 4.4 | Define monetization strategy (pricing, upgrade prompts, limits) | Pending | High | Limits + upgrade-prompt scaffolding partially built |
+| 4.1 | Document AI credits/limits per plan (free/starter/pro) | **Done** | High | Documented in [docs/AI_AND_MONETIZATION.md](docs/AI_AND_MONETIZATION.md) |
+| 4.2 | Document which AI models are used | **Done** | High | Documented in [docs/AI_AND_MONETIZATION.md](docs/AI_AND_MONETIZATION.md) |
+| 4.3 | Document payment setup (Stripe/PayPal) | **In Progress** | High | Decision + integration plan documented (Stripe recommended); not yet implemented |
+| 4.4 | Define monetization strategy (pricing, upgrade prompts, limits) | **In Progress** | High | Proposed tiers/pricing/prompts documented; pricing not yet validated or wired to payment |
 
 ## Part 5 — Epic: POST-SMARTER (Posting Tips & AI Photo Feedback)
 

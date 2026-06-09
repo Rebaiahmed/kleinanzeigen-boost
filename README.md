@@ -4,6 +4,7 @@
 "Deine Kleinanzeigen immer ganz oben — vollautomatisch."
 
 📋 **Project roadmap & task status:** [`ROADMAP.md`](ROADMAP.md) (importable: [`roadmap.csv`](roadmap.csv))
+💰 **AI limits, models & monetization:** [`docs/AI_AND_MONETIZATION.md`](docs/AI_AND_MONETIZATION.md)
 
 ![AnzeigenBoost Screenshot Placeholder](https://via.placeholder.com/800x400?text=AnzeigenBoost+Dashboard)
 

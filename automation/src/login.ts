@@ -141,6 +141,7 @@ export async function executeVisibleLoginFlow(
 ): Promise<void> {
   const browser = await chromium.launch({
     headless: false, // Non-headless so user sees the browser
+    executablePath: process.env.CHROMIUM_PATH || undefined,
     args: [
       '--disable-blink-features=AutomationControlled',
       '--no-sandbox',

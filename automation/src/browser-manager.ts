@@ -62,6 +62,9 @@ export async function getPersistentContext(userId: string): Promise<BrowserConte
     
     const context = await chromium.launchPersistentContext(userDataDir, {
       headless: !isDebug,
+      // Use a system-installed Chrome when set (e.g. on hosts where Playwright's
+      // bundled Chromium isn't available). Falls back to bundled chromium locally.
+      executablePath: process.env.CHROMIUM_PATH || undefined,
       viewport: { width: 1280, height: 720 },
       args: ['--disable-blink-features=AutomationControlled']
     });

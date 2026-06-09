@@ -8,15 +8,19 @@ import axios from 'axios';
 
 @Injectable()
 export class AiService {
-  private genAI: GoogleGenerativeAI;
+  private genAI: GoogleGenerativeAI | null = null;
   private analyzePhotosPrompt: string;
   private optimizeAdPrompt: string;
   private priceCheckPrompt: string;
   private replySuggestionsPrompt: string;
 
   constructor(private readonly firebaseService: FirebaseService) {
-    // Setup Google Generative AI client
-    this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'dummy_key');
+    // Construct the Gemini client only when a key is actually configured.
+    // If absent, genAI stays null and the model fallback chain skips Gemini and
+    // uses OpenRouter. (App-level startup validation already fails fast when
+    // NEITHER provider key is set — see main.ts validateEnv.)
+    const geminiKey = process.env.GEMINI_API_KEY?.trim();
+    this.genAI = geminiKey ? new GoogleGenerativeAI(geminiKey) : null;
 
     // Load system prompts from files at module initialization (Rule Five)
     this.analyzePhotosPrompt = fs.readFileSync(
@@ -69,10 +73,10 @@ export class AiService {
         if (modelInfo.type === 'google') {
           // Google Native API call
           const geminiKey = process.env.GEMINI_API_KEY;
-          if (!geminiKey || geminiKey === 'dummy_key' || geminiKey.trim() === '') {
+          if (!geminiKey || geminiKey.trim() === '' || !this.genAI) {
             throw new Error('GEMINI_API_KEY is not configured or empty');
           }
-          
+
           const model = this.genAI.getGenerativeModel({
             model: modelInfo.name,
             systemInstruction: finalSystemInstruction,
@@ -334,7 +338,7 @@ export class AiService {
 
     // 4. Pre-check API Key configuration
     const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey || geminiKey === 'dummy_key' || geminiKey.trim() === '') {
+    if (!geminiKey || geminiKey.trim() === '') {
       throw new HttpException(
         'KI-Analysedienst nicht konfiguriert. Bitte trage einen gültigen GEMINI_API_KEY in der backend/.env Datei ein.',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -431,7 +435,7 @@ export class AiService {
   async optimizeExistingAd(userId: string, title: string, description: string, category: string) {
     console.log(`[KI-Opt] optimizeExistingAd START — userId: ${userId}, title: "${title?.slice(0, 40)}"`);
     const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey || geminiKey === 'dummy_key' || geminiKey.trim() === '') {
+    if (!geminiKey || geminiKey.trim() === '') {
       console.error('[KI-Opt] No GEMINI_API_KEY configured');
       throw new HttpException(
         'KI-Analysedienst nicht konfiguriert. Bitte trage einen gültigen GEMINI_API_KEY in der backend/.env Datei ein.',
@@ -529,7 +533,7 @@ export class AiService {
 
   async suggestPrice(userId: string, title: string) {
     const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey || geminiKey === 'dummy_key' || geminiKey.trim() === '') {
+    if (!geminiKey || geminiKey.trim() === '') {
       throw new HttpException(
         'KI-Analysedienst nicht konfiguriert. Bitte trage einen gültigen GEMINI_API_KEY in der backend/.env Datei ein.',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -597,7 +601,7 @@ export class AiService {
 
   async suggestReply(userId: string, messageHistory: string[]) {
     const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey || geminiKey === 'dummy_key' || geminiKey.trim() === '') {
+    if (!geminiKey || geminiKey.trim() === '') {
       throw new HttpException(
         'KI-Analysedienst nicht konfiguriert. Bitte trage einen gültigen GEMINI_API_KEY in der backend/.env Datei ein.',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -773,7 +777,7 @@ ${JSON.stringify(dataset)}`;
    */
   async healthCheck(): Promise<{ ok: boolean; latencyMs: number; error?: string }> {
     const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey || geminiKey === 'dummy_key' || geminiKey.trim() === '') {
+    if (!geminiKey || geminiKey.trim() === '') {
       return { ok: false, latencyMs: 0, error: 'GEMINI_API_KEY not configured' };
     }
     // A real Gemini API key is always 39 characters starting with "AI"

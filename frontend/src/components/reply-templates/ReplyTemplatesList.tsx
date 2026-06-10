@@ -251,6 +251,9 @@ export function ReplyTemplatesList() {
           ))}
         </div>
       ) : templates.length === 0 ? (
+        // While the create form is open, hide the quick-start so the two paths
+        // don't compete (avoids decision paralysis on an empty page).
+        isFormOpen ? null : (
         <div className="space-y-4">
           {/* Starter templates CTA */}
           <div className="border border-dashed border-[#A8C300]/50 bg-green-50/30 rounded-lg p-5">
@@ -279,6 +282,7 @@ export function ReplyTemplatesList() {
             oder <button onClick={openCreate} className="text-[#A8C300] hover:underline font-medium">eigene Vorlage erstellen</button>
           </div>
         </div>
+        )
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {templates.map(template => (

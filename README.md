@@ -3,7 +3,7 @@
 **German SaaS that keeps your Kleinanzeigen.de ads on top — automatically.**
 "Deine Kleinanzeigen immer ganz oben, vollautomatisch."
 
-📋 [Roadmap](ROADMAP.md) · 💰 [AI & Monetization](docs/AI_AND_MONETIZATION.md) · 🚀 [Deployment](docs/DEPLOYMENT.md)
+📋 [Roadmap](docs/ROADMAP.md) · 💰 [AI & Monetization](docs/AI_AND_MONETIZATION.md) · 🚀 [Deployment](docs/DEPLOYMENT.md)
 
 ---
 

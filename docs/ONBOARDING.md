@@ -68,10 +68,15 @@ kleinzeigen_project/
 │       ├── content/index.ts      # Content script (page injection)
 │       ├── popup/App.tsx         # Extension popup UI
 │       └── config/endpoints.ts  # API URL config
-├── docker-compose.yml          # Production service definitions
-├── docker-compose.override.yml # Local dev overrides (auto-merged)
-├── ARCHITECTURE.md             # System diagrams and data flow docs
-└── ONBOARDING.md               # This file
+├── README.md                   # Overview (stays at root)
+├── CHANGELOG.md                # Changelog (stays at root)
+└── docs/                       # All other documentation
+    ├── ARCHITECTURE.md         # System diagrams and data flow
+    ├── ONBOARDING.md           # This file
+    ├── DEPLOYMENT.md           # VPS + Firebase deploy guide
+    ├── AI_AND_MONETIZATION.md  # AI limits, models, pricing
+    ├── ROADMAP.md              # Task tracker
+    └── roadmap.csv             # Importable roadmap
 ```
 
 ---

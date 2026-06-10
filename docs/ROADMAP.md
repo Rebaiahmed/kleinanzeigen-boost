@@ -42,8 +42,8 @@ Priority: **High** · **Medium** · **Low**
 
 | #   | Task | Status | Priority | Notes |
 |-----|------|--------|----------|-------|
-| 4.1 | Document AI credits/limits per plan (free/starter/pro) | **Done** | High | Documented in [docs/AI_AND_MONETIZATION.md](docs/AI_AND_MONETIZATION.md) |
-| 4.2 | Document which AI models are used | **Done** | High | Documented in [docs/AI_AND_MONETIZATION.md](docs/AI_AND_MONETIZATION.md) |
+| 4.1 | Document AI credits/limits per plan (free/starter/pro) | **Done** | High | Documented in [docs/AI_AND_MONETIZATION.md](AI_AND_MONETIZATION.md) |
+| 4.2 | Document which AI models are used | **Done** | High | Documented in [docs/AI_AND_MONETIZATION.md](AI_AND_MONETIZATION.md) |
 | 4.3 | Document payment setup (Stripe/PayPal) | **In Progress** | High | Decision + integration plan documented (Stripe recommended); not yet implemented |
 | 4.4 | Define monetization strategy (pricing, upgrade prompts, limits) | **In Progress** | High | Proposed tiers/pricing/prompts documented; pricing not yet validated or wired to payment |
 

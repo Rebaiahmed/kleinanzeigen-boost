@@ -664,8 +664,8 @@ export function AdCard({
               title="eBay-Integration kommt in Kürze"
               className="w-full border border-gray-200 rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 text-gray-400 bg-gray-50 cursor-not-allowed"
             >
-              <EbayLogo />
-              <span>eBay 🚧</span>
+              <span>eBay</span>
+              <span>🚧</span>
             </button>
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block bg-gray-800 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap z-10 pointer-events-none">
               eBay-Integration kommt in Kürze

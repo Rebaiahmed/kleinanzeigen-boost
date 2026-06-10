@@ -116,7 +116,10 @@ export function Ads() {
     setIsBannerDismissed(true);
   };
 
-  const showBanner = !isBannerDismissed && !isEbayConnected && !isLoading;
+  // eBay integration is coming soon — hide its connect banner until it's ready.
+  // Flip EBAY_ENABLED to true when the eBay flow ships.
+  const EBAY_ENABLED = false;
+  const showBanner = EBAY_ENABLED && !isBannerDismissed && !isEbayConnected && !isLoading;
 
   const sortedAds = [...ads].sort((a, b) => {
     const viewsA = typeof a.views === 'number' ? a.views : parseInt(a.views) || 0;

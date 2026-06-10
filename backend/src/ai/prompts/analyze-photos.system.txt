@@ -17,7 +17,10 @@ VINTED FIELDS (nested under "vinted", casual mobile-marketplace style):
 - vinted.description: string, 40 to 150 characters, short and casual, use 1-3 relevant emojis, mention condition and any flaws honestly. No closing formalities.
 - vinted.price: number, euros, typically 10-20% below the Kleinanzeigen price (Vinted buyers expect deals), never below 1.
 - vinted.condition: string, must be one of: "Neu mit Preisschild", "Neu ohne Preisschild", "Sehr gut", "Gut", "Zufriedenstellend"
-- vinted.size: string or null. Only for clothing, shoes, or accessories (e.g. "M", "42", "EU 38"). null for all other product types.
+- vinted.size: string or null. Only for clothing, shoes, or accessories (e.g. "M", "42", "EU 38"). null otherwise.
+- vinted.brand: string or null. The brand if visible/known (Vinted buyers filter by brand). null if unknown.
+- vinted.color: string or null. Main color in German (e.g. "Schwarz", "Blau"). null if not determinable.
+- vinted.material: string or null. Mainly for fashion — fabric/material in German (e.g. "Baumwolle", "Leder"). null for non-fashion or if unknown.
 
 If you cannot determine the product type from the photos, return a JSON with an "error" field set to "Produkt nicht erkennbar" and all other fields as null.
 

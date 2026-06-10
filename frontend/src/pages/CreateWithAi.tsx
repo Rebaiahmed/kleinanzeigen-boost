@@ -137,6 +137,10 @@ export function CreateWithAi() {
   const [vintedPrice, setVintedPrice] = useState<number>(0);
   const [vintedCondition, setVintedCondition] = useState('Gut');
   const [vintedSize, setVintedSize] = useState<string | null>(null);
+  const [vintedBrand, setVintedBrand] = useState<string | null>(null);
+  const [vintedColor, setVintedColor] = useState<string | null>(null);
+  const [vintedMaterial, setVintedMaterial] = useState<string | null>(null);
+  const [showAllVintedFields, setShowAllVintedFields] = useState(false);
   const [isVintedCopied, setIsVintedCopied] = useState(false);
 
   // Per-field copy feedback
@@ -307,6 +311,10 @@ export function CreateWithAi() {
       setVintedPrice(v.price || data.price || 0);
       setVintedCondition(VINTED_CONDITIONS.includes(v.condition) ? v.condition : 'Gut');
       setVintedSize(v.size || null);
+      setVintedBrand(v.brand || data.brand || null);
+      setVintedColor(v.color || null);
+      setVintedMaterial(v.material || null);
+      setShowAllVintedFields(false);
       setActiveTab('kleinanzeigen');
 
       incrementUsage(); // update usage counter immediately
@@ -335,7 +343,10 @@ export function CreateWithAi() {
       `Preis: ${vintedPrice} €`,
       `Zustand: ${vintedCondition}`,
     ];
+    if (vintedBrand) lines.push(`Marke: ${vintedBrand}`);
     if (vintedSize) lines.push(`Größe: ${vintedSize}`);
+    if (vintedColor) lines.push(`Farbe: ${vintedColor}`);
+    if (vintedMaterial) lines.push(`Material: ${vintedMaterial}`);
     navigator.clipboard.writeText(lines.join('\n')).then(() => {
       setIsVintedCopied(true);
       setTimeout(() => setIsVintedCopied(false), 2000);
@@ -981,34 +992,19 @@ export function CreateWithAi() {
               />
             </div>
 
-            {/* Vinted price & size */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="text-[13px] font-semibold text-gray-800">Preis (€)</label>
-                  {renderCopyBtn('v-price', vintedPrice, '#09B1BA')}
-                </div>
-                <input
-                  type="number"
-                  value={vintedPrice}
-                  onChange={(e) => setVintedPrice(parseFloat(e.target.value) || 0)}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#09B1BA]"
-                />
-                <span className="block text-[11px] text-gray-400 italic mt-1">* Vinted-Käufer erwarten oft etwas niedrigere Preise.</span>
+            {/* Vinted price */}
+            <div>
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="text-[13px] font-semibold text-gray-800">Preis (€)</label>
+                {renderCopyBtn('v-price', vintedPrice, '#09B1BA')}
               </div>
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="text-[13px] font-semibold text-gray-800">Größe (nur Mode)</label>
-                  {vintedSize && renderCopyBtn('v-size', vintedSize, '#09B1BA')}
-                </div>
-                <input
-                  type="text"
-                  value={vintedSize || ''}
-                  onChange={(e) => setVintedSize(e.target.value || null)}
-                  placeholder="z.B. M, 42, EU 38 — leer lassen wenn nicht relevant"
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#09B1BA]"
-                />
-              </div>
+              <input
+                type="number"
+                value={vintedPrice}
+                onChange={(e) => setVintedPrice(parseFloat(e.target.value) || 0)}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#09B1BA]"
+              />
+              <span className="block text-[11px] text-gray-400 italic mt-1">* Vinted-Käufer erwarten oft etwas niedrigere Preise.</span>
             </div>
 
             {/* Vinted Condition */}
@@ -1034,6 +1030,85 @@ export function CreateWithAi() {
                 ))}
               </div>
             </div>
+
+            {/* Vinted extra fields — full set for fashion, lite + toggle otherwise */}
+            {(() => {
+              const isFashion = /mode|beauty|kleidung|schuhe|accessoir/i.test(category || '');
+              const showExtras = isFashion || showAllVintedFields;
+              return (
+                <div>
+                  {!isFashion && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllVintedFields((v) => !v)}
+                      className="text-[12px] font-semibold text-[#09B1BA] hover:underline mb-3"
+                    >
+                      {showAllVintedFields ? '− Weniger Vinted-Felder' : '+ Mehr Vinted-Felder (Marke, Größe, Farbe, Material)'}
+                    </button>
+                  )}
+                  {showExtras && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Marke */}
+                      <div>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <label className="text-[13px] font-semibold text-gray-800">Marke</label>
+                          {vintedBrand && renderCopyBtn('v-brand', vintedBrand, '#09B1BA')}
+                        </div>
+                        <input
+                          type="text"
+                          value={vintedBrand || ''}
+                          onChange={(e) => setVintedBrand(e.target.value || null)}
+                          placeholder="z.B. Nike, Zara — wichtig für Vinted-Suche"
+                          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#09B1BA]"
+                        />
+                      </div>
+                      {/* Größe */}
+                      <div>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <label className="text-[13px] font-semibold text-gray-800">Größe</label>
+                          {vintedSize && renderCopyBtn('v-size', vintedSize, '#09B1BA')}
+                        </div>
+                        <input
+                          type="text"
+                          value={vintedSize || ''}
+                          onChange={(e) => setVintedSize(e.target.value || null)}
+                          placeholder="z.B. M, 42, EU 38"
+                          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#09B1BA]"
+                        />
+                      </div>
+                      {/* Farbe */}
+                      <div>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <label className="text-[13px] font-semibold text-gray-800">Farbe</label>
+                          {vintedColor && renderCopyBtn('v-color', vintedColor, '#09B1BA')}
+                        </div>
+                        <input
+                          type="text"
+                          value={vintedColor || ''}
+                          onChange={(e) => setVintedColor(e.target.value || null)}
+                          placeholder="z.B. Schwarz, Blau"
+                          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#09B1BA]"
+                        />
+                      </div>
+                      {/* Material */}
+                      <div>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <label className="text-[13px] font-semibold text-gray-800">Material</label>
+                          {vintedMaterial && renderCopyBtn('v-material', vintedMaterial, '#09B1BA')}
+                        </div>
+                        <input
+                          type="text"
+                          value={vintedMaterial || ''}
+                          onChange={(e) => setVintedMaterial(e.target.value || null)}
+                          placeholder="z.B. Baumwolle, Leder"
+                          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#09B1BA]"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Vinted Description */}
             <div>
@@ -1066,6 +1141,7 @@ export function CreateWithAi() {
                   <span className="text-[12px] text-[#09B1BA] font-bold animate-in fade-in duration-200">Kopiert!</span>
                 )}
               </div>
+              <p className="text-[11px] text-gray-500 mt-2">📷 Die Fotos lädst du bei Vinted selbst hoch – Vinted erlaubt kein automatisches Übertragen von Bildern.</p>
             </div>
 
             <button

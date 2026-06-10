@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
+import { ENDPOINTS } from '../config/endpoints';
 
-const DASHBOARD = 'https://kleinanzeigen-app.web.app';
+// Single source of truth — currently localhost (see endpoints.ts). Switch
+// endpoints.ts to prod URLs before publishing to the Web Store.
+const DASHBOARD = ENDPOINTS.DASHBOARD_BASE;
 
 function openTab(path: string) {
   chrome.tabs.create({ url: `${DASHBOARD}${path}` });

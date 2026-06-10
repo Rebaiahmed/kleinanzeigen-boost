@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-const DASHBOARD = 'http://localhost:5173';
+const DASHBOARD = 'https://kleinanzeigen-app.web.app';
 
 function openTab(path: string) {
   chrome.tabs.create({ url: `${DASHBOARD}${path}` });
@@ -8,13 +8,19 @@ function openTab(path: string) {
 }
 
 function App() {
+  // null = checking, true = signed in to Kleinanzeigen, false = not
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const url = tabs[0]?.url || '';
-      setIsLoggedIn(url.includes('kleinanzeigen.de'));
-    });
+    // Truthful status: ask the background whether Kleinanzeigen cookies exist
+    // (real login state) — not just whether the current tab happens to be KA.
+    chrome.runtime.sendMessage(
+      { type: 'CHECK_PLATFORM_LOGIN', platform: 'kleinanzeigen' },
+      (resp) => {
+        if (chrome.runtime.lastError) { setIsLoggedIn(false); return; }
+        setIsLoggedIn(!!resp?.isLoggedIn);
+      },
+    );
   }, []);
 
   return (
@@ -29,7 +35,7 @@ function App() {
             background: isLoggedIn ? '#fff' : 'rgba(255,255,255,0.4)',
           }} />
           <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.9)' }}>
-            {isLoggedIn === null ? '…' : isLoggedIn ? 'Verbunden' : 'Nicht verbunden'}
+            {isLoggedIn === null ? 'Prüfe…' : isLoggedIn ? 'Bei Kleinanzeigen angemeldet' : 'Nicht angemeldet'}
           </span>
         </div>
       </div>

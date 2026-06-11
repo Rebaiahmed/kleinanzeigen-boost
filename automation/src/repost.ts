@@ -88,6 +88,18 @@ export async function executeRepostFlow(userId: string, adId: string, adData: an
     if (await page.isVisible('iframe[src*="captcha"]')) {
       throw new Error('CAPTCHA_DETECTED');
     }
+
+    // Detect an IP block / rate-limit / "unusual activity" interstitial so the
+    // scheduler can classify it as IP_BLOCKED (vs a generic failure) and back off.
+    try {
+      const bodyText = (await page.textContent('body'))?.toLowerCase() || '';
+      if (/ungewöhnliche aktivität|unusual activity|zu viele anfragen|too many requests|vorübergehend gesperrt|temporarily blocked|ip-adresse/.test(bodyText)) {
+        throw new Error('IP_BLOCKED');
+      }
+    } catch (e: any) {
+      if (e.message === 'IP_BLOCKED') throw e;
+      // textContent failure is non-fatal — ignore and continue.
+    }
     // Close the page, not the context, to keep browser alive
     await page.close();
 

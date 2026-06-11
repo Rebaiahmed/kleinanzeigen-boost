@@ -6,10 +6,24 @@ import { SessionService } from '../auth/session.service';
 import { AdStatus } from '../ads/dto/ad-status.enum';
 import { AdData } from '../ads/dto/ad-data.interface';
 import { SCHEDULER_CONFIG } from '../config/scheduler.constants';
+import { classifyRepostError } from '../common/repost-error.util';
 
-/** Consistent context prefix for scheduler logs: "[user=… ad=…]". */
-function logCtx(userId: string, adId?: string): string {
-  return adId ? `[user=${userId} ad=${adId}]` : `[user=${userId}]`;
+/** Consistent context prefix for scheduler logs: "[run=… user=… ad=…]". */
+function logCtx(userId?: string, adId?: string, runId?: string): string {
+  const parts: string[] = [];
+  if (runId) parts.push(`run=${runId}`);
+  if (userId) parts.push(`user=${userId}`);
+  if (adId) parts.push(`ad=${adId}`);
+  return `[${parts.join(' ')}]`;
+}
+
+/** Aggregated counters for one cron run — persisted as the run summary. */
+interface RunStats {
+  due: number;
+  succeeded: number;
+  failed: number;
+  skippedUsers: number;
+  errorsByCode: Record<string, number>;
 }
 
 @Injectable()
@@ -100,6 +114,7 @@ export class SchedulerService {
       lastRunAt: doc.data()?.lastRunAt || null,
       lastRepostAt: doc.data()?.lastRepostAt || null,
       totalRepostsAllTime: doc.data()?.totalRepostsAllTime || 0,
+      lastRun: doc.data()?.lastRun || null, // { runId, triggeredBy, due, succeeded, failed, errorsByCode, durationMs }
     };
   }
 
@@ -113,7 +128,13 @@ export class SchedulerService {
     }
     this.isRunning = true;
 
-    this.logger.log(`Running scheduled repost check... (triggeredBy=${triggeredBy})`);
+    // Correlation id — stamped on every log line, repostLog and the run summary
+    // so a whole run can be traced end-to-end.
+    const runId = (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`).slice(0, 8);
+    const runStartedAt = Date.now();
+    const stats: RunStats = { due: 0, succeeded: 0, failed: 0, skippedUsers: 0, errorsByCode: {} };
+
+    this.logger.log(`${logCtx(undefined, undefined, runId)} ▶ Repost run started (triggeredBy=${triggeredBy})`);
     const db = this.firebaseService.firestore;
     const now = new Date().toISOString();
 
@@ -122,7 +143,7 @@ export class SchedulerService {
         lastRunAt: now
       }, { merge: true });
     } catch (e: any) {
-      this.logger.warn(`Failed to update schedulerMeta: ${e.message}`);
+      this.logger.warn(`${logCtx(undefined, undefined, runId)} Failed to update schedulerMeta: ${e.message}`);
     }
 
     try {
@@ -159,9 +180,12 @@ export class SchedulerService {
         .get();
 
       if (dueAdsSnap.empty) {
-        this.logger.log('No due reposts this run');
+        this.logger.log(`${logCtx(undefined, undefined, runId)} ✓ No due reposts this run`);
+        await this.persistRunSummary(runId, triggeredBy, stats, Date.now() - runStartedAt);
         return { skipped: false };
       }
+
+      stats.due = dueAdsSnap.size;
 
       // Group due ads by their owning user (ad.ref.parent.parent.id).
       const adsByUser = new Map<string, any[]>();
@@ -179,28 +203,68 @@ export class SchedulerService {
         if (userDoc.data()?.accountStatus === 'expired') continue;
         activeUserIds.push(uid);
       }
-      const skipped = userIds.length - activeUserIds.length;
-      if (skipped > 0) this.logger.log(`Skipping ${skipped} user(s) with expired session`);
+      stats.skippedUsers = userIds.length - activeUserIds.length;
+      if (stats.skippedUsers > 0) this.logger.log(`${logCtx(undefined, undefined, runId)} Skipping ${stats.skippedUsers} user(s) with expired session`);
+
+      this.logger.log(`${logCtx(undefined, undefined, runId)} Processing ${stats.due} due ad(s) across ${activeUserIds.length} user(s)`);
 
       // Process up to N users concurrently — automation tasks can take 120s each.
       const USER_CONCURRENCY = SCHEDULER_CONFIG.userConcurrency;
       for (let i = 0; i < activeUserIds.length; i += USER_CONCURRENCY) {
         const chunk = activeUserIds.slice(i, i + USER_CONCURRENCY);
-        await Promise.all(chunk.map(uid => this.processUserReposts(uid, adsByUser.get(uid)!, triggeredBy)));
+        await Promise.all(chunk.map(uid => this.processUserReposts(uid, adsByUser.get(uid)!, triggeredBy, runId, stats)));
       }
     } catch (error: any) {
-      this.logger.error(`Cron iteration failed: ${error.message}`);
+      this.logger.error(`${logCtx(undefined, undefined, runId)} ✗ Cron iteration failed: ${error.message}`, error.stack);
     } finally {
       this.isRunning = false;
     }
+
+    const durationMs = Date.now() - runStartedAt;
+    const errorsSummary = Object.entries(stats.errorsByCode).map(([c, n]) => `${c}=${n}`).join(' ') || 'none';
+    this.logger.log(
+      `${logCtx(undefined, undefined, runId)} ■ Repost run finished in ${durationMs}ms — ` +
+      `due=${stats.due} ok=${stats.succeeded} failed=${stats.failed} skippedUsers=${stats.skippedUsers} errors[${errorsSummary}]`,
+    );
+    await this.persistRunSummary(runId, triggeredBy, stats, durationMs);
     return { skipped: false };
+  }
+
+  /** Persist a per-run summary so cron history is traceable from Firestore. */
+  private async persistRunSummary(
+    runId: string,
+    triggeredBy: 'cron' | 'manual',
+    stats: RunStats,
+    durationMs: number,
+  ): Promise<void> {
+    const db = this.firebaseService.firestore;
+    const summary = {
+      runId,
+      triggeredBy,
+      finishedAt: new Date().toISOString(),
+      durationMs,
+      ...stats,
+    };
+    try {
+      // Latest run on the meta doc (for the dashboard) + an append-only history log.
+      await db.collection('meta').doc('schedulerMeta').set({ lastRun: summary }, { merge: true });
+      await db.collection('meta').doc('schedulerMeta').collection('runs').doc(runId).set(summary);
+    } catch (e: any) {
+      this.logger.warn(`${logCtx(undefined, undefined, runId)} Failed to persist run summary: ${e.message}`);
+    }
   }
 
   /**
    * Processes all due reposts for a single user.
    * Extracted from the cron loop so it can run concurrently across users.
    */
-  private async processUserReposts(userId: string, adDocs: any[], triggeredBy: 'cron' | 'manual' = 'cron'): Promise<void> {
+  private async processUserReposts(
+    userId: string,
+    adDocs: any[],
+    triggeredBy: 'cron' | 'manual' = 'cron',
+    runId?: string,
+    stats?: RunStats,
+  ): Promise<void> {
     const db = this.firebaseService.firestore;
 
     if (!adDocs || adDocs.length === 0) return;
@@ -213,7 +277,7 @@ export class SchedulerService {
       const adData = adDoc.data() as AdData;
       const repostIntervalMinutes: number = adData.repostIntervalMinutes ?? SCHEDULER_CONFIG.defaultRepostIntervalMinutes;
 
-      this.logger.log(`${logCtx(userId, adId)} Initiating automated repost`);
+      this.logger.log(`${logCtx(userId, adId, runId)} Initiating automated repost`);
 
       // 1. Atomic state lock — read first so we skip gracefully if the ad was
       //    deleted, or its status/autoRepost changed, between the query and now.
@@ -264,14 +328,33 @@ export class SchedulerService {
             viewsBefore,
             viewsAfter: null,
             triggeredBy,
+            runId: runId || null,
           });
 
-          this.logger.log(`${logCtx(userId, adId)} Repost scheduled: next in ${repostIntervalMinutes} minutes`);
+          if (stats) stats.succeeded++;
+          this.logger.log(`${logCtx(userId, adId, runId)} ✓ Repost ok — next in ${repostIntervalMinutes} min`);
         }
       } catch (error: any) {
-        this.logger.error(`${logCtx(userId, adId)} Repost failed: ${error.message}`);
+        const errorCode = classifyRepostError(error.message);
+        if (stats) {
+          stats.failed++;
+          stats.errorsByCode[errorCode] = (stats.errorsByCode[errorCode] || 0) + 1;
+        }
+        this.logger.error(`${logCtx(userId, adId, runId)} ✗ Repost failed [${errorCode}]: ${error.message}`);
 
         const adRef = db.collection('users').doc(userId).collection('ads').doc(adId);
+
+        // Always record the failure in the ad's repostLogs for traceability.
+        await adRef.collection('repostLogs').add({
+          status: 'failed',
+          errorCode,
+          error: (error.message || 'unknown').slice(0, 500),
+          executedAt: new Date().toISOString(),
+          durationMs: Date.now() - startTime,
+          viewsBefore,
+          triggeredBy,
+          runId: runId || null,
+        }).catch((e: any) => this.logger.warn(`${logCtx(userId, adId, runId)} Failed to write failure log: ${e.message}`));
 
         if (error.message === 'SESSION_EXPIRED') {
           // Confirm before halting — a single SESSION_EXPIRED can be a false positive.
@@ -280,12 +363,12 @@ export class SchedulerService {
 
           if (reallyExpired) {
             await db.collection('users').doc(userId).update({ accountStatus: 'expired' });
-            this.logger.warn(`${logCtx(userId)} Session confirmed expired — halting remaining reposts`);
+            this.logger.warn(`${logCtx(userId, undefined, runId)} Session confirmed expired — halting remaining reposts`);
             break; // All ads share these cookies; no point continuing.
           }
 
           // False positive — session still authenticates. Skip this ad, keep going.
-          this.logger.warn(`${logCtx(userId, adId)} SESSION_EXPIRED not confirmed on re-check — continuing with other ads`);
+          this.logger.warn(`${logCtx(userId, adId, runId)} SESSION_EXPIRED not confirmed on re-check — continuing with other ads`);
           continue;
         }
 
@@ -318,14 +401,14 @@ export class SchedulerService {
             this.logger.warn(`Failed to write notification for ${adId}: ${notifyErr.message}`);
           }
 
-          this.logger.warn(`${logCtx(userId, adId)} Auto-Repost disabled after ${MAX_REPOST_FAILURES} failures`);
+          this.logger.warn(`${logCtx(userId, adId, runId)} Auto-Repost disabled after ${MAX_REPOST_FAILURES} failures [${errorCode}]`);
         } else {
           await adRef.update({
             status: AdStatus.ACTIVE,
             pendingRepostSince: null,
             repostFailureCount: failureCount,
           });
-          this.logger.warn(`${logCtx(userId, adId)} Repost failure ${failureCount}/${MAX_REPOST_FAILURES}`);
+          this.logger.warn(`${logCtx(userId, adId, runId)} Repost failure ${failureCount}/${MAX_REPOST_FAILURES} [${errorCode}]`);
         }
       }
     }

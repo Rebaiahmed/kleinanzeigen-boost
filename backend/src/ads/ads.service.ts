@@ -6,6 +6,7 @@ import { FirebaseService } from '../firebase/firebase.service';
 import { AutomationService } from '../automation/automation.service';
 import { EbayService } from '../ebay/ebay.service';
 import { VintedService } from '../vinted/vinted.service';
+import { classifyRepostError } from '../common/repost-error.util';
 @Injectable()
 export class AdsService {
   private readonly logger = new Logger(AdsService.name);
@@ -119,6 +120,7 @@ export class AdsService {
       throw new InternalServerErrorException(error.message);
     }
 
+    const startTime = Date.now();
     try {
       const result = await this.automationService.callAutomationWorker('repost', { userId, adId, adData });
       if (result.success) {
@@ -129,14 +131,26 @@ export class AdsService {
           lastPostedAt: new Date().toISOString(),
           nextRepostAt,
         });
+        await adRef.collection('repostLogs').add({
+          status: 'success', executedAt: new Date().toISOString(),
+          durationMs: Date.now() - startTime, triggeredBy: 'manual', runId: null,
+        }).catch(() => {});
         return { success: true, message: 'Anzeige wurde erfolgreich neu eingestellt' };
       } else {
         await adRef.update({ status: AdStatus.ACTIVE });
         throw new InternalServerErrorException(result.error || 'Repost fehlgeschlagen');
       }
     } catch (error: any) {
+      const errorCode = classifyRepostError(error.message);
+      this.logger.error(`[manual repost user=${userId} ad=${adId}] ✗ failed [${errorCode}]: ${error.message}`);
       // Revert status on worker failure
       await adRef.update({ status: AdStatus.ACTIVE }).catch(() => {});
+      // Record the failure for traceability (same shape as the scheduler logs).
+      await adRef.collection('repostLogs').add({
+        status: 'failed', errorCode, error: (error.message || 'unknown').slice(0, 500),
+        executedAt: new Date().toISOString(), durationMs: Date.now() - startTime,
+        triggeredBy: 'manual', runId: null,
+      }).catch(() => {});
       throw new InternalServerErrorException(error.message);
     }
   }

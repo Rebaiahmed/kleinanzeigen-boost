@@ -128,15 +128,39 @@ function injectRenewButton(listing: FbListing) {
 }
 
 function tick() {
-  findListings().forEach(injectRenewButton);
+  // Re-checked every tick so FB's SPA navigation (no full reload) is handled.
+  if (!isMarketplaceListingsPage()) return;
+  const listings = findListings();
+  if (listings.length) {
+    console.log(`[AnzeigenBoost][FB POC] Found ${listings.length} listing card(s) on ${location.pathname}`);
+  }
+  listings.forEach(injectRenewButton);
 }
 
 export function startFacebookMarketplace() {
   if (!FEATURES.FACEBOOK_MARKETPLACE_REPOST) return;
-  if (!isMarketplaceListingsPage()) return;
 
-  console.log('[AnzeigenBoost][FB POC] Facebook Marketplace repost POC active. ' +
-    'Selectors are best-guess — verify against live DOM.');
+  console.log(
+    `[AnzeigenBoost][FB POC] active. path="${location.pathname}" — ` +
+    `isListingsPage=${isMarketplaceListingsPage()}. ` +
+    `Navigate to facebook.com/marketplace/you/selling if no buttons appear. ` +
+    `item-links on page: ${document.querySelectorAll('a[href*="/marketplace/item/"]').length}`,
+  );
+
+  // FB is a SPA — log every path change so we can capture the real URL of the
+  // "your listings" page (and the item-link count there) for selector tuning.
+  let lastPath = location.pathname;
+  setInterval(() => {
+    if (location.pathname !== lastPath) {
+      lastPath = location.pathname;
+      console.log(
+        `[AnzeigenBoost][FB POC] navigated → path="${location.pathname}" — ` +
+        `isListingsPage=${isMarketplaceListingsPage()} ` +
+        `item-links=${document.querySelectorAll('a[href*="/marketplace/item/"]').length}`,
+      );
+    }
+  }, 1000);
+
   tick();
   let scheduled = false;
   const observer = new MutationObserver(() => {

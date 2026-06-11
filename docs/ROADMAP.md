@@ -38,6 +38,7 @@ Priority: **High** · **Medium** · **Low**
 | 3.1 | Add pagination for ads synchronization | **Done** | Medium | Client-side, 12/page (commit 047f917f) |
 | 3.2 | Better loading spinner during sync | Pending | Medium | Small corner spinner exists; this is a polish pass |
 | 3.3 | Apply official logo to frontend header, landing & favicon | Pending | Low | Use `anzeigenboost_logo_final.svg` (PNG export drops the wordmark — SVG renders correctly). Replace the `Zap` mark + text wordmark in TopBar & Landing; set favicon. Extension icon already done. |
+| 3.4 | „Nur aktive Anzeigen" filter / hide-deleted toggle | Pending | Low | Now that `listingState` is synced (active/reserved/paused/deleted), add a dashboard filter to show only active ads or hide „Gelöscht" listings. |
 
 ## Part 4 — Documentation & Monetization
 
@@ -47,6 +48,7 @@ Priority: **High** · **Medium** · **Low**
 | 4.2 | Document which AI models are used | **Done** | High | Documented in [docs/AI_AND_MONETIZATION.md](AI_AND_MONETIZATION.md) |
 | 4.3 | Document payment setup (Stripe/PayPal) | **In Progress** | High | Decision + integration plan documented (Stripe recommended); not yet implemented |
 | 4.4 | Define monetization strategy (pricing, upgrade prompts, limits) | **In Progress** | High | Proposed tiers/pricing/prompts documented; pricing not yet validated or wired to payment |
+| 4.5 | Generate Firestore schema reference (`docs/firestore-schema.md`) | Pending | Medium | Explore every Firestore read/write; document all collections/subcollections (`meta`, `sessions`, `users/{id}`, `users/{id}/ads/{adId}`, `aiUsage`, `handshakes`, `loginJobs`, repostLogs, notifications, schedulerMeta/runs). Per doc type: every field (name, type, required/optional, description) inferred from code. TS interface + plain-language table. Flag inconsistent/optional/mixed-type fields. Note: `ads` now has `listingState` (active/reserved/paused/deleted) + repost-lifecycle `status`. |
 
 ## Part 5 — Epic: POST-SMARTER (Posting Tips & AI Photo Feedback)
 

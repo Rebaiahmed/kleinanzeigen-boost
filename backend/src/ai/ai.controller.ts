@@ -54,6 +54,22 @@ export class AiController {
     );
   }
 
+  // 3 improved variants for the in-page "KI-Inhalt" button. Rate-limited.
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @UseGuards(JwtAuthGuard)
+  @Post('rewrite-variants')
+  async rewriteVariants(
+    @Req() req: any,
+    @Body() body: { title: string; description: string; category?: string }
+  ) {
+    return this.aiService.rewriteAdVariants(
+      req.user.userId,
+      body.title,
+      body.description,
+      body.category || 'Sonstiges'
+    );
+  }
+
   @UseGuards(JwtAuthGuard)
   @Post('price')
   async suggestPrice(

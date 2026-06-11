@@ -635,10 +635,10 @@ export function AdCard({
                 ? 'border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50'
                 : aiWarning
                 ? 'border-yellow-400 text-yellow-700 hover:bg-yellow-50'
-                : 'border-gray-300 text-gray-700 hover:border-green-600 hover:text-green-600 hover:bg-green-50'
+                : 'border-ka-green text-ka-green hover:bg-[#f3f7d6]'
             }`}
           >
-            <Sparkles className={`w-3.5 h-3.5 ${aiBlocked ? 'text-gray-300' : aiWarning ? 'text-yellow-500' : 'text-green-600'}`} />
+            <Sparkles className={`w-3.5 h-3.5 ${aiBlocked ? 'text-gray-300' : aiWarning ? 'text-yellow-500' : 'text-ka-green'}`} />
             <span>KI-Opt</span>
           </button>
 
@@ -717,9 +717,9 @@ export function AdCard({
                 setIsBottomSheetOpen(false);
                 onAIOptimize(ad.id);
               }}
-              className="flex items-center justify-center gap-2.5 w-full py-3 px-4 border border-green-600 text-green-700 rounded-lg hover:bg-green-50 font-semibold text-sm transition-colors"
+              className="flex items-center justify-center gap-2.5 w-full py-3 px-4 border border-ka-green text-ka-green rounded-lg hover:bg-[#f3f7d6] font-semibold text-sm transition-colors"
             >
-              <Sparkles className="w-4 h-4 text-green-600" />
+              <Sparkles className="w-4 h-4 text-ka-green" />
               <span>KI-Optimierung starten</span>
             </button>
 

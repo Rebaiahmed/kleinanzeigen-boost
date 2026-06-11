@@ -155,6 +155,90 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
     return true;
   }
 
+  // Fetch the user's reply templates (used by the KA in-page injector).
+  // Token stays in the background; content scripts never see it.
+  if (message.type === 'FETCH_REPLY_TEMPLATES') {
+    chrome.storage.session.get(['token'], async ({ token }: any) => {
+      if (!token) {
+        sendResponse({ success: false, error: 'NOT_CONNECTED' });
+        return;
+      }
+      try {
+        const res = await fetch(`${API_URL}/reply-templates`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          sendResponse({ success: false, error: res.status === 401 ? 'NOT_CONNECTED' : `HTTP ${res.status}` });
+          return;
+        }
+        const templates = await res.json();
+        sendResponse({ success: true, templates: Array.isArray(templates) ? templates : [] });
+      } catch (err: any) {
+        sendResponse({ success: false, error: err.message });
+      }
+    });
+    return true;
+  }
+
+  // Track that a template was used in a real chat (reuses copy-count endpoint).
+  if (message.type === 'TRACK_TEMPLATE_USE') {
+    chrome.storage.session.get(['token'], async ({ token }: any) => {
+      if (!token || !message.id) { sendResponse({ success: false }); return; }
+      try {
+        await fetch(`${API_URL}/reply-templates/${message.id}/copy`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        sendResponse({ success: true });
+      } catch {
+        sendResponse({ success: false });
+      }
+    });
+    return true;
+  }
+
+  // Repost an ad (server-side delete-and-relist) — from the Meine Anzeigen page.
+  if (message.type === 'REPOST_AD') {
+    chrome.storage.session.get(['token'], async ({ token }: any) => {
+      if (!token) { sendResponse({ success: false, error: 'NOT_CONNECTED' }); return; }
+      if (!message.adId) { sendResponse({ success: false, error: 'NO_AD_ID' }); return; }
+      try {
+        const res = await fetch(`${API_URL}/ads/repost/${encodeURIComponent(message.adId)}`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.status === 401) { sendResponse({ success: false, error: 'NOT_CONNECTED' }); return; }
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { sendResponse({ success: false, error: data.message || `HTTP ${res.status}` }); return; }
+        sendResponse({ success: true, data });
+      } catch (err: any) {
+        sendResponse({ success: false, error: err.message });
+      }
+    });
+    return true;
+  }
+
+  // Generate 3 AI title/description variants for an ad.
+  if (message.type === 'REWRITE_AD') {
+    chrome.storage.session.get(['token'], async ({ token }: any) => {
+      if (!token) { sendResponse({ error: 'NOT_CONNECTED' }); return; }
+      try {
+        const res = await fetch(`${API_URL}/ai/rewrite-variants`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ title: message.title, description: message.description }),
+        });
+        if (res.status === 401) { sendResponse({ error: 'NOT_CONNECTED' }); return; }
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { sendResponse({ error: data.message || `HTTP ${res.status}` }); return; }
+        sendResponse({ variants: data.variants || [] });
+      } catch (err: any) {
+        sendResponse({ error: err.message });
+      }
+    });
+    return true;
+  }
+
   // Logout
   if (message.type === 'LOGOUT') {
     chrome.storage.session.remove(['token'], () => sendResponse({ success: true }));

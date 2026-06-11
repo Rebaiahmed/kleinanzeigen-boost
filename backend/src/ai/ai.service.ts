@@ -545,6 +545,45 @@ export class AiService {
     return parsedJson;
   }
 
+  /**
+   * Generate 3 improved title/description variants for an existing ad.
+   * Used by the in-page "KI-Inhalt" button on Kleinanzeigen so the seller can
+   * pick a better-performing version. Returns { variants: [{title, description}] }.
+   */
+  async rewriteAdVariants(userId: string, title: string, description: string, category: string) {
+    this.assertAiConfigured();
+
+    const descSlice = (description || '').slice(0, 300);
+    const systemPrompt =
+      `You optimize German classified ads for kleinanzeigen.de. Given an ad, produce THREE distinct improved versions ` +
+      `that are clearer, more searchable, and more appealing to buyers. Keep the same product and language (German). ` +
+      `Each title under 60 characters; each description 80-220 characters, friendly private-seller tone, ending with "Bei Fragen gerne melden.". ` +
+      `Return ONLY valid JSON, no markdown, exactly: {"variants":[{"title":"...","description":"..."},{"title":"...","description":"..."},{"title":"...","description":"..."}]}`;
+    const userPrompt = `Title: ${title}\nDescription: ${descSlice}\nCategory: ${category}`;
+
+    const fallbackResult = await this.executeWithFallback(
+      [userPrompt],
+      systemPrompt,
+      { responseMimeType: 'application/json', maxOutputTokens: 900 },
+    );
+
+    let parsed: any;
+    try {
+      if (!isJsonComplete(fallbackResult.responseText)) {
+        throw new Error(`TRUNCATED at ${fallbackResult.responseText.length}`);
+      }
+      parsed = JSON.parse(cleanAndExtractJson(fallbackResult.responseText));
+    } catch (e: any) {
+      this.logger.error('[KI-Rewrite] parse failed:', e.message, '| raw:', fallbackResult.responseText.slice(0, 120));
+      throw new HttpException('Die KI-Antwort konnte nicht verarbeitet werden. Bitte erneut versuchen.', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    await this.logUsage(userId, fallbackResult.modelName, fallbackResult.promptTokenCount, fallbackResult.candidatesTokenCount, false);
+
+    const variants = Array.isArray(parsed?.variants) ? parsed.variants.slice(0, 3) : [];
+    return { variants };
+  }
+
   async suggestPrice(userId: string, title: string) {
     this.assertAiConfigured();
 

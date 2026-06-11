@@ -95,7 +95,10 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
     return true;
   }
 
-  // Check if user is logged into a platform via cookies
+  // Check if user is logged into a platform.
+  // For Kleinanzeigen we validate an ACTUAL authenticated session (a valid,
+  // non-expired access_token JWT) — not mere cookie presence, because KA keeps
+  // consent/analytics cookies after logout, which used to show a false "logged in".
   if (message.type === 'CHECK_PLATFORM_LOGIN') {
     const domains: Record<string, string> = {
       kleinanzeigen: 'kleinanzeigen.de',
@@ -104,41 +107,44 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
     };
     const domain = domains[message.platform] || '';
     chrome.cookies.getAll({ domain }, (cookies) => {
+      if (message.platform !== 'kleinanzeigen') {
+        // Other platforms keep the previous heuristic for now.
+        sendResponse({ isLoggedIn: cookies.length > 0, username: null });
+        return;
+      }
+
+      // Decode the access_token JWT and require a present, non-expired token.
+      const atCookie = cookies.find(c => c.name === 'access_token');
+      let isLoggedIn = false;
       let username: string | null = null;
-      if (message.platform === 'kleinanzeigen') {
-        // Try to decode the 'up' cookie (base64 JSON user profile)
-        // 1. Try zpstorage identity cookie (contains {"email":"..."})
+
+      if (atCookie?.value) {
+        try {
+          const parts = atCookie.value.split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+            const notExpired = !payload.exp || payload.exp * 1000 > Date.now();
+            isLoggedIn = notExpired;
+            if (notExpired) {
+              username = payload.username || payload.displayName || payload.name || payload.email || payload.sub || null;
+            }
+          }
+        } catch { /* malformed token → treat as logged out */ }
+      }
+
+      // Username enrichment from the identity cookie (only when actually logged in).
+      if (isLoggedIn && !username) {
         const identityCookie = cookies.find(c => c.name.includes('identity'));
         if (identityCookie) {
           try {
             const decoded = JSON.parse(atob(identityCookie.value));
             username = decoded.email || decoded.username || decoded.displayName || null;
-            console.log('[BG] identity cookie decoded:', decoded, '| username:', username);
-          } catch { /* not decodable */ }
-        }
-
-        // 2. Try Kleinanzeigen access_token JWT payload
-        if (!username) {
-          const atCookie = cookies.find(c => c.name === 'access_token');
-          if (atCookie) {
-            try {
-              const parts = atCookie.value.split('.');
-              if (parts.length === 3) {
-                const payload = JSON.parse(atob(parts[1]));
-                username = payload.username || payload.displayName || payload.name || payload.email || payload.sub || null;
-                console.log('[BG] access_token payload:', payload, '| username:', username);
-              }
-            } catch { /* not decodable */ }
-          }
-        }
-
-        // 3. Fallback: named username cookies
-        if (!username) {
-          const nameCookie = cookies.find(c => ['user.username', 'username', 'ka_username'].includes(c.name));
-          if (nameCookie) username = decodeURIComponent(nameCookie.value);
+          } catch { /* ignore */ }
         }
       }
-      sendResponse({ isLoggedIn: cookies.length > 0, username });
+
+      console.log('[BG] KA login check → isLoggedIn:', isLoggedIn, '| username:', username);
+      sendResponse({ isLoggedIn, username });
     });
     return true;
   }

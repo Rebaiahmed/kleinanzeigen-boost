@@ -5,8 +5,15 @@ import { ENDPOINTS } from '../config/endpoints';
 // endpoints.ts to prod URLs before publishing to the Web Store.
 const DASHBOARD = ENDPOINTS.DASHBOARD_BASE;
 
+const KA_LOGIN_URL = 'https://www.kleinanzeigen.de/m-einloggen.html';
+
 function openTab(path: string) {
   chrome.tabs.create({ url: `${DASHBOARD}${path}` });
+  window.close();
+}
+
+function openUrl(url: string) {
+  chrome.tabs.create({ url });
   window.close();
 }
 
@@ -43,56 +50,83 @@ function App() {
         </div>
       </div>
 
+      {/* Not-logged-in prompt — shown only once we've confirmed no session. */}
+      {isLoggedIn === false && (
+        <div style={{ padding: '12px 12px 0' }}>
+          <div style={{
+            background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8,
+            padding: '10px 12px', fontSize: 12, color: '#9a3412', lineHeight: 1.45,
+          }}>
+            Du bist nicht bei Kleinanzeigen angemeldet. Bitte melde dich zuerst an,
+            um deine Anzeigen zu verwalten.
+            <button
+              onClick={() => openUrl(KA_LOGIN_URL)}
+              style={{
+                display: 'block', width: '100%', marginTop: 8, padding: '8px',
+                background: '#A8C300', color: '#fff', border: 'none', borderRadius: 6,
+                fontSize: 12, fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              Bei Kleinanzeigen anmelden
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Quick actions */}
       <div style={{ padding: '12px 12px 8px' }}>
         <p style={{ fontSize: 11, color: '#999', margin: '0 0 8px 2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           Schnellzugriff
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <QuickButton icon="📄" label="Meine Anzeigen"    onClick={() => openTab('/meine-anzeigen')} />
-          <QuickButton icon="📋" label="Antwort-Vorlagen"  onClick={() => openTab('/vorlagen')} />
-          <QuickButton icon="🤖" label="Mit KI erstellen"  onClick={() => openTab('/neue-anzeige-mit-ki-erstellen')} />
+          <QuickButton icon="📄" label="Meine Anzeigen"    disabled={!isLoggedIn} onClick={() => openTab('/meine-anzeigen')} />
+          <QuickButton icon="📋" label="Antwort-Vorlagen"  disabled={!isLoggedIn} onClick={() => openTab('/vorlagen')} />
+          <QuickButton icon="🤖" label="Mit KI erstellen"  disabled={!isLoggedIn} onClick={() => openTab('/neue-anzeige-mit-ki-erstellen')} />
         </div>
       </div>
 
       <div style={{ height: 1, background: '#f0f0f0', margin: '4px 12px' }} />
 
-      {/* Session transfer */}
+      {/* Session transfer — only meaningful once logged in */}
       <div style={{ padding: '8px 12px 12px' }}>
-        <SessionButton />
+        <SessionButton disabled={!isLoggedIn} />
       </div>
     </div>
   );
 }
 
-function QuickButton({ icon, label, onClick }: { icon: string; label: string; onClick: () => void }) {
+function QuickButton({ icon, label, onClick, disabled = false }: { icon: string; label: string; onClick: () => void; disabled?: boolean }) {
   const [hovered, setHovered] = useState(false);
   return (
     <button
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      title={disabled ? 'Bitte zuerst bei Kleinanzeigen anmelden' : undefined}
       style={{
         display: 'flex', alignItems: 'center', gap: 10,
         width: '100%', padding: '9px 12px',
-        background: hovered ? '#f0f0f0' : '#f8f8f8',
+        background: disabled ? '#f5f5f5' : hovered ? '#f0f0f0' : '#f8f8f8',
         border: '1px solid #e8e8e8', borderRadius: 6,
-        cursor: 'pointer', fontSize: 13, fontWeight: 500,
-        color: '#333', textAlign: 'left',
+        cursor: disabled ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 500,
+        color: disabled ? '#bbb' : '#333', textAlign: 'left',
+        opacity: disabled ? 0.7 : 1,
       }}
     >
       <span style={{ fontSize: 16 }}>{icon}</span>
       {label}
-      <span style={{ marginLeft: 'auto', color: '#bbb', fontSize: 12 }}>→</span>
+      <span style={{ marginLeft: 'auto', color: '#bbb', fontSize: 12 }}>{disabled ? '🔒' : '→'}</span>
     </button>
   );
 }
 
-function SessionButton() {
+function SessionButton({ disabled = false }: { disabled?: boolean }) {
   const [state, setState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [error, setError] = useState('');
 
   const transfer = () => {
+    if (disabled) return;
     setState('loading');
     setError('');
     chrome.runtime.sendMessage({ type: 'INIT_HANDSHAKE' }, (response) => {
@@ -105,6 +139,7 @@ function SessionButton() {
     });
   };
 
+  const isDisabled = disabled || state === 'loading';
   return (
     <>
       {error && (
@@ -112,13 +147,14 @@ function SessionButton() {
       )}
       <button
         onClick={transfer}
-        disabled={state === 'loading'}
+        disabled={isDisabled}
+        title={disabled ? 'Bitte zuerst bei Kleinanzeigen anmelden' : undefined}
         style={{
           width: '100%', padding: '8px',
           background: '#fff', border: '1px solid #ddd',
           borderRadius: 6, fontSize: 12, color: '#666',
-          cursor: state === 'loading' ? 'default' : 'pointer',
-          opacity: state === 'loading' ? 0.6 : 1,
+          cursor: isDisabled ? 'not-allowed' : 'pointer',
+          opacity: isDisabled ? 0.6 : 1,
         }}
       >
         {state === 'loading' ? 'Übertrage…' : '🔗 Sitzung übertragen'}

@@ -5,12 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AnzeigenBoost</title>
   <style>
+    /* Size the popup to its content (top-anchored), no dead space. Width matches
+       the App root (280px); height is auto so each state fits its own content. */
     html, body, #root {
-      width: 320px;
-      min-height: 200px;
+      width: 280px;
       margin: 0;
       padding: 0;
+      height: auto;
     }
+    body { overflow: hidden; }
   </style>
 </head>
 <body>

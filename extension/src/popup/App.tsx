@@ -30,18 +30,30 @@ function App() {
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // KA login state (validated against a non-expired access_token in the bg).
-    chrome.runtime.sendMessage(
-      { type: 'CHECK_PLATFORM_LOGIN', platform: 'kleinanzeigen' },
-      (resp) => setIsLoggedIn(chrome.runtime.lastError ? false : !!resp?.isLoggedIn),
-    );
-    // Boost connection state = does the background hold a session token?
-    // The popup is a trusted context, so it can read session storage directly.
-    try {
-      chrome.storage.session.get(['token'], ({ token }) => setIsConnected(!!token));
-    } catch {
-      setIsConnected(false);
-    }
+    const refresh = () => {
+      // KA login state (validated against a non-expired access_token in the bg).
+      chrome.runtime.sendMessage(
+        { type: 'CHECK_PLATFORM_LOGIN', platform: 'kleinanzeigen' },
+        (resp) => setIsLoggedIn(chrome.runtime.lastError ? false : !!resp?.isLoggedIn),
+      );
+      // Boost connection = does the background hold a session token? The popup is
+      // a trusted context, so it can read session storage directly.
+      try {
+        chrome.storage.session.get(['token'], ({ token }) => setIsConnected(!!token));
+      } catch {
+        setIsConnected(false);
+      }
+    };
+
+    refresh();
+    // Re-evaluate when the popup regains focus (e.g. user logged in on the KA tab
+    // and came back) so the stepper advances from step 1 → step 2 live.
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
   }, []);
 
   const state: PopupState =
@@ -92,6 +104,7 @@ function LoggedOut() {
 
       <DividerLabel text="Nach dem Login verfügbar" />
       <LockedList />
+      <TrustFooter />
     </div>
   );
 }
@@ -127,6 +140,7 @@ function NotConnected() {
 
       <DividerLabel text="Nach dem Verbinden verfügbar" />
       <LockedList />
+      <TrustFooter />
     </div>
   );
 }
@@ -209,6 +223,17 @@ function DividerLabel({ text }: { text: string }) {
   );
 }
 
+/** Identical lock glyph for every locked row (SVG, not emoji — renders the same
+ *  size/weight on every platform). */
+function LockIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <rect x="5" y="11" width="14" height="9" rx="2" fill="#c4c4c4" />
+      <path d="M8 11V8a4 4 0 1 1 8 0v3" stroke="#c4c4c4" strokeWidth="2" fill="none" />
+    </svg>
+  );
+}
+
 /** Non-interactive, de-emphasised list shown while locked. */
 function LockedList() {
   const items = [
@@ -228,12 +253,22 @@ function LockedList() {
             fontSize: 12, color: '#bbb', opacity: 0.6, userSelect: 'none', cursor: 'default',
           }}
         >
-          <span style={{ fontSize: 13, filter: 'grayscale(1)' }}>{it.icon}</span>
+          <span style={{ fontSize: 13, filter: 'grayscale(1)', width: 16, textAlign: 'center' }}>{it.icon}</span>
           {it.label}
-          <span style={{ marginLeft: 'auto', fontSize: 11 }}>🔒</span>
+          <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}><LockIcon /></span>
         </div>
       ))}
     </div>
+  );
+}
+
+/** Small reassurance line — fills reclaimed space and builds trust. */
+function TrustFooter() {
+  return (
+    <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10.5, color: '#999', margin: '12px 2px 0', lineHeight: 1.4 }}>
+      <span style={{ display: 'flex' }}><LockIcon /></span>
+      Deine Login-Daten bleiben sicher. Wir speichern kein Passwort.
+    </p>
   );
 }
 

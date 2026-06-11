@@ -55,6 +55,7 @@ export class AdsService {
     // Read existing ads first so we can (a) preserve in-flight repost status and
     // (b) reconcile listings that disappeared from KA (deleted/expired).
     const existingSnap = await adsCol.get();
+    const existingIds = new Set(existingSnap.docs.map(d => d.id));
     const incomingIds = new Set<string>();
 
     // One-time visibility into KA's state fields so the mapping can be verified
@@ -84,7 +85,10 @@ export class AdsService {
         const listingState = this.mapListingState(ad);
         // Re-checked on every sync: a lifted reservation flips listingState back
         // to 'active', clearing the badge and re-enabling auto-repost.
-        const normalized = { ...ad, image, views, messages, listingState, syncedAt: new Date().toISOString() };
+        const normalized: any = { ...ad, image, views, messages, listingState, syncedAt: new Date().toISOString() };
+        // firstSyncedAt is set ONCE, on first import (merge preserves it after),
+        // so newly-appeared ads can be sorted to the top ("Neueste zuerst").
+        if (!existingIds.has(docId)) normalized.firstSyncedAt = new Date().toISOString();
         batch.set(adsCol.doc(docId), normalized, { merge: true });
       }
       await batch.commit();

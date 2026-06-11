@@ -28,7 +28,7 @@ export function Ads() {
   const navigate = useNavigate();
   const { ads, invalidateAds, isLoading, isFetching, isError, error } = useAds();
   const [syncError, setSyncError] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<'views-desc' | 'views-asc'>('views-desc');
+  const [sortBy, setSortBy] = useState<'newest' | 'views-desc' | 'views-asc'>('newest');
   const [currentPage, setCurrentPage] = useState(1);
   const ADS_PER_PAGE = 12;
   const [isBackgroundSyncing, setIsBackgroundSyncing] = useState(false);
@@ -122,6 +122,15 @@ export function Ads() {
   const showBanner = EBAY_ENABLED && !isBannerDismissed && !isEbayConnected && !isLoading;
 
   const sortedAds = [...ads].sort((a, b) => {
+    if (sortBy === 'newest') {
+      // Newest-first by when the ad FIRST appeared in a sync. syncedAt is bumped
+      // every sync, so it's not used here — ads without firstSyncedAt (legacy)
+      // rank oldest, so genuinely new ads float to the top. id breaks ties.
+      const ta = Date.parse(a.firstSyncedAt || '') || 0;
+      const tb = Date.parse(b.firstSyncedAt || '') || 0;
+      if (tb !== ta) return tb - ta;
+      return String(b.id).localeCompare(String(a.id));
+    }
     const viewsA = typeof a.views === 'number' ? a.views : parseInt(a.views) || 0;
     const viewsB = typeof b.views === 'number' ? b.views : parseInt(b.views) || 0;
     return sortBy === 'views-desc' ? viewsB - viewsA : viewsA - viewsB;
@@ -170,6 +179,7 @@ export function Ads() {
           <div className="flex items-center gap-1.5 border border-[#ccc] bg-white rounded-sm px-2.5 py-1.5 text-[13px] text-[#333] shadow-sm">
             <span className="text-[#666] font-medium hidden sm:inline">Sortieren nach:</span>
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="bg-transparent focus:outline-none font-semibold text-[#333] cursor-pointer">
+              <option value="newest">Neueste zuerst</option>
               <option value="views-desc">Meiste Aufrufe</option>
               <option value="views-asc">Wenigste Aufrufe</option>
             </select>

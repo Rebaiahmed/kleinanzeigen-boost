@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { SupportMe } from '../components/SupportMe';
 import { Heart, CheckCircle2, AlertCircle, RefreshCw, LogOut, Check } from 'lucide-react';
 import { Toast } from '../components/Toast';
+import { useBilling } from '../hooks/useBilling';
 
 const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -40,6 +41,7 @@ const EbayLogo = () => (
 
 export function Settings() {
   const navigate = useNavigate();
+  const billing = useBilling();
   const [ebayConnected, setEbayConnected] = useState(false);
   const [ebayUsername, setEbayUsername] = useState('');
   const [isLoadingEbay, setIsLoadingEbay] = useState(false);
@@ -213,6 +215,62 @@ export function Settings() {
       </section>
 
       {/* AI Usage Section */}
+      {/* Plan & Abo — only shown when Stripe billing is enabled on the backend */}
+      {billing.enabled && (() => {
+        const plan = (aiUsage?.plan || 'free').toLowerCase();
+        const isPaid = plan === 'starter' || plan === 'pro';
+        return (
+          <section className="bg-white p-6 rounded-lg shadow-sm border border-ka-gray-200">
+            <h2 className="text-xl font-semibold mb-1 text-ka-gray-900">Dein Plan</h2>
+            <p className="text-sm text-gray-500 mb-5">
+              Aktueller Plan: <span className="font-semibold text-gray-800 capitalize">{plan}</span>
+            </p>
+
+            {billing.error && (
+              <p className="text-sm text-red-600 mb-4">{billing.error}</p>
+            )}
+
+            {isPaid ? (
+              <button
+                onClick={billing.openPortal}
+                disabled={billing.busy}
+                className="px-5 py-2 bg-gray-800 hover:bg-gray-900 disabled:opacity-50 text-white font-bold text-[13px] rounded-sm transition-colors"
+              >
+                {billing.busy ? 'Öffne…' : 'Abo verwalten'}
+              </button>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="border border-gray-200 rounded-lg p-5 flex flex-col">
+                  <h3 className="text-lg font-bold text-gray-800">Starter</h3>
+                  <p className="text-sm text-gray-500 mt-1 mb-3">500 KI-Analysen/Monat · unbegrenzte Vorlagen · eBay-Cross-Posting</p>
+                  <p className="text-2xl font-bold text-gray-900 mb-4">€4,99<span className="text-sm font-normal text-gray-500">/Monat</span></p>
+                  <button
+                    onClick={() => billing.startCheckout('starter')}
+                    disabled={billing.busy}
+                    className="mt-auto px-5 py-2 border border-ka-green text-ka-green hover:bg-[#f3f7d6] disabled:opacity-50 font-bold text-[13px] rounded-sm transition-colors"
+                  >
+                    {billing.busy ? 'Öffne…' : 'Starter wählen'}
+                  </button>
+                </div>
+                <div className="border-2 border-ka-green rounded-lg p-5 flex flex-col relative">
+                  <span className="absolute top-3 right-3 text-[10px] font-bold bg-ka-green text-white px-2 py-0.5 rounded-full">Beliebt</span>
+                  <h3 className="text-lg font-bold text-gray-800">Pro</h3>
+                  <p className="text-sm text-gray-500 mt-1 mb-3">Unbegrenzte KI-Analysen · unbegrenztes Auto-Repost · Priorität-Support</p>
+                  <p className="text-2xl font-bold text-gray-900 mb-4">€9,99<span className="text-sm font-normal text-gray-500">/Monat</span></p>
+                  <button
+                    onClick={() => billing.startCheckout('pro')}
+                    disabled={billing.busy}
+                    className="mt-auto px-5 py-2 bg-ka-green hover:bg-[#96ae00] disabled:opacity-50 text-white font-bold text-[13px] rounded-sm transition-colors"
+                  >
+                    {billing.busy ? 'Öffne…' : 'Pro wählen'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+        );
+      })()}
+
       <section className="bg-white p-6 rounded-lg shadow-sm border border-ka-gray-200">
         <h2 className="text-xl font-semibold mb-6 text-ka-gray-900">AI Optimizations</h2>
         
@@ -262,10 +320,15 @@ export function Settings() {
                   </div>
 
                   <button
-                    onClick={() => showToast('Plan-Upgrade wird geladen...', 'success')}
-                    className="px-5 py-2 bg-[#A8C300] hover:bg-[#96ae00] text-white font-bold text-[13px] rounded-sm transition-colors shadow-sm cursor-pointer whitespace-nowrap self-start sm:self-center"
+                    onClick={() =>
+                      billing.enabled
+                        ? billing.startCheckout('pro')
+                        : showToast('Upgrades sind bald verfügbar.', 'success')
+                    }
+                    disabled={billing.busy}
+                    className="px-5 py-2 bg-[#A8C300] hover:bg-[#96ae00] disabled:opacity-50 text-white font-bold text-[13px] rounded-sm transition-colors shadow-sm cursor-pointer whitespace-nowrap self-start sm:self-center"
                   >
-                    Upgrade Plan
+                    {billing.busy ? 'Öffne…' : 'Upgrade Plan'}
                   </button>
                 </div>
               </div>

@@ -53,7 +53,9 @@ function validateEnv() {
 
 async function bootstrap() {
   validateEnv();
-  const app = await NestFactory.create(AppModule);
+  // rawBody: true preserves the unparsed request body (req.rawBody) needed for
+  // Stripe webhook signature verification, while still parsing JSON for everything else.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   // Security
   app.use(helmet());

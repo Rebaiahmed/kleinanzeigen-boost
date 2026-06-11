@@ -30,6 +30,8 @@ Priority: **High** · **Medium** · **Low**
 | 2.1 | Publish extension to Chrome Web Store | Pending | High | Update `ENDPOINTS.*` to prod URLs first; store listing copy drafted |
 | 2.2 | Generate logo (icon + branding) | Pending | High | — |
 | 2.3 | Prepare Kleinanzeigen profile (testing/demo) | Pending | Medium | — |
+| 2.4 | In-page actions on Kleinanzeigen (content scripts) | **In Review** | Medium | PR #25: reply-template injection on Nachrichten + per-ad buttons (Neu stellen / KI-Inhalt / Dashboard) on Meine Anzeigen. Behind `FEATURES.*` flags. New backend `POST /api/ai/rewrite-variants`. |
+| 2.5 | Facebook Marketplace repost (POC) | **POC / In Review** | Low | PR #26: flag-gated (`FACEBOOK_MARKETPLACE_REPOST`, OFF). Tier 1 = automate FB's native renew; delete-and-relist deliberately not built. See [docs/POC-facebook-marketplace-repost.md](POC-facebook-marketplace-repost.md). Needs live-DOM selector validation. |
 
 ## Part 3 — Frontend & UX
 
@@ -44,8 +46,8 @@ Priority: **High** · **Medium** · **Low**
 |-----|------|--------|----------|-------|
 | 4.1 | Document AI credits/limits per plan (free/starter/pro) | **Done** | High | Documented in [docs/AI_AND_MONETIZATION.md](AI_AND_MONETIZATION.md) |
 | 4.2 | Document which AI models are used | **Done** | High | Documented in [docs/AI_AND_MONETIZATION.md](AI_AND_MONETIZATION.md) |
-| 4.3 | Document payment setup (Stripe/PayPal) | **In Progress** | High | Decision + integration plan documented (Stripe recommended); not yet implemented |
-| 4.4 | Define monetization strategy (pricing, upgrade prompts, limits) | **In Progress** | High | Proposed tiers/pricing/prompts documented; pricing not yet validated or wired to payment |
+| 4.3 | Document payment setup (Stripe/PayPal) | **Done (flag-gated)** | High | Stripe billing implemented behind `BILLING_ENABLED` (PR #27): checkout/portal/webhook → `users/{id}.tier`. Dormant until Stripe keys + price IDs set. Pending: Stripe config + HTTPS domain (1.2) to register webhook + test. |
+| 4.4 | Define monetization strategy (pricing, upgrade prompts, limits) | **In Progress** | High | Tiers/prompts wired (Settings "Dein Plan", flag-gated, PR #27). AI + template limits enforce via `tier`. Pending: validate €4.99/€9.99 pricing; enforce per-plan `maxAutoRepostAds` cap (scheduler change, not yet built). |
 
 ## Part 5 — Epic: POST-SMARTER (Posting Tips & AI Photo Feedback)
 

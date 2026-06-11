@@ -31,13 +31,44 @@ export class AdsService {
     return { success: true, lastRunAt: doc.data()?.lastRunAt || null };
   }
 
+  /**
+   * Map a Kleinanzeigen ad's reported state to our listingState. Defensive —
+   * KA's JSON field naming varies, so we check several shapes. listingState is
+   * SEPARATE from `status` (which tracks our repost lifecycle), so reserved/
+   * paused listings are recognisable without disturbing scheduler state.
+   */
+  private mapListingState(ad: any): 'active' | 'reserved' | 'paused' {
+    const raw = String(ad.status ?? ad.adStatus ?? ad.state ?? ad.listingState ?? '').toLowerCase();
+    const flags = Array.isArray(ad.flags) ? ad.flags.map((f: any) => String(f).toLowerCase()) : [];
+    const has = (re: RegExp) => re.test(raw) || flags.some((f: string) => re.test(f));
+
+    if (ad.reserved === true || ad.isReserved === true || has(/reserv/)) return 'reserved';
+    if (ad.paused === true || ad.deactivated === true || has(/paus|inactive|deactiv|offline/)) return 'paused';
+    return 'active';
+  }
+
   async importAds(userId: string, ads: any[]) {
     this.logger.log(`importAds called for user ${userId} — ${ads.length} ads`);
     const db = this.firebaseService.firestore;
+    const adsCol = db.collection('users').doc(userId).collection('ads');
+
+    // Read existing ads first so we can (a) preserve in-flight repost status and
+    // (b) reconcile listings that disappeared from KA (deleted/expired).
+    const existingSnap = await adsCol.get();
+    const incomingIds = new Set<string>();
+
+    // One-time visibility into KA's state fields so the mapping can be verified
+    // against real payloads (KA's JSON naming isn't documented).
+    if (ads.length > 0) {
+      const s = ads[0];
+      this.logger.log(`importAds state sample → status=${s.status} adStatus=${s.adStatus} state=${s.state} reserved=${s.reserved} flags=${JSON.stringify(s.flags)} → mapped=${this.mapListingState(s)}`);
+    }
+
     if (ads.length > 0) {
       const batch = db.batch();
       for (const ad of ads) {
         const docId = String(ad.id || ad.adId);
+        incomingIds.add(docId);
         // Normalize fields from Kleinanzeigen API to frontend-expected names
         // adImage can be: a string URL, an object {src}, or a relative path
         const rawImage = ad.adImage || ad.image || ad.thumbnailUrl || ad.pictureUrls?.[0];
@@ -50,13 +81,31 @@ export class AdsService {
         }
         const views = ad.viewCount ?? ad.views ?? 0;
         const messages = ad.replies ?? ad.messages ?? 0;
-        const normalized = { ...ad, image, views, messages, syncedAt: new Date().toISOString() };
-        const adRef = db.collection('users').doc(userId).collection('ads').doc(docId);
-        batch.set(adRef, normalized, { merge: true });
+        const listingState = this.mapListingState(ad);
+        // Re-checked on every sync: a lifted reservation flips listingState back
+        // to 'active', clearing the badge and re-enabling auto-repost.
+        const normalized = { ...ad, image, views, messages, listingState, syncedAt: new Date().toISOString() };
+        batch.set(adsCol.doc(docId), normalized, { merge: true });
       }
       await batch.commit();
     }
-    const snap = await db.collection('users').doc(userId).collection('ads').get();
+
+    // Reconcile: KA-synced ads that are no longer returned were deleted/expired
+    // on Kleinanzeigen. Flag them (don't delete) so the dashboard can surface or
+    // filter them. Skip in-app drafts (never came from KA).
+    const gone = existingSnap.docs.filter(d => {
+      const data: any = d.data();
+      const isDraft = String(d.id).startsWith('draft_') || data.status === 'pending';
+      return data.syncedAt && !isDraft && !incomingIds.has(d.id) && data.listingState !== 'deleted';
+    });
+    if (gone.length > 0) {
+      const delBatch = db.batch();
+      gone.forEach(d => delBatch.update(d.ref, { listingState: 'deleted', deletedDetectedAt: new Date().toISOString() }));
+      await delBatch.commit();
+      this.logger.log(`importAds: flagged ${gone.length} ad(s) as deleted/expired (gone from KA)`);
+    }
+
+    const snap = await adsCol.get();
     const allAds = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     return { success: true, ads: allAds };
   }

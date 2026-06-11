@@ -142,7 +142,16 @@ export function AdCard({
   const [isLoadingAiSuggestion, setIsLoadingAiSuggestion] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
 
+  // Auto-repost is gated when the listing isn't active on Kleinanzeigen.
+  // State is refreshed on every sync, so this clears when a reservation is lifted.
+  const repostLocked = ad.listingState === 'reserved' || ad.listingState === 'paused' || ad.listingState === 'deleted';
+  const repostLockedLabel =
+    ad.listingState === 'reserved' ? 'reserviert'
+    : ad.listingState === 'paused' ? 'pausiert'
+    : 'gelöscht';
+
   const handleCheckboxChange = () => {
+    if (repostLocked) return; // can't enable auto-repost on a reserved/paused/deleted ad
     if (autoRepostChecked) {
       // Show confirmation modal before deactivating
       setShowDeactivateModal(true);
@@ -364,22 +373,43 @@ export function AdCard({
                 <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" /> Entwurf
               </span>
             )}
+            {/* Live state synced from Kleinanzeigen */}
+            {ad.listingState === 'reserved' && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full border border-orange-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-500" /> Reserviert
+              </span>
+            )}
+            {ad.listingState === 'paused' && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-gray-50 text-gray-600 px-2 py-0.5 rounded-full border border-gray-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> Pausiert
+              </span>
+            )}
+            {ad.listingState === 'deleted' && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-red-50 text-red-600 px-2 py-0.5 rounded-full border border-red-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Gelöscht
+              </span>
+            )}
           </div>
         </div>
 
         {/* Middle: Auto-Repost Switcher with Popover and AI Timing recommendation */}
         <div className="relative mb-4">
           <div className="flex items-start justify-between">
-            <label className="flex items-start gap-2 cursor-pointer group">
+            <label className={`flex items-start gap-2 group ${repostLocked ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
               <input
                 type="checkbox"
-                className="mt-0.5 h-3.5 w-3.5 text-ka-green border-[#ccc] rounded-sm focus:ring-ka-green cursor-pointer"
-                checked={autoRepostChecked}
+                className={`mt-0.5 h-3.5 w-3.5 text-ka-green border-[#ccc] rounded-sm focus:ring-ka-green ${repostLocked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                checked={autoRepostChecked && !repostLocked}
+                disabled={repostLocked}
                 onChange={handleCheckboxChange}
               />
               <div className="text-[13px]">
-                <span className="block font-semibold text-[#333] group-hover:text-ka-green transition-colors">Auto-Repost</span>
-                {!autoRepostChecked && ad.repostDisabledReason ? (
+                <span className={`block font-semibold transition-colors ${repostLocked ? 'text-gray-400' : 'text-[#333] group-hover:text-ka-green'}`}>Auto-Repost</span>
+                {repostLocked ? (
+                  <span className="text-[12px] block text-orange-600 font-medium">
+                    ⏸ Pausiert — Anzeige ist {repostLockedLabel}
+                  </span>
+                ) : !autoRepostChecked && ad.repostDisabledReason ? (
                   <span
                     title={ad.repostDisabledReason}
                     className="text-[12px] block text-red-600 font-medium"

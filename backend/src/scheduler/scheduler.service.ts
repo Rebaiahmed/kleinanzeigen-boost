@@ -291,8 +291,11 @@ export class SchedulerService {
         const ref = db.collection('users').doc(userId).collection('ads').doc(adId);
         const snap = await t.get(ref);
         if (!snap.exists) return false; // deleted since the query
-        const cur = snap.data() as AdData;
+        const cur = snap.data() as any;
         if (cur.status !== AdStatus.ACTIVE || cur.autoRepost !== true) return false; // no longer eligible
+        // Don't repost listings that KA marks reserved/paused/deleted — reposting
+        // a reserved ad would be wrong. State is refreshed on every sync.
+        if (cur.listingState && cur.listingState !== 'active') return false;
         t.update(ref, { status: AdStatus.PENDING_REPOST, pendingRepostSince: new Date().toISOString() });
         return true;
       });

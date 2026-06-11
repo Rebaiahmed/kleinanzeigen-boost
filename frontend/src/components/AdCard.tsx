@@ -308,16 +308,28 @@ export function AdCard({
 
       {/* Left side: Image & Metadata */}
       <div className="flex flex-col sm:flex-row flex-1 p-3 gap-3 border-b md:border-b-0 border-[#e5e5e5]">
-        <div className="shrink-0 w-full sm:w-[130px] h-[100px] bg-[#f5f5f5] flex items-center justify-center overflow-hidden">
+        <div className="relative shrink-0 w-full sm:w-[130px] h-[100px] bg-[#f5f5f5] flex items-center justify-center overflow-hidden">
           {(ad.image || ad.thumbnailUrl || ad.pictureUrl) ? (
             <img
               src={ad.image || ad.thumbnailUrl || ad.pictureUrl}
               alt={ad.title}
-              className="w-full h-full object-cover mix-blend-multiply"
+              // Dim + desaturate when the listing isn't active (reserved/paused/
+              // deleted) — mirrors how Kleinanzeigen greys out such listings.
+              className={`w-full h-full object-cover mix-blend-multiply transition-all ${repostLocked ? 'grayscale opacity-50' : ''}`}
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
           ) : (
             <span className="text-[#bbb] text-[11px]">Kein Bild</span>
+          )}
+          {ad.listingState === 'reserved' && (
+            <span className="absolute bottom-1 left-1 text-[9px] font-bold uppercase tracking-wide text-white bg-orange-500/90 px-1.5 py-0.5 rounded-sm">
+              Reserviert
+            </span>
+          )}
+          {ad.listingState === 'deleted' && (
+            <span className="absolute bottom-1 left-1 text-[9px] font-bold uppercase tracking-wide text-white bg-red-500/90 px-1.5 py-0.5 rounded-sm">
+              Gelöscht
+            </span>
           )}
         </div>
 

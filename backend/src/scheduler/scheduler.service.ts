@@ -198,9 +198,15 @@ export class SchedulerService {
       // Fetch only the user docs that actually have due ads, and skip expired sessions.
       const userIds = [...adsByUser.keys()];
       const activeUserIds: string[] = [];
+      const nowMs = Date.now();
       for (const uid of userIds) {
-        const userDoc = await db.collection('users').doc(uid).get();
-        if (userDoc.data()?.accountStatus === 'expired') continue;
+        const userData = (await db.collection('users').doc(uid).get()).data();
+        if (userData?.accountStatus === 'expired') continue;
+        // Global IP-block cooldown: skip the user entirely until the window passes.
+        if (userData?.repostPausedUntil && new Date(userData.repostPausedUntil).getTime() > nowMs) {
+          this.logger.warn(`${logCtx(uid, undefined, runId)} Skipped — reposts paused until ${userData.repostPausedUntil} (IP cooldown)`);
+          continue;
+        }
         activeUserIds.push(uid);
       }
       stats.skippedUsers = userIds.length - activeUserIds.length;
@@ -355,6 +361,23 @@ export class SchedulerService {
           triggeredBy,
           runId: runId || null,
         }).catch((e: any) => this.logger.warn(`${logCtx(userId, adId, runId)} Failed to write failure log: ${e.message}`));
+
+        // IP_BLOCKED: stop hammering — pause ALL of this user's reposts for a
+        // cooldown window and bail out of their batch immediately.
+        if (errorCode === 'IP_BLOCKED') {
+          const cooldownMs = SCHEDULER_CONFIG.ipBlockCooldownHours * 60 * 60 * 1000;
+          const pausedUntil = new Date(Date.now() + cooldownMs).toISOString();
+          await adRef.update({ status: AdStatus.ACTIVE, pendingRepostSince: null }).catch(() => {});
+          await db.collection('users').doc(userId).set({ repostPausedUntil: pausedUntil }, { merge: true }).catch(() => {});
+          await db.collection('users').doc(userId).collection('notifications').add({
+            type: 'reposts_paused',
+            message: `Reposts pausiert: Kleinanzeigen hat ungewöhnliche Aktivität erkannt. Wir versuchen es automatisch in ${SCHEDULER_CONFIG.ipBlockCooldownHours} Stunden erneut.`,
+            read: false,
+            createdAt: new Date().toISOString(),
+          }).catch(() => {});
+          this.logger.warn(`${logCtx(userId, adId, runId)} IP_BLOCKED — pausing all reposts for ${SCHEDULER_CONFIG.ipBlockCooldownHours}h (until ${pausedUntil})`);
+          break; // shared IP/session — don't touch this user's other ads
+        }
 
         if (error.message === 'SESSION_EXPIRED') {
           // Confirm before halting — a single SESSION_EXPIRED can be a false positive.

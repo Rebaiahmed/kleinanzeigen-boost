@@ -17,4 +17,11 @@ export const SCHEDULER_CONFIG = {
 
   /** Delay between sequential scrape-views calls in view tracking, to avoid rate limits. */
   scrapeDelayMs: Number(process.env.SCRAPE_VIEWS_DELAY_MS) || 300,
+
+  /**
+   * When a repost hits IP_BLOCKED, pause ALL of that user's reposts for this
+   * many hours (global cooldown) instead of hammering their remaining ads and
+   * worsening the block. Reposts resume automatically after the window.
+   */
+  ipBlockCooldownHours: Number(process.env.IP_BLOCK_COOLDOWN_HOURS) || 6,
 };

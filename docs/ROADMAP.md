@@ -37,6 +37,7 @@ Priority: **High** · **Medium** · **Low**
 |-----|------|--------|----------|-------|
 | 3.1 | Add pagination for ads synchronization | **Done** | Medium | Client-side, 12/page (commit 047f917f) |
 | 3.2 | Better loading spinner during sync | Pending | Medium | Small corner spinner exists; this is a polish pass |
+| 3.3 | Apply official logo to frontend header, landing & favicon | Pending | Low | Use `anzeigenboost_logo_final.svg` (PNG export drops the wordmark — SVG renders correctly). Replace the `Zap` mark + text wordmark in TopBar & Landing; set favicon. Extension icon already done. |
 
 ## Part 4 — Documentation & Monetization
 

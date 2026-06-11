@@ -628,7 +628,7 @@ export function AdCard({
           {/* KI-Optimierung */}
           <button
             onClick={() => onAIOptimize(ad.id)}
-            title={aiBlocked ? 'Tageslimit erreicht' : aiWarning ? 'Fast am Limit' : 'KI-Optimierung'}
+            title={aiBlocked ? 'Monatslimit erreicht' : aiWarning ? 'Fast am Limit' : 'KI-Optimierung'}
             disabled={aiBlocked}
             className={`flex-1 border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors ${
               aiBlocked

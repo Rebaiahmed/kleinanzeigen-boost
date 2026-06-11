@@ -34,7 +34,7 @@ export function PriceSuggestion({ adId, adTitle, currentPrice, onCheck, aiBlocke
       <button
         onClick={handleClick}
         disabled={loading || aiBlocked}
-        title={aiBlocked ? 'Tageslimit erreicht' : 'KI-Preisvorschlag'}
+        title={aiBlocked ? 'Monatslimit erreicht' : 'KI-Preisvorschlag'}
         className={`w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-sm text-[11px] font-medium border transition-colors ${
           aiBlocked
             ? 'border-gray-200 text-gray-300 cursor-not-allowed'

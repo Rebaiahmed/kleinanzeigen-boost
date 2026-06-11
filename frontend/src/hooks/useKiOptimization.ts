@@ -103,7 +103,7 @@ export function useKiOptimization(
     }
 
     if (isBlocked) {
-      setPanelError({ status: 429, message: `Tageslimit erreicht (${callsCount}/${limit}). Morgen wieder verfügbar.` });
+      setPanelError({ status: 429, message: `Monatslimit erreicht (${callsCount}/${limit}). Nächsten Monat wieder verfügbar.` });
       setIsPanelLoading(false);
       return;
     }

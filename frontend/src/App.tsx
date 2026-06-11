@@ -9,6 +9,7 @@ import { Landing } from './pages/Landing';
 import { AuthCallback } from './pages/AuthCallback';
 import { EbaySuccess } from './pages/EbaySuccess';
 import { ReplyTemplatesList } from './components/reply-templates/ReplyTemplatesList';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
   return (
@@ -20,11 +21,11 @@ function App() {
         <Route path="/auth" element={<Navigate to="/login" replace />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/ebay/callback/success" element={<EbaySuccess />} />
-        {/* Authenticated Routes wrapped in AppShell */}
-        <Route path="/meine-anzeigen" element={<AppShell><Ads /></AppShell>} />
-        <Route path="/neue-anzeige-mit-ki-erstellen" element={<AppShell><CreateWithAi /></AppShell>} />
-        <Route path="/einstellungen" element={<AppShell><Settings /></AppShell>} />
-        <Route path="/vorlagen" element={<AppShell><ReplyTemplatesList /></AppShell>} />
+        {/* Authenticated Routes — guarded, then wrapped in AppShell */}
+        <Route path="/meine-anzeigen" element={<ProtectedRoute><AppShell><Ads /></AppShell></ProtectedRoute>} />
+        <Route path="/neue-anzeige-mit-ki-erstellen" element={<ProtectedRoute><AppShell><CreateWithAi /></AppShell></ProtectedRoute>} />
+        <Route path="/einstellungen" element={<ProtectedRoute><AppShell><Settings /></AppShell></ProtectedRoute>} />
+        <Route path="/vorlagen" element={<ProtectedRoute><AppShell><ReplyTemplatesList /></AppShell></ProtectedRoute>} />
         {/* Catch-all redirect to ads for the simplified view */}
         <Route path="*" element={<Navigate to="/meine-anzeigen" replace />} />
       </Routes>

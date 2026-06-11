@@ -194,6 +194,7 @@ export function useAdsActions(): AdsActionsReturn {
           method: 'POST',
           headers: { Authorization: `Bearer ${getToken()}` },
         });
+        if (res.status === 401) { handleUnauthorized(); return; }
         const data = await res.json();
         if (data.success) {
           showToast(successMsg, 'success');

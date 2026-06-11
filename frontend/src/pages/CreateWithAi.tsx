@@ -247,7 +247,7 @@ export function CreateWithAi() {
   const analyzePhotos = async () => {
     if (photos.length === 0) return;
     if (isBlocked) {
-      setErrorMessage(`Tageslimit erreicht (${callsCount}/${limit}). Morgen wieder verfügbar.`);
+      setErrorMessage(`Monatslimit erreicht (${callsCount}/${limit}). Nächsten Monat wieder verfügbar.`);
       return;
     }
 
@@ -604,7 +604,7 @@ export function CreateWithAi() {
               'bg-gray-50 border border-gray-200'
             }`}>
               <span className={`font-medium whitespace-nowrap ${isBlocked ? 'text-red-600' : isWarning ? 'text-yellow-700' : 'text-gray-500'}`}>
-                {isBlocked ? '🚫 Tageslimit erreicht' : isWarning ? `⚠️ Noch ${remaining} KI-Anfragen` : `✨ ${remaining} von ${limit} verfügbar`}
+                {isBlocked ? '🚫 Monatslimit erreicht' : isWarning ? `⚠️ Noch ${remaining} KI-Anfragen` : `✨ ${remaining} von ${limit} verfügbar`}
               </span>
               <div className="flex-1 bg-gray-200 rounded-full h-1.5 overflow-hidden">
                 <div
@@ -645,11 +645,27 @@ export function CreateWithAi() {
           <div className="bg-emerald-50 border-b border-emerald-100 text-emerald-800 px-5 py-3 flex gap-2 items-center text-sm">
             <Check className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>KI hat deine Fotos analysiert — überprüfe die Daten unten.</span>
-            {remainingCalls !== null && remainingCalls !== -1 && (
-              <span className="ml-auto text-[11px] bg-emerald-100/60 text-emerald-700 px-2 py-0.5 rounded-full font-medium">
-                {remainingCalls} Analysen übrig
-              </span>
-            )}
+            <div className="ml-auto flex items-center gap-2">
+              {remainingCalls !== null && remainingCalls !== -1 && (
+                <span className="text-[11px] bg-emerald-100/60 text-emerald-700 px-2 py-0.5 rounded-full font-medium">
+                  {remainingCalls} Analysen übrig
+                </span>
+              )}
+              {/* Regenerate: re-run the same photos through the AI. Uses one more
+                  AI analysis (counts against the quota), hence the title hint. */}
+              <button
+                type="button"
+                onClick={analyzePhotos}
+                disabled={isLoading || isBlocked}
+                title={isBlocked ? 'Monatslimit erreicht' : 'Erneut generieren (verbraucht eine weitere KI-Analyse)'}
+                className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#86b817] hover:text-[#6f8f00] disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+              >
+                {isLoading
+                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  : <Sparkles className="w-3.5 h-3.5" />}
+                <span>Neu generieren</span>
+              </button>
+            </div>
           </div>
 
           {/* Platform tabs */}

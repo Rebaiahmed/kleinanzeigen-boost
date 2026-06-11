@@ -4,16 +4,29 @@ services:
     build: ./backend
     ports: ["3000:3000"]
     env_file: ./backend/.env
-    volumes:
-      - ./backend/src:/app/src
     networks: [anzeigenboost]
-    depends_on: [automation]
+    depends_on:
+      automation:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        # Vite bakes VITE_* at build time, so a runtime env_file can't change the
+        # static bundle — the API URL must be a build arg. Override per environment.
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000/api}
     ports: ["5173:80"]
-    env_file: ./frontend/.env
     networks: [anzeigenboost]
+    depends_on:
+      backend:
+        condition: service_started
 
   automation:
     build: ./automation

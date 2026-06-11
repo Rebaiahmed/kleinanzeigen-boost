@@ -21,7 +21,7 @@ Priority: **High** · **Medium** · **Low**
 | 1.7 | Deploy frontend to Firebase | **Done** | High | Live (landing works; dashboard needs https API = domain) |
 | 1.8 | Command to clean up Firestore data (for testing) | **Done** | Medium | `npm run cleanup:firestore -- --user <id>` or `--all --yes` (works in real + mock mode) |
 | 1.9 | VPS provisioning script (deps for any new VPS) | **Done** | Medium | `scripts/provision-vps.sh` (Node 20, PM2, nginx, Chrome, browser libs, ufw) |
-| 1.10 | Migrate deployment to Docker + docker-compose | Pending | Low | Future — see issue #24. Current PM2 setup works |
+| 1.10 | Migrate deployment to Docker + docker-compose | **In Progress** | Low | Dockerfiles + compose (dev/override/prod) for all 3 services, healthchecks, `.dockerignore`, docs/DOCKER.md (PR). Pending: CI build→GHCR + VPS cutover from PM2 (do with 1.2). Issue #24 |
 
 ## Part 2 — Chrome Extension
 

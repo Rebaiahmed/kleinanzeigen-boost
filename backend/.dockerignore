@@ -1,0 +1,17 @@
+node_modules
+dist
+npm-debug.log*
+.env
+.env.*
+.git
+.gitignore
+Dockerfile
+.dockerignore
+*.md
+coverage
+.vscode
+.DS_Store
+# never bake secrets into an image
+*firebase-adminsdk*.json
+*-service-account*.json
+aachen-*.json

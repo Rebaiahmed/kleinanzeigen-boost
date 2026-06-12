@@ -2,6 +2,7 @@
 // Sync is extension-initiated: frontend triggers TRIGGER_SYNC → background
 // fetches ads from Kleinanzeigen → POSTs to backend.
 import { ENDPOINTS } from '../config/endpoints';
+import { executeRepostCreateOnly } from './repost-engine';
 
 const API_URL = ENDPOINTS.API_BASE;
 
@@ -161,9 +162,186 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
     return true;
   }
 
+  // Inject the photo-attach test into the page's MAIN world (bypasses KA's CSP,
+  // which blocks content-script <script> injection). Validates the upload trick.
+  if (message.type === 'AB_INJECT_PHOTO_TEST') {
+    const tabId = _sender.tab?.id;
+    if (!tabId) { sendResponse({ ok: false, error: 'no tab' }); return true; }
+    chrome.scripting.executeScript({
+      target: { tabId },
+      world: 'MAIN',
+      func: () => {
+        // Diagnostic: list every file input on the page so we know our target.
+        const allInputs = Array.from(document.querySelectorAll('input[type="file"]')) as HTMLInputElement[];
+        console.log('[AB-main] file inputs on page:', allInputs.length);
+        allInputs.forEach((el, i) => console.log(`[AB-main]   input#${i}: accept="${el.accept}" multiple=${el.multiple} disabled=${el.disabled} hidden=${el.offsetParent === null} class="${el.className}"`));
+
+        const input = (allInputs.find((el) => /image/.test(el.accept)) || allInputs[0]) as HTMLInputElement | undefined;
+        if (!input) { console.log('[AB-main] ✗ no file input found'); return; }
+        const canvas = document.createElement('canvas');
+        canvas.width = 600; canvas.height = 400;
+        const ctx = canvas.getContext('2d')!;
+        ctx.fillStyle = '#A8C300'; ctx.fillRect(0, 0, 600, 400);
+        ctx.fillStyle = '#1f2937'; ctx.font = 'bold 36px sans-serif';
+        ctx.fillText('AnzeigenBoost Test', 80, 210);
+        canvas.toBlob((blob) => {
+          if (!blob) { console.log('[AB-main] ✗ toBlob failed'); return; }
+          const file = new File([blob], 'ab-test-' + Date.now() + '.jpg', { type: 'image/jpeg' });
+          try {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            console.log('[AB-main] DataTransfer before assign → files.length =', dt.files.length, '(expect 1)');
+            input.files = dt.files;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            console.log('[AB-main] input.files after assign → length =', input.files.length);
+          } catch (e) { console.log('[AB-main] input.files threw:', (e as Error).message); }
+          try {
+            const zone = (input.closest('div') || input.parentElement) as HTMLElement;
+            const dt2 = new DataTransfer();
+            dt2.items.add(file);
+            zone.dispatchEvent(new DragEvent('dragenter', { bubbles: true, dataTransfer: dt2 }));
+            zone.dispatchEvent(new DragEvent('dragover', { bubbles: true, dataTransfer: dt2 }));
+            zone.dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer: dt2 }));
+            console.log('[AB-main] dispatched synthetic drop; drop dataTransfer.files =', dt2.files.length);
+          } catch (e) { console.log('[AB-main] drop threw:', (e as Error).message); }
+          console.log('[AB-main] ■ done — WATCH the form for a photo preview');
+        }, 'image/jpeg', 0.9);
+      },
+    }).then(() => sendResponse({ ok: true })).catch((e) => {
+      console.warn('[BG] executeScript failed:', e.message);
+      sendResponse({ ok: false, error: e.message });
+    });
+    return true;
+  }
+
+  // CDP UPLOAD TEST — attach a photo to KA's file input via chrome.debugger
+  // (DOM.setFileInputFiles), the same mechanism Playwright/kleinanzeigen-bot use.
+  // This bypasses the file-input security wall that blocks input.files. Runs in
+  // the user's own browser (home IP, real session). Non-destructive: does not submit.
+  if (message.type === 'AB_CDP_UPLOAD_TEST') {
+    const tabId = _sender.tab?.id;
+    if (!tabId) { sendResponse({ ok: false, error: 'no tab' }); return true; }
+    runCdpUploadTest(tabId).then(sendResponse);
+    return true;
+  }
+
+  // v1 client-side repost (CREATE-ONLY, no delete) — runs the CDP engine on the
+  // active KA tab. Needs an active kleinanzeigen.de tab to attach the debugger to.
+  if (message.type === 'AB_REPOST_CREATE_TEST') {
+    // Accept either the numeric id or the URL slug (e.g. "3406908146-81-1928").
+    const adId = (String(message.adId || '').match(/\d{5,}/) || [''])[0];
+    if (!adId) { sendResponse({ ok: false, error: 'no valid numeric adId' }); return true; }
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const tab = tabs.find((t) => /kleinanzeigen\.de/.test(t.url || '')) || tabs[0];
+      if (!tab?.id) { sendResponse({ ok: false, error: 'no active KA tab — open kleinanzeigen.de first' }); return; }
+      executeRepostCreateOnly(tab.id, adId).then((result) => {
+        // Surface the outcome as a desktop notification (the tab navigates during
+        // the flow, so the page callback often can't deliver it).
+        const title = result.ok ? '✅ Repost-Test fertig' : '❌ Repost-Test fehlgeschlagen';
+        const msg = result.ok
+          ? `Schritt: ${result.step}. Prüfe deine Anzeigen auf ein neues Duplikat.\n${result.finalUrl || ''}`
+          : `Bei Schritt "${result.step}": ${result.error}`;
+        chrome.notifications.create({
+          type: 'basic',
+          iconUrl: 'icons/icon-128.png',
+          title,
+          message: msg.slice(0, 300),
+        });
+        sendResponse(result);
+      });
+    });
+    return true;
+  }
+
   // Logout
   if (message.type === 'LOGOUT') {
     chrome.storage.session.remove(['token'], () => sendResponse({ success: true }));
     return true;
   }
 });
+
+// ─── CDP file-upload proof-of-concept ─────────────────────────────────────────
+
+/** Promisified chrome.debugger.sendCommand. */
+function cdp(target: chrome.debugger.Debuggee, method: string, params?: any): Promise<any> {
+  return new Promise((resolve, reject) => {
+    chrome.debugger.sendCommand(target, method, params || {}, (res) => {
+      const err = chrome.runtime.lastError;
+      if (err) reject(new Error(err.message)); else resolve(res);
+    });
+  });
+}
+
+/** Download a tiny test image and return its absolute on-disk path. */
+function downloadTestImage(): Promise<string> {
+  // 8x8 green PNG (valid image KA will accept for the POC).
+  const dataUrl =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAFklEQVR42mNkYPhfz0BkYBxVSFQFAP9cBQHsx0p6AAAAAElFTkSuQmCC';
+  return new Promise((resolve, reject) => {
+    chrome.downloads.download({ url: dataUrl, filename: 'anzeigenboost/ab-test.png', conflictAction: 'overwrite' }, (id) => {
+      if (chrome.runtime.lastError || id == null) { reject(new Error(chrome.runtime.lastError?.message || 'download failed')); return; }
+      const onChanged = (delta: chrome.downloads.DownloadDelta) => {
+        if (delta.id !== id || !delta.state) return;
+        if (delta.state.current === 'complete') {
+          chrome.downloads.onChanged.removeListener(onChanged);
+          chrome.downloads.search({ id }, (items) => {
+            const f = items?.[0]?.filename;
+            if (f) resolve(f); else reject(new Error('no file path after download'));
+          });
+        } else if (delta.state.current === 'interrupted') {
+          chrome.downloads.onChanged.removeListener(onChanged);
+          reject(new Error('download interrupted'));
+        }
+      };
+      chrome.downloads.onChanged.addListener(onChanged);
+    });
+  });
+}
+
+async function runCdpUploadTest(tabId: number): Promise<{ ok: boolean; filesLength?: number; error?: string; filePath?: string; fileBytes?: number }> {
+  const target = { tabId };
+  let fileBytes = -1;
+  try {
+    const filePath = await downloadTestImage();
+    await new Promise<void>((r) => chrome.downloads.search({}, (items) => {
+      const it = items.find((i) => i.filename === filePath);
+      fileBytes = it?.fileSize ?? it?.totalBytes ?? -1;
+      r();
+    }));
+    console.log('[AB-cdp] test image downloaded to:', filePath, 'bytes=', fileBytes);
+
+    await new Promise<void>((resolve, reject) =>
+      chrome.debugger.attach(target, '1.3', () => chrome.runtime.lastError ? reject(new Error(chrome.runtime.lastError.message)) : resolve()),
+    );
+    console.log('[AB-cdp] debugger attached');
+
+    await cdp(target, 'DOM.enable');
+    const { root } = await cdp(target, 'DOM.getDocument', { depth: -1 });
+    const { nodeId } = await cdp(target, 'DOM.querySelector', { nodeId: root.nodeId, selector: 'input[type="file"][accept*="image"]' });
+    if (!nodeId) throw new Error('file input not found via CDP');
+
+    await cdp(target, 'DOM.setFileInputFiles', { files: [filePath], nodeId });
+    console.log('[AB-cdp] DOM.setFileInputFiles sent for path:', filePath);
+
+    // Verify how many files the input now holds (via the page).
+    const { object } = await cdp(target, 'DOM.resolveNode', { nodeId });
+    let filesLength = -1;
+    if (object?.objectId) {
+      const r = await cdp(target, 'Runtime.callFunctionOn', {
+        objectId: object.objectId,
+        functionDeclaration: 'function(){ this.dispatchEvent(new Event("change",{bubbles:true})); this.dispatchEvent(new Event("input",{bubbles:true})); return this.files ? this.files.length : -1; }',
+        returnByValue: true,
+      });
+      filesLength = r?.result?.value;
+    }
+    console.log('[AB-cdp] ✓ input.files.length after CDP upload =', filesLength, '→ WATCH the form for a preview');
+
+    await new Promise<void>((resolve) => chrome.debugger.detach(target, () => resolve()));
+    return { ok: true, filesLength, filePath, fileBytes };
+  } catch (e: any) {
+    console.warn('[AB-cdp] ✗ failed:', e.message);
+    await new Promise<void>((resolve) => chrome.debugger.detach(target, () => resolve())).catch(() => {});
+    return { ok: false, error: e.message, fileBytes };
+  }
+}

@@ -85,9 +85,11 @@ export class AuthController {
   }
 
   @Post('exchange-token')
-  async exchangeHandshake(@Body() body: any, @Res({ passthrough: true }) res: Response) {
+  async exchangeHandshake(@Body() body: any, @Req() req: any, @Res({ passthrough: true }) res: Response) {
     const { token } = body;
-    const { accessToken, userId } = await this.authService.exchangeHandshakeToken(token);
+    // Forward the caller's existing auth (if logged in) so the handshake can link
+    // the marketplace cookies to that user id too.
+    const { accessToken, userId } = await this.authService.exchangeHandshakeToken(token, req.headers?.authorization);
 
     res.cookie('kb_session', accessToken, {
       httpOnly: true,

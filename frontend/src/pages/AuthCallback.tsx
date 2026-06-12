@@ -34,8 +34,13 @@ export function AuthCallback() {
 
         const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
 
+        // If already logged in (e.g. email/Auth0), forward that token so the
+        // backend links the marketplace cookies to this user id too — otherwise
+        // repost/scheduler (which run under that id) can't find the cookies.
+        const existingToken = localStorage.getItem('kb_session') || localStorage.getItem('token');
         const exchangeRes = await axios.post(`${apiUrl}/auth/exchange-token`, { token }, {
-          withCredentials: true
+          withCredentials: true,
+          headers: existingToken ? { Authorization: `Bearer ${existingToken}` } : {},
         });
 
         if (exchangeRes.data.success) {

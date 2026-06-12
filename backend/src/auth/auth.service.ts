@@ -120,8 +120,9 @@ export class AuthService {
     return token;
   }
 
-  async exchangeHandshakeToken(token: string) {
+  async exchangeHandshakeToken(token: string, authHeader?: string) {
     const db = this.firebaseService.firestore;
+    const linkUserId = this.userIdFromAuthHeader(authHeader);
     const docRef = db.collection('handshakes').doc(token);
 
     // Atomically claim the token inside a Firestore transaction.
@@ -184,16 +185,41 @@ export class AuthService {
     });
 
     // Store permanent session — cookies encrypted at rest
+    const encryptedCookieBlob = this.encryptData(JSON.stringify(cookies));
     await db.collection('sessions').doc(userId).set({
       status: 'active',
       lastLogin: new Date().toISOString(),
-      marketplaceCookies: this.encryptData(JSON.stringify(cookies)),
+      marketplaceCookies: encryptedCookieBlob,
     }, { merge: true });
 
     // Fresh cookies → clear any prior 'expired' flag so the scheduler resumes this user.
     await this.clearExpiredStatus(userId);
 
+    // IMPORTANT: if the user is already logged in to the dashboard (e.g. via
+    // email/Auth0) when they connect, their ads + reposts run under THAT id —
+    // not the marketplace stableUserId. Store the cookies under that id too, so
+    // repost/scrape/scheduler (which look up sessions/{ownerId}) find them.
+    if (linkUserId && linkUserId !== userId) {
+      await db.collection('sessions').doc(linkUserId).set({
+        status: 'active',
+        lastLogin: new Date().toISOString(),
+        marketplaceCookies: encryptedCookieBlob,
+      }, { merge: true });
+      await this.clearExpiredStatus(linkUserId);
+      this.logger.log(`[handshake] also linked marketplace cookies to authenticated user ${linkUserId}`);
+    }
+
     return { accessToken: jwtToken, userId };
+  }
+
+  /** Extract a userId from an optional "Bearer <jwt>" header, or null if absent/invalid. */
+  private userIdFromAuthHeader(authHeader?: string): string | null {
+    if (!authHeader?.startsWith('Bearer ')) return null;
+    try {
+      return this.jwtService.verify(authHeader.slice(7))?.sub || null;
+    } catch {
+      return null;
+    }
   }
 
   /**

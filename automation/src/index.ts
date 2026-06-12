@@ -202,13 +202,33 @@ app.post('/sync', async (req, res) => {
   }
 });
 
+// NON-DESTRUCTIVE snapshot — captures fields + downloads photos. Deletes nothing.
+app.post('/repost-snapshot', async (req, res) => {
+  const { userId, adId, cookies } = req.body;
+  if (!userId || !adId) return res.status(400).json({ error: 'Missing userId or adId' });
+  try {
+    const { captureAdSnapshot } = await import('./repost-snapshot');
+    const result = await captureAdSnapshot(userId, adId, cookies);
+    if (!result.success) return res.status(500).json({ error: result.error, step: result.step });
+    // Don't ship local file paths to the client; report a summary instead.
+    const s = result.snapshot!;
+    return res.json({
+      success: true,
+      fields: { title: s.title, priceAmount: s.priceAmount, priceType: s.priceType, categoryId: s.categoryId, locationId: s.locationId, zipCode: s.zipCode, adType: s.adType, descriptionLength: s.description.length },
+      photos: { found: s.photoUrls.length, downloaded: s.photoFiles.length, urls: s.photoUrls },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/repost', async (req, res) => {
-  const { userId, adId, adData } = req.body;
+  const { userId, adId, adData, cookies } = req.body;
   if (!userId || !adId) {
     return res.status(400).json({ error: 'Missing userId or adId' });
   }
   try {
-    const result = await executeRepostFlow(userId, adId, adData);
+    const result = await executeRepostFlow(userId, adId, adData, cookies);
     if (!result.success) {
       return res.status(500).json({ error: result.error, step: result.step });
     }

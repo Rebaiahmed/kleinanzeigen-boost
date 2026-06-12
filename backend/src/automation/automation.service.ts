@@ -34,12 +34,20 @@ export class AutomationService {
 
       return response.data;
     } catch (error: any) {
-      this.logger.error(`Automation worker call failed: ${error.message}`);
-      // Pass through specific worker errors like SESSION_EXPIRED
-      if (error.response?.data?.error === 'SESSION_EXPIRED') {
+      // The worker returns its real reason in the response body ({ error, step }).
+      // Surface that instead of axios's opaque "Request failed with status code 500".
+      const workerError = error.response?.data?.error;
+      const workerStep = error.response?.data?.step;
+      this.logger.error(
+        `Automation worker '${endpoint}' failed: ${workerError || error.message}` +
+        (workerStep ? ` (step=${workerStep})` : ''),
+      );
+      if (workerError === 'SESSION_EXPIRED') {
         throw new Error('SESSION_EXPIRED');
       }
-      throw new InternalServerErrorException(error.message);
+      throw new InternalServerErrorException(
+        workerError ? `${workerError}${workerStep ? ` (step=${workerStep})` : ''}` : error.message,
+      );
     }
   }
 

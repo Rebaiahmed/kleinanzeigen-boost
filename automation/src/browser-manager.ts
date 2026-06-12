@@ -60,17 +60,21 @@ export async function getPersistentContext(userId: string): Promise<BrowserConte
     const isDebug = process.env.DEBUG_BROWSER === 'true';
     const userDataDir = path.resolve(__dirname, `../../automation/user-data-dir/${userId}`);
     
+    // DEBUG_BROWSER=true → visible (headed) browser. DEBUG_SLOWMO (ms) slows each
+    // Playwright action so you can watch the flow; defaults to 600ms in debug.
+    const slowMo = isDebug ? Number(process.env.DEBUG_SLOWMO || 600) : 0;
     const context = await chromium.launchPersistentContext(userDataDir, {
       headless: !isDebug,
+      slowMo,
       // Use a system-installed Chrome when set (e.g. on hosts where Playwright's
       // bundled Chromium isn't available). Falls back to bundled chromium locally.
       executablePath: process.env.CHROMIUM_PATH || undefined,
       viewport: { width: 1280, height: 720 },
       args: ['--disable-blink-features=AutomationControlled']
     });
-    
+
     activeContexts.set(userId, { context, lastAccessed: Date.now() });
-    console.log(`[BrowserManager] Persistent context launched successfully for user: ${userId}`);
+    console.log(`[BrowserManager] Persistent context launched (headless=${!isDebug}, slowMo=${slowMo}ms) for user: ${userId}`);
     return context;
   } catch (error) {
     console.error(`[BrowserManager] Failed to launch context for ${userId}:`, error);

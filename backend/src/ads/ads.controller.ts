@@ -40,6 +40,13 @@ export class AdsController {
     return this.adsService.repostAd(req.user.userId, adId);
   }
 
+  // Phase 1 (non-destructive): capture the ad's fields + photos so we can verify
+  // we can rebuild it BEFORE any delete logic exists. Deletes nothing.
+  @Post('repost-snapshot/:id')
+  async repostSnapshot(@Req() req: any, @Param('id') adId: string) {
+    return this.adsService.snapshotAd(req.user.userId, adId);
+  }
+
   @Post('reserve/:id')
   async toggleReserve(@Req() req: any, @Param('id') adId: string) {
     return this.adsService.toggleReserve(req.user.userId, adId);

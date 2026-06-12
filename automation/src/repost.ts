@@ -10,12 +10,27 @@ export const randomDelay = async (min = 1000, max = 5000) => {
   await new Promise(resolve => setTimeout(resolve, ms));
 };
 
-export async function executeRepostFlow(userId: string, adId: string, adData: any): Promise<{ success: boolean; step: string; error?: string }> {
+export async function executeRepostFlow(userId: string, adId: string, adData: any, cookies?: any[]): Promise<{ success: boolean; step: string; error?: string }> {
   let page: Page | null = null;
   let currentStep = 'init';
 
+  console.log(`[repost] ▶ start ad=${adId} user=${userId} cookies=${Array.isArray(cookies) ? cookies.length : 0}`);
+
   try {
     const context = await getPersistentContext(userId);
+
+    // Inject the user's session cookies (same as scrape-views). Without this the
+    // context is unauthenticated and the session check below throws a false
+    // SESSION_EXPIRED, even though the user's Kleinanzeigen session is valid.
+    if (Array.isArray(cookies) && cookies.length > 0) {
+      const validSameSite = ['Strict', 'Lax', 'None'];
+      const sanitizedCookies = cookies.map((c: any) => ({
+        ...c,
+        sameSite: validSameSite.includes(c.sameSite) ? c.sameSite : 'Lax',
+      }));
+      await context.addCookies(sanitizedCookies);
+    }
+
     page = context.pages().find(p => p.url() !== 'about:blank' || context.pages().length === 1) || await context.newPage();
     if (page.url() !== 'about:blank') {
       page = await context.newPage();
@@ -106,10 +121,16 @@ export async function executeRepostFlow(userId: string, adId: string, adData: an
     return { success: true, step: currentStep };
 
   } catch (error: any) {
-    if (page) await page.close().catch(() => {});  return { 
-      success: false, 
-      step: currentStep, 
-      error: error.message || 'Unknown error during automation' 
+    // Log the real failure point + message + page URL so we can see exactly where
+    // the repost flow breaks (session_check / delete_ad / verify_deletion / submit).
+    const url = page ? page.url() : 'n/a';
+    console.error(`[repost] ✗ FAILED at step='${currentStep}' ad=${adId} url=${url} → ${error?.message}`);
+    if (error?.stack) console.error(error.stack);
+    if (page) await page.close().catch(() => {});
+    return {
+      success: false,
+      step: currentStep,
+      error: error.message || 'Unknown error during automation',
     };
   }
 }

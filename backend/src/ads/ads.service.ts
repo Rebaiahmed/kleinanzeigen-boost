@@ -7,6 +7,7 @@ import { AutomationService } from '../automation/automation.service';
 import { EbayService } from '../ebay/ebay.service';
 import { VintedService } from '../vinted/vinted.service';
 import { classifyRepostError } from '../common/repost-error.util';
+import { SessionService } from '../auth/session.service';
 @Injectable()
 export class AdsService {
   private readonly logger = new Logger(AdsService.name);
@@ -16,6 +17,7 @@ export class AdsService {
     private readonly automationService: AutomationService,
     private readonly ebayService: EbayService,
     private readonly vintedService: VintedService,
+    private readonly sessionService: SessionService,
   ) {}
 
   async getAds(userId: string) {
@@ -175,7 +177,12 @@ export class AdsService {
 
     const startTime = Date.now();
     try {
-      const result = await this.automationService.callAutomationWorker('repost', { userId, adId, adData });
+      // The repost worker uses a fresh browser context — it must be given the
+      // user's session cookies (same as scrape-views), otherwise it lands on the
+      // login page and throws a false SESSION_EXPIRED.
+      const cookies = await this.sessionService.getDecryptedCookies(userId);
+      this.logger.warn(`[repost-debug] userId=${userId} → ${cookies.length} session cookie(s) found${cookies.length ? ` (names: ${cookies.slice(0, 8).map((c: any) => c.name).join(',')})` : ' — NONE: cookies are stored under a different id or missing → re-run Verbinden'}`);
+      const result = await this.automationService.callAutomationWorker('repost', { userId, adId, adData, cookies });
       if (result.success) {
         const repostIntervalMinutes: number = adData.repostIntervalMinutes ?? 1440;
         const nextRepostAt = new Date(Date.now() + repostIntervalMinutes * 60 * 1000).toISOString();
@@ -206,6 +213,13 @@ export class AdsService {
       }).catch(() => {});
       throw new InternalServerErrorException(error.message);
     }
+  }
+
+  /** Phase 1 (non-destructive): snapshot an ad's fields + photos via the worker. */
+  async snapshotAd(userId: string, adId: string) {
+    const cookies = await this.sessionService.getDecryptedCookies(userId);
+    this.logger.log(`[snapshot] user=${userId} ad=${adId} → ${cookies.length} cookie(s)`);
+    return this.automationService.callAutomationWorker('repost-snapshot', { userId, adId, cookies });
   }
 
   async toggleReserve(userId: string, adId: string) {

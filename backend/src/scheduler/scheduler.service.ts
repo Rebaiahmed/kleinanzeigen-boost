@@ -313,9 +313,10 @@ export class SchedulerService {
 
       const startTime = Date.now();
 
-      // 3. Trigger worker
+      // 3. Trigger worker — pass the user's session cookies so the repost
+      //    context authenticates (otherwise: false SESSION_EXPIRED).
       try {
-        const result = await this.automationService.callAutomationWorker('repost', { userId, adId, adData });
+        const result = await this.automationService.callAutomationWorker('repost', { userId, adId, adData, cookies });
 
         // 4. On success, update state and create log
         if (result.success) {

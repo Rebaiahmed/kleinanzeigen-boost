@@ -223,7 +223,12 @@ export function AdCard({
     if (!aiSuggestion || !onUpdateFields) return;
     setIsSavingInterval(true);
     try {
-      const nextRepostAt = calculateNextOccurrence(aiSuggestion.bestDayOfWeek, aiSuggestion.bestHour);
+      let nextRepostAt = calculateNextOccurrence(aiSuggestion.bestDayOfWeek, aiSuggestion.bestHour);
+      // Round to next full minute to align with scheduler granularity
+      const futureMs = new Date(nextRepostAt).getTime();
+      const nextMinute = Math.ceil(futureMs / 60000) * 60000;
+      nextRepostAt = new Date(nextMinute).toISOString();
+
       // Must explicitly set status='active' so scheduler's query finds the ad
       const ok = await onUpdateFields(ad.id, {
         status: 'active',
@@ -254,7 +259,12 @@ export function AdCard({
     if (!onUpdateFields) return;
     setIsSavingInterval(true);
     try {
-      const nextRepostAt = new Date(Date.now() + selectedInterval * 60 * 1000).toISOString();
+      // Round to next full minute to align with scheduler granularity (runs every minute)
+      const now = Date.now();
+      const futureMs = now + selectedInterval * 60 * 1000;
+      const nextMinute = Math.ceil(futureMs / 60000) * 60000; // round up to next minute
+      const nextRepostAt = new Date(nextMinute).toISOString();
+
       // Must explicitly set status='active' so scheduler's query finds the ad
       const ok = await onUpdateFields(ad.id, {
         status: 'active',

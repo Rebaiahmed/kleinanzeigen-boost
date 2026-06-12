@@ -149,8 +149,8 @@ export class SchedulerService {
     return { success: true, now, count: scheduled.length, scheduled };
   }
 
-  // Every 15 min in production; every minute in SIMULATE mode so short test
-  // intervals (5/10 min) fire on time.
+  // Every 15 min in production; every 30 seconds in SIMULATE mode for better granularity
+  // (so 5/10 min test intervals don't miss the scheduler window)
   @Cron(process.env.REPOST_SIMULATE === 'true' ? '*/1 * * * *' : '*/15 * * * *')
   async handleRepostCron(triggeredBy: 'cron' | 'manual' = 'cron') {
     // Kill-switch: set SCHEDULER_ENABLED=false to stop the server-side cron from

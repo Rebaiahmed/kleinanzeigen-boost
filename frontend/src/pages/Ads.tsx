@@ -89,6 +89,47 @@ export function Ads() {
     return ads;
   };
 
+  // One-click test of the notification pipeline — surfaces the HTTP result so we
+  // can see if the backend route exists (404 = backend running old code).
+  const sendTestNotification = async () => {
+    const token = localStorage.getItem('kb_session') || localStorage.getItem('token');
+    const apiBase = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
+    try {
+      const res = await fetch(`${apiBase}/notifications/test`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const body = await res.text();
+      if (res.status === 404) {
+        alert(`❌ HTTP 404 — der Backend kennt /notifications/test nicht.\nDas Backend läuft NICHT mit dem neuen Code (alter Build).\n\nLösung: Backend stoppen und mit "npm run start:dev" neu starten.`);
+      } else if (res.ok) {
+        alert(`✅ HTTP ${res.status} — Test gesendet.\nDie Benachrichtigung kommt über die Live-Verbindung (SSE).\nWenn jetzt KEINE Benachrichtigung erscheint, ist die SSE-Verbindung das Problem.\n\nAntwort: ${body}`);
+      } else {
+        alert(`⚠️ HTTP ${res.status}\n${body}`);
+      }
+    } catch (e: any) {
+      alert(`❌ Netzwerkfehler: ${e.message}\nLäuft das Backend auf ${apiBase}?`);
+    }
+  };
+
+  // Diagnostic: show exactly what the scheduler sees for auto-repost ads.
+  const checkSchedule = async () => {
+    const token = localStorage.getItem('kb_session') || localStorage.getItem('token');
+    const apiBase = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
+    try {
+      const res = await fetch(`${apiBase}/ads/schedule-debug`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) { alert(`HTTP ${res.status} — Backend läuft evtl. mit altem Code.`); return; }
+      const d = await res.json();
+      if (!d.ads?.length) { alert(`Keine Auto-Repost-Anzeigen gefunden.\n\nJetzt: ${d.now}`); return; }
+      const lines = d.ads.map((a: any) =>
+        `• ${a.title}\n   autoRepost=${a.autoRepost} status=${a.status} listingState=${a.listingState}\n   nächster=${a.nextRepostAt}\n   → fällig jetzt: ${a.dueNow}`,
+      ).join('\n\n');
+      alert(`Jetzt: ${d.now}\nAuto-Repost-Anzeigen: ${d.count}\n\n${lines}`);
+    } catch (e: any) {
+      alert(`❌ ${e.message}`);
+    }
+  };
+
   const handleSync = async () => {
     if (contextInvalidated) { window.location.reload(); return; }
     setSyncError(null);
@@ -221,6 +262,21 @@ export function Ads() {
           >
             <RefreshCw className={`w-3.5 h-3.5 ${(isSyncing || isBackgroundSyncing) ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">{contextInvalidated ? 'Seite neu laden' : 'Synchronisieren'}</span>
+          </button>
+          {/* Test the notification pipeline (SSE) with one click. */}
+          <button
+            onClick={sendTestNotification}
+            title="Sendet eine Test-Benachrichtigung über die Live-Verbindung"
+            className="flex items-center gap-1.5 bg-white hover:bg-gray-50 border border-[#ccc] text-[#333] font-medium py-1.5 px-3 rounded-sm transition-colors text-[13px]"
+          >
+            🔔 <span className="hidden sm:inline">Test</span>
+          </button>
+          <button
+            onClick={checkSchedule}
+            title="Zeigt, was der Scheduler für deine Auto-Repost-Anzeigen sieht"
+            className="flex items-center gap-1.5 bg-white hover:bg-gray-50 border border-[#ccc] text-[#333] font-medium py-1.5 px-3 rounded-sm transition-colors text-[13px]"
+          >
+            🔍 <span className="hidden sm:inline">Zeitplan</span>
           </button>
           <button
             onClick={() => navigate('/neue-anzeige-mit-ki-erstellen')}

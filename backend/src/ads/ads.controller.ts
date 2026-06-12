@@ -47,6 +47,23 @@ export class AdsController {
     return this.adsService.snapshotAd(req.user.userId, adId);
   }
 
+  // Diagnostic: what the scheduler actually sees for this user's auto-repost ads.
+  @Get('schedule-debug')
+  async scheduleDebug(@Req() req: any) {
+    return this.adsService.getScheduleDebug(req.user.userId);
+  }
+
+  // Unread notifications (e.g. simulated reposts) for the dashboard poller.
+  @Get('notifications')
+  async getNotifications(@Req() req: any) {
+    return this.adsService.getUnreadNotifications(req.user.userId);
+  }
+
+  @Post('notifications/read')
+  async markNotificationsRead(@Req() req: any, @Body() body: { ids: string[] }) {
+    return this.adsService.markNotificationsRead(req.user.userId, body?.ids || []);
+  }
+
   @Post('reserve/:id')
   async toggleReserve(@Req() req: any, @Param('id') adId: string) {
     return this.adsService.toggleReserve(req.user.userId, adId);

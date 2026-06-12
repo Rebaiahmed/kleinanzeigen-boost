@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { TopBar } from './TopBar';
 import { useExtension } from '../../hooks/useExtension';
+import { useRepostNotifications } from '../../hooks/useRepostNotifications';
 import { AlertCircle, MessageSquare } from 'lucide-react';
 
 const FEEDBACK_FORM_URL =
@@ -18,6 +19,8 @@ const isChromiumBrowser =
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { isConnected, isChecking } = useExtension();
+  // Poll for repost notifications (incl. simulated reposts) → show desktop notif.
+  useRepostNotifications();
 
   // Only show the "not connected" banner when we're certain the extension is
   // missing — not while checking (avoids flash) and not if the user has a valid

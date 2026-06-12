@@ -30,7 +30,7 @@ export interface AdsActionsReturn {
   handleEbayCrossPost: (adId: string) => Promise<{ success: boolean; url?: string; error?: string }>;
   saveDraft: (adData: any) => Promise<any>;
   optimizeExistingAd: (title: string, description: string, category: string, price: string | number) => Promise<any>;
-  updateAdFields: (adId: string, fields: { title?: string; description?: string; repostIntervalMinutes?: number; nextRepostAt?: string; autoRepost?: boolean }) => Promise<boolean>;
+  updateAdFields: (adId: string, fields: { title?: string; description?: string; status?: string; repostIntervalMinutes?: number; nextRepostAt?: string; autoRepost?: boolean }) => Promise<boolean>;
   fetchSchedulerStatus: () => Promise<string | null>;
   isSyncing: boolean;
   toastMessage: string | null;
@@ -381,7 +381,7 @@ export function useAdsActions(): AdsActionsReturn {
 
 
   const updateAdFields = useCallback(
-    async (adId: string, fields: { title?: string; description?: string; repostIntervalMinutes?: number; nextRepostAt?: string; autoRepost?: boolean }): Promise<boolean> => {
+    async (adId: string, fields: { title?: string; description?: string; status?: string; repostIntervalMinutes?: number; nextRepostAt?: string; autoRepost?: boolean }): Promise<boolean> => {
       try {
         const res = await fetch(`${API_URL}/ads/${adId}`, {
           method: 'PATCH',

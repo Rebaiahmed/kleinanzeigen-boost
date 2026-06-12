@@ -54,8 +54,12 @@ const EbayLogo = () => (
 const DE_DAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
 
 // value 0 = "Jetzt" (immediate one-time repost, not a recurring interval)
+// The 5/10/15-min options are short intervals for testing the scheduler.
 const INTERVAL_OPTIONS = [
   { label: 'Jetzt', value: 0 },
+  { label: '5 Min', value: 5 },
+  { label: '10 Min', value: 10 },
+  { label: '15 Min', value: 15 },
   { label: '12h', value: 720 },
   { label: '24h', value: 1440 },
   { label: '2 Tage', value: 2880 },
@@ -220,7 +224,9 @@ export function AdCard({
     setIsSavingInterval(true);
     try {
       const nextRepostAt = calculateNextOccurrence(aiSuggestion.bestDayOfWeek, aiSuggestion.bestHour);
+      // Must explicitly set status='active' so scheduler's query finds the ad
       const ok = await onUpdateFields(ad.id, {
+        status: 'active',
         autoRepost: true,
         repostIntervalMinutes: 10080,
         nextRepostAt,
@@ -249,7 +255,9 @@ export function AdCard({
     setIsSavingInterval(true);
     try {
       const nextRepostAt = new Date(Date.now() + selectedInterval * 60 * 1000).toISOString();
+      // Must explicitly set status='active' so scheduler's query finds the ad
       const ok = await onUpdateFields(ad.id, {
+        status: 'active',
         autoRepost: true,
         repostIntervalMinutes: selectedInterval,
         nextRepostAt,

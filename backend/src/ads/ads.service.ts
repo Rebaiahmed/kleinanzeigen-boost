@@ -215,11 +215,59 @@ export class AdsService {
     }
   }
 
-  /** Phase 1 (non-destructive): snapshot an ad's fields + photos via the worker. */
-  async snapshotAd(userId: string, adId: string) {
-    const cookies = await this.sessionService.getDecryptedCookies(userId);
-    this.logger.log(`[snapshot] user=${userId} ad=${adId} → ${cookies.length} cookie(s)`);
-    return this.automationService.callAutomationWorker('repost-snapshot', { userId, adId, cookies });
+  /** Diagnostic: what the scheduler sees for this user's auto-repost ads. */
+  async getScheduleDebug(userId: string) {
+    const db = this.firebaseService.firestore;
+    const snap = await db.collection('users').doc(userId).collection('ads').get();
+    const now = new Date().toISOString();
+    const ads = snap.docs
+      .map((d) => {
+        const a: any = d.data();
+        return {
+          id: d.id,
+          title: String(a.title || '').replace(/<[^>]+>/g, '').slice(0, 40),
+          autoRepost: a.autoRepost ?? null,
+          status: a.status ?? null,
+          listingState: a.listingState ?? null,
+          nextRepostAt: a.nextRepostAt ?? null,
+          dueNow: a.autoRepost === true && a.status === AdStatus.ACTIVE && !!a.nextRepostAt && a.nextRepostAt <= now,
+        };
+      })
+      .filter((a) => a.autoRepost);
+    return { success: true, now, count: ads.length, ads };
+  }
+
+  /** Unread notifications (newest first) for the dashboard poller. */
+  async getUnreadNotifications(userId: string) {
+    const db = this.firebaseService.firestore;
+    const snap = await db.collection('users').doc(userId).collection('notifications')
+      .where('read', '==', false).get();
+    const items = snap.docs
+      .map(d => ({ id: d.id, ...(d.data() as any) }))
+      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+    return { success: true, notifications: items };
+  }
+
+  /** Mark the given notification ids as read. */
+  async markNotificationsRead(userId: string, ids: string[]) {
+    if (!ids?.length) return { success: true, updated: 0 };
+    const db = this.firebaseService.firestore;
+    const batch = db.batch();
+    ids.forEach(id => batch.update(
+      db.collection('users').doc(userId).collection('notifications').doc(id),
+      { read: true },
+    ));
+    await batch.commit().catch(() => {});
+    return { success: true, updated: ids.length };
+  }
+
+  /**
+   * DISABLED — the server-side repost/snapshot approach is parked (we moved to
+   * client-side). Returns immediately and never calls the automation worker, so
+   * a stray client loop can't spawn browser tabs. Re-enable only intentionally.
+   */
+  async snapshotAd(_userId: string, _adId: string) {
+    return { success: false, disabled: true, message: 'repost-snapshot is disabled (server-side repost parked).' };
   }
 
   async toggleReserve(userId: string, adId: string) {
@@ -325,9 +373,20 @@ export class AdsService {
     const payload: any = {};
     if (updateData.title !== undefined) payload.title = updateData.title;
     if (updateData.description !== undefined) payload.description = updateData.description;
+    if (updateData.status !== undefined) payload.status = updateData.status;
     if (updateData.repostIntervalMinutes !== undefined) payload.repostIntervalMinutes = updateData.repostIntervalMinutes;
     if (updateData.nextRepostAt !== undefined) payload.nextRepostAt = updateData.nextRepostAt;
     if (updateData.autoRepost !== undefined) payload.autoRepost = updateData.autoRepost;
+
+    // Auto-set status to ACTIVE when enabling auto-repost (if not explicitly set and not mid-repost).
+    // Frontend should explicitly set status='active' when scheduling to guarantee scheduler finds it.
+    if (updateData.autoRepost === true && updateData.status === undefined) {
+      const cur = (await adRef.get()).data() as any;
+      const st = cur?.status;
+      if (st !== AdStatus.PENDING && st !== AdStatus.PENDING_REPOST) {
+        payload.status = AdStatus.ACTIVE;
+      }
+    }
 
     if (Object.keys(payload).length > 0) {
       // Use merge:true so it creates the doc if it doesn't exist (handles userId mismatch)

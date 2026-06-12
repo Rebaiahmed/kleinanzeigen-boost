@@ -117,6 +117,14 @@ function injectRepostButtons() {
 }
 
 export function initKaRepost() {
+  // Background → content alert (used by the simulated scheduler so the signal
+  // doesn't depend on OS notification permissions).
+  try {
+    chrome.runtime.onMessage.addListener((msg) => {
+      if (msg?.type === 'AB_SIM_ALERT') alert(msg.text || 'AnzeigenBoost');
+    });
+  } catch { /* no chrome.runtime in some contexts */ }
+
   // Inject test buttons on the manage page + keep them as the SPA re-renders.
   injectRepostButtons();
   const obs = new MutationObserver(() => injectRepostButtons());
@@ -126,6 +134,12 @@ export function initKaRepost() {
     if (event.source !== window) return;
     const t = event.data?.type;
     if (t === 'AB_REPOST_TEST') runTestFill();
+    // Diagnostic for the simulated scheduler.
+    if (t === 'AB_SIM_TEST') {
+      log('firing scheduler diagnostic → check service-worker console for [BG][sim]');
+      try { chrome.runtime.sendMessage({ type: 'AB_SIM_TEST' }, (r) => log('sim test result:', JSON.stringify(r))); }
+      catch (e: any) { log('sim test threw:', e.message); }
+    }
     // v1 real repost (CREATE-ONLY, no delete) — forwards to the background engine.
     if (t === 'AB_REPOST_CREATE' && event.data?.adId) {
       log('forwarding AB_REPOST_CREATE for ad', event.data.adId, '→ background engine (watch the service-worker console for [AB-engine] logs)');

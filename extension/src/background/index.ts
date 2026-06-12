@@ -27,13 +27,81 @@ async function doSync(token: string): Promise<{ success: boolean; ads?: any[]; e
 }
 
 chrome.alarms.create('periodic-sync', { periodInMinutes: 30 });
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name !== 'periodic-sync') return;
-  chrome.storage.session.get(['token'], async ({ token }: any) => {
-    if (!token) return;
-    try { await doSync(token); console.log('[BG] Periodic sync done'); }
-    catch (e: any) { console.warn('[BG] Periodic sync failed:', e.message); }
+
+// NOTE: extension-side simulated scheduler is DISABLED — the simulation now runs
+// in the BACKEND cron (REPOST_SIMULATE=true) and the dashboard shows the notifs.
+// The alarm below is intentionally not created (kept the code for reference).
+// chrome.alarms.create('repost-sim-check', { periodInMinutes: 1 });
+
+/** Pop an alert() on an open Kleinanzeigen tab (no OS-notification dependency). */
+function alertOnKaTab(text: string) {
+  chrome.tabs.query({}, (tabs) => {
+    const t = tabs.find((tab) => /kleinanzeigen\.de/.test(tab.url || ''));
+    if (t?.id) chrome.tabs.sendMessage(t.id, { type: 'AB_SIM_ALERT', text }, () => void chrome.runtime.lastError);
+    else console.warn('[BG][sim] no open kleinanzeigen.de tab to show the alert');
   });
+}
+
+async function runSimulatedScheduler(verbose = false) {
+  const { token } = await chrome.storage.session.get(['token']);
+  if (!token) { if (verbose) console.warn('[BG][sim] no token — not connected'); return; }
+  let ads: any[] = [];
+  try {
+    const res = await fetch(`${API_URL}/ads`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) { if (verbose) console.warn('[BG][sim] /ads HTTP', res.status); return; }
+    const data = await res.json();
+    ads = data.ads || data || [];
+  } catch (e: any) { if (verbose) console.warn('[BG][sim] fetch failed:', e.message); return; }
+
+  const now = Date.now();
+  if (verbose) {
+    console.log(`[BG][sim] fetched ${ads.length} ad(s). Auto-repost ads:`);
+    ads.filter((a) => a.autoRepost).forEach((a) =>
+      console.log(`[BG][sim]   ad ${a.id}: nextRepostAt=${a.nextRepostAt} (due=${a.nextRepostAt ? new Date(a.nextRepostAt).getTime() <= now : false}) listingState=${a.listingState}`));
+  }
+  const due = ads.filter((a) =>
+    a.autoRepost === true &&
+    a.nextRepostAt && new Date(a.nextRepostAt).getTime() <= now &&
+    (!a.listingState || a.listingState === 'active'),
+  );
+  if (verbose) console.log(`[BG][sim] due now: ${due.length}`);
+  if (due.length === 0) return;
+
+  for (const ad of due) {
+    const title = (ad.title || 'Deine Anzeige').replace(/<[^>]+>/g, '').slice(0, 60);
+    chrome.notifications.create(`repost-sim-${ad.id}-${now}`, {
+      type: 'basic',
+      iconUrl: 'icons/icon-128.png',
+      title: '✅ Anzeige neu gestellt (Simulation)',
+      message: `„${title}" wäre jetzt neu eingestellt worden. (Test-Modus — es wurde nichts gepostet.)`,
+    });
+    // Also pop an alert on an open KA tab (works even if OS notifications are off).
+    alertOnKaTab(`✅ Simulation: „${title}" wäre jetzt neu eingestellt worden. (Test — nichts gepostet)`);
+
+    // Reschedule so it doesn't fire again immediately (mirrors real behaviour).
+    const intervalMin = Number(ad.repostIntervalMinutes) || 1440;
+    const next = new Date(now + intervalMin * 60 * 1000).toISOString();
+    try {
+      await fetch(`${API_URL}/ads/${ad.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ nextRepostAt: next }),
+      });
+    } catch { /* non-fatal in test mode */ }
+    console.log(`[BG][sim] notified + rescheduled ad ${ad.id} → next ${next}`);
+  }
+}
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'periodic-sync') {
+    chrome.storage.session.get(['token'], async ({ token }: any) => {
+      if (!token) return;
+      try { await doSync(token); console.log('[BG] Periodic sync done'); }
+      catch (e: any) { console.warn('[BG] Periodic sync failed:', e.message); }
+    });
+  } else if (alarm.name === 'repost-sim-check') {
+    runSimulatedScheduler().catch((e) => console.warn('[BG][sim] failed:', e.message));
+  }
 });
 
 // ─── Handshake helpers ────────────────────────────────────────────────────────
@@ -251,6 +319,23 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
         sendResponse(result);
       });
     });
+    return true;
+  }
+
+  // Diagnostic: fire an immediate test notification AND run the scheduler check
+  // verbosely. If the test notification doesn't appear → OS notifications are off.
+  if (message.type === 'AB_SIM_TEST') {
+    alertOnKaTab('🔔 AnzeigenBoost Test-Alert — der Cron-Mechanismus funktioniert!');
+    chrome.notifications.create('ab-sim-test-' + Date.now(), {
+      type: 'basic',
+      iconUrl: 'icons/icon-128.png',
+      title: '🔔 AnzeigenBoost Test',
+      message: 'Wenn du das siehst, funktionieren Benachrichtigungen. Prüfe jetzt die Konsole für [BG][sim].',
+    }, (id) => {
+      const err = chrome.runtime.lastError;
+      console.log('[BG][sim] test notification created id=', id, 'err=', err?.message);
+    });
+    runSimulatedScheduler(true).then(() => sendResponse({ ok: true })).catch((e) => sendResponse({ ok: false, error: e.message }));
     return true;
   }
 

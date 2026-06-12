@@ -13,6 +13,7 @@ import { SchedulerModule } from './scheduler/scheduler.module';
 import { EbayModule } from './ebay/ebay.module';
 import { ReplyTemplatesModule } from './reply-templates/reply-templates.module';
 import { AdminModule } from './admin/admin.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { HealthController } from './health/health.controller';
 
 @Module({
@@ -32,6 +33,7 @@ import { HealthController } from './health/health.controller';
     EbayModule,
     ReplyTemplatesModule,
     AdminModule,
+    NotificationsModule,
     // TODO: Import Users Modules
   ],
   controllers: [HealthController],

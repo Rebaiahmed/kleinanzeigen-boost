@@ -10,6 +10,10 @@ export class UpdateAdDto {
   description?: string;
 
   @IsOptional()
+  @IsString()
+  status?: string;
+
+  @IsOptional()
   @IsNumber()
   @Min(1)
   repostIntervalMinutes?: number;

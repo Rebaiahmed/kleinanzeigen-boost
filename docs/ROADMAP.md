@@ -63,6 +63,22 @@ Priority: **High** · **Medium** · **Low**
 
 > **Epic deferred:** most of POST-SMARTER overlaps existing features (AI generation, KI-Opt, suggestPrice). Critiquing AI-generated ads is circular; the only genuinely new slice is photo-quality coaching — revisit only if users request it.
 
+## Part 7 — Epic: Repost via Delete + Re-create
+
+> KA removed free bumping; deleted ads are unrecoverable (confirmed by testing).
+> The only free repost = snapshot → delete → re-create with photo re-upload.
+> Full design + constraints + captured selectors in [docs/REPOST-DELETE-RECREATE.md](REPOST-DELETE-RECREATE.md).
+
+| #   | Task | Status | Priority | Notes |
+|-----|------|--------|----------|-------|
+| 7.1 | Phase 0 — Firebase Storage + snapshot schema | Pending | High | Foundation for photo backup |
+| 7.2 | Phase 1 — Snapshot + full-size photo backup (non-destructive, dryRun) | Pending | High | Scrape edit page (sync only stores 1 thumbnail); download all photos |
+| 7.3 | Phase 2 — Re-create from snapshot (fill form + re-upload photos + category picker) | Pending | High | Needs `p-anzeige-aufgeben.html` form DOM; category picker is the hard part |
+| 7.4 | Phase 3 — Wire delete↔recreate with verify guards + new-adId migration | Pending | High | Never delete without a verified complete snapshot |
+
+> ⚠️ Fragile (breaks on KA form redesigns), ban-risk if frequent, deletes real
+> ads — must be bulletproof. The current `repost.ts` is a non-working stub.
+
 ## Part 6 — Security & Anti-Ban
 
 | #   | Task | Status | Priority | Notes |

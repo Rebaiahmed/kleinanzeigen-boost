@@ -1,33 +1,49 @@
 version: '3.9'
+# Production stack — pulls pre-built images from GHCR (built by CI), runs on the VPS.
+# Usage: docker compose -f docker-compose.prod.yml up -d
+# Requires env: GHCR_OWNER (your GitHub org/user), and the .env files on the host.
 services:
   backend:
-    image: ghcr.io/YOURUSERNAME/anzeigenboost-backend:latest
+    image: ghcr.io/${GHCR_OWNER}/anzeigenboost-backend:latest
     restart: always
     env_file: /opt/anzeigenboost/.env.backend
     networks: [anzeigenboost]
     expose: ["3000"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   frontend:
-    image: ghcr.io/YOURUSERNAME/anzeigenboost-frontend:latest
+    image: ghcr.io/${GHCR_OWNER}/anzeigenboost-frontend:latest
     restart: always
     ports: ["80:80", "443:443"]
     volumes:
       - certbot-www:/var/www/certbot
       - certbot-conf:/etc/letsencrypt
     networks: [anzeigenboost]
+    depends_on:
+      backend:
+        condition: service_started
 
   automation:
-    image: ghcr.io/YOURUSERNAME/anzeigenboost-automation:latest
+    image: ghcr.io/${GHCR_OWNER}/anzeigenboost-automation:latest
     restart: always
     env_file: /opt/anzeigenboost/.env.automation
     networks: [anzeigenboost]
     # NOT exposed externally — Docker network only
 
+  # Renews certificates every 12h; the nginx (frontend) container serves the
+  # ACME challenge from the shared certbot-www volume.
   certbot:
     image: certbot/certbot
+    restart: always
     volumes:
       - certbot-www:/var/www/certbot
       - certbot-conf:/etc/letsencrypt
+    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot; sleep 12h & wait $${!}; done'
 
 volumes:
   certbot-www:

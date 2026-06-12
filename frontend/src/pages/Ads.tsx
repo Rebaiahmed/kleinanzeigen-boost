@@ -30,7 +30,6 @@ export function Ads() {
   const { ads, invalidateAds, isLoading, isFetching, isError, error } = useAds();
   const [syncError, setSyncError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'newest' | 'views-desc' | 'views-asc'>('newest');
-  const [hideDeleted, setHideDeleted] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const ADS_PER_PAGE = 12;
   const [isBackgroundSyncing, setIsBackgroundSyncing] = useState(false);
@@ -139,9 +138,9 @@ export function Ads() {
   const EBAY_ENABLED = false;
   const showBanner = EBAY_ENABLED && !isBannerDismissed && !isEbayConnected && !isLoading;
 
-  // Deleted-on-KA ads are kept in the DB but hidden by default (toggle below).
-  const deletedCount = ads.filter((a: any) => a.listingState === 'deleted').length;
-  const visibleAds = hideDeleted ? ads.filter((a: any) => a.listingState !== 'deleted') : ads;
+  // Always hide deleted ads (removed from Kleinanzeigen but kept in DB for history).
+  // Users don't need to see deleted listings.
+  const visibleAds = ads.filter((a: any) => a.listingState !== 'deleted');
 
   const sortedAds = [...visibleAds].sort((a, b) => {
     if (sortBy === 'newest') {
@@ -163,8 +162,8 @@ export function Ads() {
   const safePage = Math.min(currentPage, totalPages);
   const paginatedAds = sortedAds.slice((safePage - 1) * ADS_PER_PAGE, safePage * ADS_PER_PAGE);
 
-  // Reset to page 1 when the sort order or the deleted-filter changes.
-  useEffect(() => { setCurrentPage(1); }, [sortBy, hideDeleted]);
+  // Reset to page 1 when the sort order changes.
+  useEffect(() => { setCurrentPage(1); }, [sortBy]);
   // Clamp if the list shrank (e.g. an ad was deleted) and the current page no longer exists.
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages); }, [totalPages, currentPage]);
 
@@ -206,19 +205,6 @@ export function Ads() {
               <option value="views-asc">Wenigste Aufrufe</option>
             </select>
           </div>
-
-          {/* Show/hide deleted (gone-from-KA) ads — only appears if there are any */}
-          {deletedCount > 0 && (
-            <label className="flex items-center gap-1.5 border border-[#ccc] bg-white rounded-sm px-2.5 py-1.5 text-[13px] text-[#333] shadow-sm cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={!hideDeleted}
-                onChange={(e) => setHideDeleted(!e.target.checked)}
-                className="h-3.5 w-3.5 accent-[#A8C300] cursor-pointer"
-              />
-              <span className="text-[#666] font-medium">Gelöschte anzeigen ({deletedCount})</span>
-            </label>
-          )}
 
           {(isFetching || isBackgroundSyncing) && ads.length > 0 && (
             <div className="flex items-center gap-1.5 text-xs text-gray-500 py-1.5 px-1 shrink-0">

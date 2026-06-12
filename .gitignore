@@ -56,3 +56,6 @@ firebase-credentials.json
 *firebase-adminsdk*.json
 aachen-*.json
 *-service-account*.json
+
+# Local test artifacts (sample product images, payloads)
+testing_data/

@@ -7,6 +7,7 @@ import { AdStatus } from '../ads/dto/ad-status.enum';
 import { AdData } from '../ads/dto/ad-data.interface';
 import { SCHEDULER_CONFIG } from '../config/scheduler.constants';
 import { classifyRepostError } from '../common/repost-error.util';
+import { NotificationsService } from '../notifications/notifications.service';
 
 /** Consistent context prefix for scheduler logs: "[run=… user=… ad=…]". */
 function logCtx(userId?: string, adId?: string, runId?: string): string {
@@ -37,6 +38,7 @@ export class SchedulerService {
     private readonly firebaseService: FirebaseService,
     private readonly automationService: AutomationService,
     private readonly sessionService: SessionService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async triggerNow() {
@@ -118,8 +120,17 @@ export class SchedulerService {
     };
   }
 
-  @Cron('*/15 * * * *') // Runs every 15 minutes in production
+  // Every 15 min in production; every minute in SIMULATE mode so short test
+  // intervals (5/10 min) fire on time.
+  @Cron(process.env.REPOST_SIMULATE === 'true' ? '*/1 * * * *' : '*/15 * * * *')
   async handleRepostCron(triggeredBy: 'cron' | 'manual' = 'cron') {
+    // Kill-switch: set SCHEDULER_ENABLED=false to stop the server-side cron from
+    // calling the automation worker (e.g. while testing the client-side scheduler).
+    // A manual trigger ignores the switch on purpose.
+    if (triggeredBy === 'cron' && process.env.SCHEDULER_ENABLED === 'false') {
+      return { skipped: true, reason: 'scheduler_disabled' };
+    }
+
     // Mutex: if a previous run is still in progress (e.g. many slow worker calls),
     // skip this tick rather than processing the same due ads twice concurrently.
     if (this.isRunning) {
@@ -315,8 +326,25 @@ export class SchedulerService {
 
       // 3. Trigger worker — pass the user's session cookies so the repost
       //    context authenticates (otherwise: false SESSION_EXPIRED).
+      //    SIMULATE MODE: when REPOST_SIMULATE=true, skip the automation worker
+      //    entirely (nothing is posted), treat it as a success, and write a
+      //    notification — so the real cron timing/due-detection can be tested.
       try {
-        const result = await this.automationService.callAutomationWorker('repost', { userId, adId, adData, cookies });
+        const simulate = process.env.REPOST_SIMULATE === 'true';
+        let result: any;
+        if (simulate) {
+          result = { success: true };
+          // Persist + push live over SSE (no polling).
+          await this.notificationsService.emit(userId, {
+            type: 'repost_simulated',
+            adId,
+            adTitle: adData.title || 'Anzeige',
+            message: `Simulation: „${(adData.title || 'Deine Anzeige').replace(/<[^>]+>/g, '')}" wurde neu gestellt.`,
+          });
+          this.logger.log(`${logCtx(userId, adId, runId)} [SIMULATE] would repost — notification pushed (nothing posted)`);
+        } else {
+          result = await this.automationService.callAutomationWorker('repost', { userId, adId, adData, cookies });
+        }
 
         // 4. On success, update state and create log
         if (result.success) {
@@ -373,11 +401,9 @@ export class SchedulerService {
           const pausedUntil = new Date(Date.now() + cooldownMs).toISOString();
           await adRef.update({ status: AdStatus.ACTIVE, pendingRepostSince: null }).catch(() => {});
           await db.collection('users').doc(userId).set({ repostPausedUntil: pausedUntil }, { merge: true }).catch(() => {});
-          await db.collection('users').doc(userId).collection('notifications').add({
+          await this.notificationsService.emit(userId, {
             type: 'reposts_paused',
             message: `Reposts pausiert: Kleinanzeigen hat ungewöhnliche Aktivität erkannt. Wir versuchen es automatisch in ${SCHEDULER_CONFIG.ipBlockCooldownHours} Stunden erneut.`,
-            read: false,
-            createdAt: new Date().toISOString(),
           }).catch(() => {});
           this.logger.warn(`${logCtx(userId, adId, runId)} IP_BLOCKED — pausing all reposts for ${SCHEDULER_CONFIG.ipBlockCooldownHours}h (until ${pausedUntil})`);
           break; // shared IP/session — don't touch this user's other ads
@@ -414,19 +440,13 @@ export class SchedulerService {
             nextRepostAt: null,
           });
 
-          // Write a notification the dashboard can surface
-          try {
-            await db.collection('users').doc(userId).collection('notifications').add({
-              type: 'repost_disabled',
-              adId,
-              adTitle: adData.title || 'Anzeige',
-              message: `Auto-Repost für "${adData.title || 'deine Anzeige'}" wurde nach ${MAX_REPOST_FAILURES} fehlgeschlagenen Versuchen deaktiviert. Bitte prüfe die Anzeige und aktiviere sie erneut.`,
-              read: false,
-              createdAt: new Date().toISOString(),
-            });
-          } catch (notifyErr: any) {
-            this.logger.warn(`Failed to write notification for ${adId}: ${notifyErr.message}`);
-          }
+          // Write a notification the dashboard can surface (both persistent + live SSE)
+          await this.notificationsService.emit(userId, {
+            type: 'repost_disabled',
+            adId,
+            adTitle: adData.title || 'Anzeige',
+            message: `Auto-Repost für "${adData.title || 'deine Anzeige'}" wurde nach ${MAX_REPOST_FAILURES} fehlgeschlagenen Versuchen deaktiviert. Bitte prüfe die Anzeige und aktiviere sie erneut.`,
+          }).catch((err: any) => this.logger.warn(`Failed to emit notification for ${adId}: ${err.message}`));
 
           this.logger.warn(`${logCtx(userId, adId, runId)} Auto-Repost disabled after ${MAX_REPOST_FAILURES} failures [${errorCode}]`);
         } else {
@@ -443,6 +463,7 @@ export class SchedulerService {
 
   @Cron('0 * * * *') // Runs every hour
   async trackRepostViews() {
+    if (process.env.SCHEDULER_ENABLED === 'false') return; // kill-switch (see handleRepostCron)
     this.logger.log('Running view tracking cron...');
     const db = this.firebaseService.firestore;
     const now = new Date();

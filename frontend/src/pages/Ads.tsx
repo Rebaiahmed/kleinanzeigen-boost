@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, RefreshCw, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 import { useAdsActions } from '../hooks/useAdsActions';
 import { useAds } from '../hooks/useAds';
 import { useAiUsage } from '../hooks/useAiUsage';
 import { useKiOptimization } from '../hooks/useKiOptimization';
+import { useRepostNotifications } from '../hooks/useRepostNotifications';
 import { AdGrid } from '../components/AdGrid';
 import { Toast } from '../components/Toast';
 import { useExtension } from '../hooks/useExtension';
@@ -56,6 +57,22 @@ export function Ads() {
   } = useAdsActions();
 
   const kiOpt = useKiOptimization(ads, optimizeExistingAd, incrementUsage, isBlocked, callsCount, limit);
+
+  // Listen for repost notifications and prompt sync
+  const handleRepostNotification = useCallback(async () => {
+    setSyncError(null);
+    setIsBackgroundSyncing(true);
+    try {
+      await syncAds(() => {});
+      invalidateAds();
+    } catch (e: any) {
+      setSyncError(e.message || 'Synchronisierung fehlgeschlagen');
+    } finally {
+      setIsBackgroundSyncing(false);
+    }
+  }, [syncAds, invalidateAds]);
+
+  useRepostNotifications(handleRepostNotification);
 
   // Platform connection status
   useEffect(() => {

@@ -10,17 +10,21 @@ function getToken() {
  * Real-time notifications via Server-Sent Events (no polling). Connects to
  * /api/notifications/stream and shows each event as a desktop notification
  * (falling back to alert() if permission isn't granted). Auto-reconnects.
+ *
+ * When a repost notification arrives, prompts user to sync ads.
  */
-export function useRepostNotifications() {
+export function useRepostNotifications(onRepostNotification?: () => void) {
   const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     const token = getToken();
     if (!token) return;
 
-    // Ask for notification permission on first load.
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().catch(() => {});
+    // Aggressively ask for notification permission on first load
+    if ('Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().catch(() => {});
+      }
     }
 
     const show = (title: string, body: string) => {
@@ -42,12 +46,25 @@ export function useRepostNotifications() {
         try {
           const data = JSON.parse(e.data);
           if (!data || data.type === 'ping') return; // heartbeat
+
           let title = '🔔 AnzeigenBoost';
           if (data.type === 'repost_simulated') title = '✅ Anzeige neu gestellt';
           else if (data.type === 'repost_pending_notification') title = '📢 Repost bereit';
           else if (data.type === 'repost_disabled') title = '⚠️ Auto-Repost deaktiviert';
           else if (data.type === 'reposts_paused') title = '⛔ Reposts pausiert';
+
           show(title, data.message || 'Benachrichtigung von AnzeigenBoost');
+
+          // When repost notification arrives, trigger refresh in parent component
+          if (data.type === 'repost_pending_notification' && onRepostNotification) {
+            // Give user a moment to see the notification, then prompt sync
+            setTimeout(() => {
+              const syncNow = confirm('🔔 Repost-Zeit erreicht!\n\nMöchtest du die Anzeigen jetzt synchronisieren?');
+              if (syncNow) {
+                onRepostNotification();
+              }
+            }, 1000);
+          }
         } catch { /* ignore non-JSON */ }
       };
 
@@ -67,5 +84,5 @@ export function useRepostNotifications() {
       if (reconnectTimer) window.clearTimeout(reconnectTimer);
       esRef.current?.close();
     };
-  }, []);
+  }, [onRepostNotification]);
 }

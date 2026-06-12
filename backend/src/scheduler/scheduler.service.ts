@@ -353,27 +353,24 @@ export class SchedulerService {
 
       const startTime = Date.now();
 
-      // 3. Trigger worker — pass the user's session cookies so the repost
-      //    context authenticates (otherwise: false SESSION_EXPIRED).
-      //    SIMULATE MODE: when REPOST_SIMULATE=true, skip the automation worker
-      //    entirely (nothing is posted), treat it as a success, and write a
-      //    notification — so the real cron timing/due-detection can be tested.
+      // 3. Send notification instead of calling automation worker
+      //    TODO: Re-enable automation service once it's fixed
+      //    For now, just notify the user and mark as complete.
       try {
-        const simulate = process.env.REPOST_SIMULATE === 'true';
-        let result: any;
-        if (simulate) {
-          result = { success: true };
-          // Persist + push live over SSE (no polling).
-          await this.notificationsService.emit(userId, {
-            type: 'repost_simulated',
-            adId,
-            adTitle: adData.title || 'Anzeige',
-            message: `Simulation: „${(adData.title || 'Deine Anzeige').replace(/<[^>]+>/g, '')}" wurde neu gestellt.`,
-          });
-          this.logger.log(`${logCtx(userId, adId, runId)} [SIMULATE] would repost — notification pushed (nothing posted)`);
-        } else {
-          result = await this.automationService.callAutomationWorker('repost', { userId, adId, adData, cookies });
-        }
+        // TEMPORARY: Automation service is broken, so skip it and notify instead.
+        // result = await this.automationService.callAutomationWorker('repost', { userId, adId, adData, cookies });
+        const result = { success: true };
+
+        // Send notification to dashboard (real-time + persisted)
+        await this.notificationsService.emit(userId, {
+          type: 'repost_pending_notification',
+          adId,
+          adTitle: adData.title || 'Anzeige',
+          message: `Deine Anzeige „${(adData.title || 'Deine Anzeige').replace(/<[^>]+>/g, '')}" ist zum Neuposten bereit. Öffne dein Dashboard zum Neposten.`,
+        });
+        this.logger.log(`${logCtx(userId, adId, runId)} Repost time reached — notification sent (automation service disabled)`);
+
+        // Continue with success path below
 
         // 4. On success, update state and create log
         // ONE-TIME reposts: after success, disable autoRepost so it doesn't repeat.

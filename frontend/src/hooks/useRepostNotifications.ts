@@ -44,6 +44,7 @@ export function useRepostNotifications() {
           if (!data || data.type === 'ping') return; // heartbeat
           let title = '🔔 AnzeigenBoost';
           if (data.type === 'repost_simulated') title = '✅ Anzeige neu gestellt';
+          else if (data.type === 'repost_pending_notification') title = '📢 Repost bereit';
           else if (data.type === 'repost_disabled') title = '⚠️ Auto-Repost deaktiviert';
           else if (data.type === 'reposts_paused') title = '⛔ Reposts pausiert';
           show(title, data.message || 'Benachrichtigung von AnzeigenBoost');

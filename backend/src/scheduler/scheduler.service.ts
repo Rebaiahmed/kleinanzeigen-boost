@@ -120,6 +120,35 @@ export class SchedulerService {
     };
   }
 
+  /** Get all scheduled (pending) one-time reposts for a user. */
+  async getUserScheduledReposts(userId: string) {
+    const db = this.firebaseService.firestore;
+    const snap = await db.collection('users').doc(userId).collection('ads')
+      .where('autoRepost', '==', true)
+      .where('status', '==', AdStatus.ACTIVE)
+      .get();
+
+    const now = new Date().toISOString();
+    const scheduled = snap.docs
+      .map(d => {
+        const ad: any = d.data();
+        return {
+          id: d.id,
+          title: ad.title || '(Untitled)',
+          nextRepostAt: ad.nextRepostAt || null,
+          isDueNow: ad.nextRepostAt && ad.nextRepostAt <= now ? true : false,
+          listingState: ad.listingState || 'unknown',
+        };
+      })
+      .sort((a, b) => {
+        const aTime = a.nextRepostAt ? new Date(a.nextRepostAt).getTime() : Infinity;
+        const bTime = b.nextRepostAt ? new Date(b.nextRepostAt).getTime() : Infinity;
+        return aTime - bTime;
+      });
+
+    return { success: true, now, count: scheduled.length, scheduled };
+  }
+
   // Every 15 min in production; every minute in SIMULATE mode so short test
   // intervals (5/10 min) fire on time.
   @Cron(process.env.REPOST_SIMULATE === 'true' ? '*/1 * * * *' : '*/15 * * * *')
@@ -347,13 +376,14 @@ export class SchedulerService {
         }
 
         // 4. On success, update state and create log
+        // ONE-TIME reposts: after success, disable autoRepost so it doesn't repeat.
+        // User must manually reschedule if they want another repost.
         if (result.success) {
-          const nextRepostAt = new Date(Date.now() + repostIntervalMinutes * 60 * 1000).toISOString();
-
           await db.collection('users').doc(userId).collection('ads').doc(adId).update({
             status: AdStatus.ACTIVE,
             lastPostedAt: new Date().toISOString(),
-            nextRepostAt,
+            autoRepost: false,  // ONE-TIME only — disable to prevent re-scheduling
+            nextRepostAt: null,
             pendingRepostSince: null,
             repostFailureCount: 0,        // reset on success
             repostDisabledReason: null,
@@ -370,7 +400,7 @@ export class SchedulerService {
           });
 
           if (stats) stats.succeeded++;
-          this.logger.log(`${logCtx(userId, adId, runId)} ✓ Repost ok — next in ${repostIntervalMinutes} min`);
+          this.logger.log(`${logCtx(userId, adId, runId)} ✓ Repost ok — one-time complete (autoRepost disabled)`);
         }
       } catch (error: any) {
         const errorCode = classifyRepostError(error.message);

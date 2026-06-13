@@ -115,6 +115,21 @@ function getSessionToken(): string | null {
   return localStorage.getItem('kb_session') || localStorage.getItem('token');
 }
 
+function calculateActiveDays(ad: any): number {
+  const startDate = ad.firstSyncedAt || ad.createdAt;
+  if (!startDate) return 0;
+  const start = new Date(startDate);
+  const now = new Date();
+  const diffMs = now.getTime() - start.getTime();
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+}
+
+function calculateViewsPerDay(ad: any): number {
+  const activeDays = calculateActiveDays(ad);
+  if (activeDays === 0) return 0;
+  return Math.round((ad.views || 0) / activeDays);
+}
+
 export function AdCard({
   ad,
   onAction,
@@ -147,6 +162,9 @@ export function AdCard({
   const [aiSuggestion, setAiSuggestion] = useState<any | null>(null);
   const [isLoadingAiSuggestion, setIsLoadingAiSuggestion] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+
+  // Analytics panel state
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   // Auto-repost is gated when the listing isn't active on Kleinanzeigen.
   // State is refreshed on every sync, so this clears when a reservation is lifted.
@@ -737,6 +755,20 @@ export function AdCard({
               </div>
             </div>
           )}
+
+          {/* Analytics */}
+          <button
+            onClick={() => setShowAnalytics(!showAnalytics)}
+            className={`flex-1 border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors ${
+              showAnalytics
+                ? 'border-blue-400 text-blue-700 bg-blue-50'
+                : 'border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50'
+            }`}
+            title="Anzeigenanalytics anzeigen"
+          >
+            <span>📊</span>
+            <span>Analytics</span>
+          </button>
         </div>
 
         {/* Mobile Actions Collapsed Trigger */}
@@ -750,6 +782,37 @@ export function AdCard({
         </div>
 
       </div>
+
+      {/* Expandable Analytics Panel */}
+      {showAnalytics && (
+        <div className="border-t border-gray-200 bg-gray-50 p-3">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-[12px] font-semibold text-gray-700 uppercase tracking-wider">📊 Anzeigenanalytics</h3>
+            <button
+              onClick={() => setShowAnalytics(false)}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-[12px]">
+            <div className="bg-white rounded border border-gray-200 p-2">
+              <div className="text-gray-500 text-[11px] font-medium uppercase tracking-wider mb-0.5">Reposts</div>
+              <div className="text-[18px] font-bold text-gray-800">{ad.trackedRepostsCount || 0}</div>
+              <div className="text-gray-400 text-[10px] mt-1">
+                {ad.lastRepostViewsGained !== undefined ? `+${ad.lastRepostViewsGained} zuletzt` : 'Keine Daten'}
+              </div>
+            </div>
+            <div className="bg-white rounded border border-gray-200 p-2">
+              <div className="text-gray-500 text-[11px] font-medium uppercase tracking-wider mb-0.5">Aktive Tage</div>
+              <div className="text-[18px] font-bold text-gray-800">{calculateActiveDays(ad)}</div>
+              <div className="text-gray-400 text-[10px] mt-1">
+                {ad.views && calculateActiveDays(ad) > 0 ? `Ø ${calculateViewsPerDay(ad)}/Tag` : 'Ø - /Tag'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mobile Bottom Sheet Modal */}
       {isBottomSheetOpen && (

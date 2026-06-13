@@ -167,7 +167,16 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
   // Get JWT token from session storage (used by content scripts)
   if (message.type === 'GET_SESSION_TOKEN') {
     chrome.storage.session.get(['token'], ({ token }: any) => {
-      sendResponse({ token: token || null });
+      if (token) {
+        console.log('[BG] Sending token from session storage');
+        sendResponse({ token });
+      } else {
+        // Fallback: try to get from local storage (for development)
+        chrome.storage.local.get(['token'], ({ token: localToken }: any) => {
+          console.log('[BG] Sending token from local storage:', localToken ? 'found' : 'not found');
+          sendResponse({ token: localToken || null });
+        });
+      }
     });
     return true;
   }

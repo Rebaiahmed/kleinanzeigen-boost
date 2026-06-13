@@ -19,16 +19,38 @@ let templateCache: ReplyTemplate[] = [];
 let isCachePopulated = false;
 let injectionAttempts = 0;
 
+/** Get token from background or storage. */
+async function getToken(): Promise<string> {
+  // Try to get from background script first
+  try {
+    return await new Promise<string>((resolve) => {
+      const timeout = setTimeout(() => {
+        log('Background message timeout, trying fallback');
+        resolve('');
+      }, 2000);
+
+      chrome.runtime.sendMessage({ type: 'GET_SESSION_TOKEN' }, (response) => {
+        clearTimeout(timeout);
+        if (chrome.runtime.lastError) {
+          log('Background message error:', chrome.runtime.lastError.message);
+          resolve('');
+        } else {
+          resolve(response?.token || '');
+        }
+      });
+    });
+  } catch (err) {
+    log('Failed to get token from background:', err);
+    return '';
+  }
+}
+
 /** Fetch reply templates from backend. */
 async function fetchTemplates(): Promise<ReplyTemplate[]> {
   if (isCachePopulated) return templateCache;
 
   try {
-    const token = await new Promise<string>((resolve) => {
-      chrome.runtime.sendMessage({ type: 'GET_SESSION_TOKEN' }, (response) => {
-        resolve(response?.token || '');
-      });
-    });
+    const token = await getToken();
 
     if (!token) {
       log('No session token available');
@@ -178,18 +200,17 @@ function showTemplateModal(inputElement: HTMLElement) {
 
         // Track usage
         try {
-          const token = await new Promise<string>((resolve) => {
-            chrome.runtime.sendMessage({ type: 'GET_SESSION_TOKEN' }, (response) => {
-              resolve(response?.token || '');
+          const token = await getToken();
+          if (token) {
+            const apiUrl = localStorage.getItem('apiUrl') || 'http://localhost:3000/api';
+            await fetch(`${apiUrl}/reply-templates/${template.id}/copy`, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` },
             });
-          });
-          const apiUrl = localStorage.getItem('apiUrl') || 'http://localhost:3000/api';
-          await fetch(`${apiUrl}/reply-templates/${template.id}/copy`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${token}` },
-          });
+            log('Template usage tracked');
+          }
         } catch (e) {
-          log('Failed to track template usage');
+          log('Failed to track template usage:', e);
         }
       });
 

@@ -10,6 +10,7 @@ export interface FeatureFlags {
   enableEbay: boolean;
   enableFacebookMarketplace: boolean;
   enableAnalytics: boolean;
+  enablePhotoFeedback: boolean;
 }
 
 function parseEnvBool(value: string | undefined, defaultVal: boolean): boolean {
@@ -24,6 +25,8 @@ export const FEATURE_FLAGS: FeatureFlags = {
   enableFacebookMarketplace: parseEnvBool(process.env.ENABLE_FACEBOOK_MARKETPLACE, false),
   // Per-repost analytics — default OFF until UI is finalized
   enableAnalytics: parseEnvBool(process.env.ENABLE_ANALYTICS, false),
+  // Photo quality feedback — default OFF until ready
+  enablePhotoFeedback: parseEnvBool(process.env.ENABLE_PHOTO_FEEDBACK, false),
 };
 
 /**

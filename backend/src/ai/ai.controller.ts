@@ -96,4 +96,16 @@ export class AiController {
     }
     return this.aiService.analyzePhotos(req.user.userId, files, hint, language);
   }
+
+  // Photo feedback: analyze ad photos for quality score + suggestions (metered, cached)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @UseGuards(JwtAuthGuard)
+  @Post('photo-feedback')
+  async getPhotoFeedback(
+    @Req() req: any,
+    @Body() body: { adId: string }
+  ) {
+    console.log(`[Photo Feedback] Request for ad ${body.adId} by user ${req.user?.userId}`);
+    return this.aiService.getPhotoFeedback(req.user.userId, body.adId);
+  }
 }

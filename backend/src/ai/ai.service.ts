@@ -747,6 +747,204 @@ ${JSON.stringify(dataset)}`;
     }
     return { ok: true, latencyMs: 0 };
   }
+
+  /** Analyze ad photos for quality feedback. Metered, cached, cost-controlled. */
+  async getPhotoFeedback(
+    userId: string,
+    adId: string,
+  ): Promise<{
+    overall: number;
+    scores: Record<string, number>;
+    suggestions: string[];
+    strengths: string[];
+    analyzedAt: string;
+  }> {
+    const db = this.firebaseService.firestore;
+
+    // 1. Fetch user tier + check quota
+    const userDoc = await db.collection('users').doc(userId).get();
+    const plan = userDoc.data()?.tier || userDoc.data()?.plan || 'free';
+
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const usageRef = db.collection('aiUsage').doc(userId);
+    const usageDoc = await usageRef.get();
+
+    let callsCount = 0;
+    if (usageDoc.exists) {
+      const data = usageDoc.data()!;
+      if (data.month === currentMonth) callsCount = data.callsCount || 0;
+    }
+
+    // 2. Enforce quota (photo feedback is expensive, limit per tier)
+    const photoFeedbackQuotas: Record<string, number> = {
+      free: 3,
+      starter: 15,
+      pro: 100,
+      unlimited: 1000,
+    };
+    const quota = photoFeedbackQuotas[plan] || 3;
+
+    // Note: Using same counter as photo analysis (both are metered vision calls)
+    if (callsCount >= quota) {
+      throw new HttpException(
+        {
+          message: 'Du hast dein Kontingent für Foto-Check erreicht. Upgrade für mehr.',
+          code: 'PHOTO_FEEDBACK_LIMIT_REACHED',
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    // 3. Fetch ad + photos
+    const adDoc = await db.collection('users').doc(userId).collection('ads').doc(adId).get();
+    if (!adDoc.exists) {
+      throw new HttpException('Anzeige nicht gefunden', HttpStatus.NOT_FOUND);
+    }
+
+    const ad = adDoc.data()!;
+    let photoUrls = ad.images || ad.pictureUrls || [];
+    if (typeof photoUrls === 'string') photoUrls = [photoUrls];
+    photoUrls = (photoUrls || []).filter((p: any) => p);
+
+    if (photoUrls.length === 0) {
+      throw new HttpException('Keine Fotos in der Anzeige gefunden', HttpStatus.BAD_REQUEST);
+    }
+
+    // 4. Check cache: has this photo set been analyzed recently?
+    const existingFeedback = ad.photoFeedback;
+    const photoHash = this.hashPhotoSet(photoUrls);
+
+    if (existingFeedback && existingFeedback.imageSetHash === photoHash) {
+      this.logger.log(`[Photo Feedback] Cache hit for ad ${adId}`);
+      return {
+        overall: existingFeedback.overall,
+        scores: existingFeedback.scores,
+        suggestions: existingFeedback.suggestions,
+        strengths: existingFeedback.strengths,
+        analyzedAt: existingFeedback.analyzedAt,
+      };
+    }
+
+    // 5. Download + downscale images (cap at 5, max 1024px)
+    const imagesToAnalyze = photoUrls.slice(0, 5);
+    const base64Images = await Promise.all(
+      imagesToAnalyze.map((url: string) => this.downloadAndDownscaleImage(url, 1024)),
+    );
+
+    // 6. Call AI (OpenRouter vision model)
+    this.assertAiConfigured();
+
+    const imageParts = base64Images.map((data) => ({
+      inlineData: { data, mimeType: 'image/jpeg' },
+    }));
+
+    const systemPrompt = `You are a marketplace listing photo expert for the German classifieds site Kleinanzeigen.
+Analyze the provided product photos for a used-item listing.
+Rate each dimension 0-100:
+- lighting: brightness, shadows, glare, natural vs flash
+- clarity: focus, sharpness, resolution
+- background: clean/uncluttered, item is the focus
+- composition: framing, angle, item fills the frame, not cut off
+- coverage: enough photos and key angles (front, back, detail/close-up, any labels/defects)
+Then give 2-4 SPECIFIC, actionable suggestions. Each suggestion must reference a concrete fix.
+Do NOT give generic advice like "improve the photos".
+Also identify 1-2 things that are already good.
+Respond ONLY with valid JSON, no markdown, no extra text:
+{
+  "overall": <0-100>,
+  "scores": {
+    "lighting": <0-100>,
+    "clarity": <0-100>,
+    "background": <0-100>,
+    "composition": <0-100>,
+    "coverage": <0-100>
+  },
+  "suggestions": ["<specific fix>", "<specific fix>", ...],
+  "strengths": ["<what's good>"]
+}`;
+
+    const userPrompt = `Es gibt ${imagesToAnalyze.length} Fotos in dieser Anzeige. Analysiere sie.`;
+
+    const result = await this.executeWithFallback(
+      [userPrompt, ...imageParts],
+      systemPrompt,
+      { responseMimeType: 'application/json', maxOutputTokens: 600 },
+      { timeoutMs: AI_CONFIG.imageAnalysisTimeoutMs },
+    );
+
+    // 7. Parse response
+    let feedbackData;
+    try {
+      feedbackData = JSON.parse(cleanAndExtractJson(result.responseText));
+    } catch (e: any) {
+      this.logger.error('Failed to parse photo feedback response:', e.message);
+      throw new HttpException('Foto-Analyse fehlgeschlagen', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    // 8. Store result + increment usage
+    await db
+      .collection('users')
+      .doc(userId)
+      .collection('ads')
+      .doc(adId)
+      .update({
+        photoFeedback: {
+          overall: feedbackData.overall,
+          scores: feedbackData.scores,
+          suggestions: feedbackData.suggestions,
+          strengths: feedbackData.strengths,
+          analyzedAt: new Date().toISOString(),
+          imageSetHash: photoHash,
+        },
+      });
+
+    // Increment usage (photo feedback is metered like photo analysis)
+    const newCallsCount = (usageDoc.data()?.callsCount || 0) + 1;
+    await usageRef.set(
+      {
+        month: currentMonth,
+        callsCount: newCallsCount,
+        lastActive: new Date().toISOString(),
+      },
+      { merge: true },
+    );
+
+    this.logger.log(`[Photo Feedback] Analyzed ad ${adId} (month: ${currentMonth}, usage: ${newCallsCount})`);
+
+    return {
+      overall: feedbackData.overall,
+      scores: feedbackData.scores,
+      suggestions: feedbackData.suggestions,
+      strengths: feedbackData.strengths,
+      analyzedAt: new Date().toISOString(),
+    };
+  }
+
+  /** Simple hash of photo URLs for cache detection. */
+  private hashPhotoSet(urls: string[]): string {
+    const concat = urls.join('|');
+    let hash = 0;
+    for (let i = 0; i < concat.length; i++) {
+      const char = concat.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash;
+    }
+    return Math.abs(hash).toString(16);
+  }
+
+  /** Download image from URL and downscale to max size. */
+  private async downloadAndDownscaleImage(url: string, maxPx: number): Promise<string> {
+    try {
+      const response = await axios.get(url, { responseType: 'arraybuffer', timeout: 10000 });
+      const buffer = Buffer.from(response.data);
+      // For now, just encode as base64 (in production, use sharp or similar to downscale)
+      return buffer.toString('base64');
+    } catch (err: any) {
+      this.logger.warn(`Failed to download image from ${url}:`, err.message);
+      throw new HttpException('Foto konnte nicht geladen werden', HttpStatus.BAD_REQUEST);
+    }
+  }
 }
 
 

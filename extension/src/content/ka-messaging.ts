@@ -78,16 +78,25 @@ function injectTemplatePickerUI() {
   const btn = document.createElement('button');
   btn.innerHTML = '📋 Antwort-Vorlage';
   Object.assign(btn.style, {
-    padding: '6px 12px',
+    padding: '8px 12px',
     background: '#A8C300',
     color: '#fff',
     border: 'none',
     borderRadius: '4px',
     cursor: 'pointer',
-    fontSize: '12px',
+    fontSize: '13px',
     fontWeight: '600',
     fontFamily: 'system-ui, sans-serif',
+    transition: 'background 0.2s',
   } as CSSStyleDeclaration);
+
+  btn.addEventListener('mouseenter', () => {
+    btn.style.background = '#96ae00';
+  });
+
+  btn.addEventListener('mouseleave', () => {
+    btn.style.background = '#A8C300';
+  });
 
   btn.addEventListener('click', async () => {
     log('Template picker clicked');
@@ -97,36 +106,44 @@ function injectTemplatePickerUI() {
       return;
     }
 
-    // Simple dropdown menu
+    // Dropdown menu with KA styling
     const menu = document.createElement('div');
     Object.assign(menu.style, {
       position: 'absolute',
       background: '#fff',
-      border: '1px solid #ccc',
+      border: '1px solid #ddd',
       borderRadius: '4px',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
       zIndex: '10000',
-      minWidth: '200px',
+      minWidth: '220px',
+      maxWidth: '300px',
+      maxHeight: '400px',
+      overflowY: 'auto',
     } as CSSStyleDeclaration);
 
-    templates.forEach((template) => {
+    templates.forEach((template, index) => {
       const item = document.createElement('div');
       Object.assign(item.style, {
-        padding: '8px 12px',
+        padding: '10px 12px',
         cursor: 'pointer',
-        borderBottom: '1px solid #eee',
+        borderBottom: index < templates.length - 1 ? '1px solid #f0f0f0' : 'none',
         fontSize: '13px',
-        transition: 'background 0.2s',
+        transition: 'background 0.15s',
+        color: '#333',
       } as CSSStyleDeclaration);
 
       item.textContent = `${template.icon} ${template.title}`;
 
       item.addEventListener('mouseenter', () => {
-        item.style.background = '#f5f5f5';
+        item.style.background = '#f0f5f0';
+        item.style.color = '#A8C300';
+        item.style.fontWeight = '500';
       });
 
       item.addEventListener('mouseleave', () => {
         item.style.background = '';
+        item.style.color = '#333';
+        item.style.fontWeight = 'normal';
       });
 
       item.addEventListener('click', async () => {

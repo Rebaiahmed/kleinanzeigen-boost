@@ -761,8 +761,8 @@ export function AdCard({
             onClick={() => setShowAnalytics(!showAnalytics)}
             className={`flex-1 border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors ${
               showAnalytics
-                ? 'border-blue-400 text-blue-700 bg-blue-50'
-                : 'border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50'
+                ? 'border-ka-green text-ka-green bg-green-50'
+                : 'border-gray-300 text-gray-700 hover:border-ka-green hover:text-ka-green hover:bg-green-50'
             }`}
             title="Anzeigenanalytics anzeigen"
           >
@@ -785,9 +785,9 @@ export function AdCard({
 
       {/* Expandable Analytics Panel */}
       {showAnalytics && (
-        <div className="border-t border-gray-200 bg-gray-50 p-3">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-[12px] font-semibold text-gray-700 uppercase tracking-wider">📊 Anzeigenanalytics</h3>
+        <div className="border-t border-ka-green/20 bg-green-50/40 p-3">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[12px] font-semibold text-ka-green uppercase tracking-wider">📊 Anzeigenanalytics</h3>
             <button
               onClick={() => setShowAnalytics(false)}
               className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -796,17 +796,17 @@ export function AdCard({
             </button>
           </div>
           <div className="grid grid-cols-2 gap-3 text-[12px]">
-            <div className="bg-white rounded border border-gray-200 p-2">
-              <div className="text-gray-500 text-[11px] font-medium uppercase tracking-wider mb-0.5">Reposts</div>
-              <div className="text-[18px] font-bold text-gray-800">{ad.trackedRepostsCount || 0}</div>
-              <div className="text-gray-400 text-[10px] mt-1">
+            <div className="bg-white rounded border border-ka-green/20 p-3 hover:shadow-sm transition-shadow">
+              <div className="text-gray-500 text-[10px] font-semibold uppercase tracking-wider mb-1">Reposts</div>
+              <div className="text-[20px] font-bold text-ka-green">{ad.trackedRepostsCount || 0}</div>
+              <div className="text-gray-500 text-[10px] mt-1.5">
                 {ad.lastRepostViewsGained !== undefined ? `+${ad.lastRepostViewsGained} zuletzt` : 'Keine Daten'}
               </div>
             </div>
-            <div className="bg-white rounded border border-gray-200 p-2">
-              <div className="text-gray-500 text-[11px] font-medium uppercase tracking-wider mb-0.5">Aktive Tage</div>
-              <div className="text-[18px] font-bold text-gray-800">{calculateActiveDays(ad)}</div>
-              <div className="text-gray-400 text-[10px] mt-1">
+            <div className="bg-white rounded border border-ka-green/20 p-3 hover:shadow-sm transition-shadow">
+              <div className="text-gray-500 text-[10px] font-semibold uppercase tracking-wider mb-1">Aktive Tage</div>
+              <div className="text-[20px] font-bold text-ka-green">{calculateActiveDays(ad)}</div>
+              <div className="text-gray-500 text-[10px] mt-1.5">
                 {ad.views && calculateActiveDays(ad) > 0 ? `Ø ${calculateViewsPerDay(ad)}/Tag` : 'Ø - /Tag'}
               </div>
             </div>

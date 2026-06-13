@@ -164,6 +164,14 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
     return true;
   }
 
+  // Get JWT token from session storage (used by content scripts)
+  if (message.type === 'GET_SESSION_TOKEN') {
+    chrome.storage.session.get(['token'], ({ token }: any) => {
+      sendResponse({ token: token || null });
+    });
+    return true;
+  }
+
   // Check if user is logged into a platform.
   // For Kleinanzeigen we validate an ACTUAL authenticated session (a valid,
   // non-expired access_token JWT) — not mere cookie presence, because KA keeps

@@ -264,10 +264,11 @@ export function Settings() {
           <div className="text-sm text-gray-500 animate-pulse py-4">Lade KI-Nutzungsdaten...</div>
         ) : (
           aiUsage && (() => {
-            const { callsCount, limit } = aiUsage;
-            const isUnlimited = limit === Infinity || limit <= 0;
-            const pct = isUnlimited ? 0 : Math.min(100, Math.round((callsCount / limit) * 100));
-            
+            const { callsCount, limit, unlimited } = aiUsage;
+            // Use the 'unlimited' flag from backend (limit will be null when unlimited)
+            const isUnlimited = unlimited === true || limit === null;
+            const pct = isUnlimited ? 0 : Math.min(100, Math.round((callsCount / (limit || 1)) * 100));
+
             // Color selection based on percentage
             let barColor = 'bg-[#0064d2]'; // Default: blue
             if (pct >= 100) {
@@ -281,13 +282,13 @@ export function Settings() {
                 {/* Progress Bar Container with Percentage Row */}
                 <div className="flex items-center gap-4">
                   <div className="flex-1 bg-gray-100 rounded-full h-4 overflow-hidden border border-gray-200">
-                    <div 
-                      className={`${barColor} h-full rounded-full transition-all duration-500 ease-out`} 
+                    <div
+                      className={`${barColor} h-full rounded-full transition-all duration-500 ease-out`}
                       style={{ width: `${isUnlimited ? 0 : pct}%` }}
                     ></div>
                   </div>
                   <span className="text-sm font-semibold text-gray-700 whitespace-nowrap shrink-0">
-                    {pct}% used this month
+                    {isUnlimited ? '∞' : `${pct}%`} diesen Monat genutzt
                   </span>
                 </div>
 
@@ -296,11 +297,11 @@ export function Settings() {
                   <div className="text-sm text-gray-600 leading-normal">
                     {isUnlimited ? (
                       <p className="font-semibold text-gray-800">
-                        {callsCount} optimizations used. You have unlimited access.
+                        {callsCount} Optimierungen genutzt. Du hast unbegrenzten Zugriff.
                       </p>
                     ) : (
                       <p className="font-semibold text-gray-800">
-                        {callsCount} of {limit.toLocaleString()} optimizations used. Upgrade for unlimited access.
+                        {callsCount} von {(limit || 0).toLocaleString('de-DE')} Optimierungen genutzt. Upgraden für unbegrenzten Zugriff.
                       </p>
                     )}
                   </div>
@@ -309,7 +310,7 @@ export function Settings() {
                     onClick={() => showToast('Plan-Upgrade wird geladen...', 'success')}
                     className="px-5 py-2 bg-[#A8C300] hover:bg-[#96ae00] text-white font-bold text-[13px] rounded-sm transition-colors shadow-sm cursor-pointer whitespace-nowrap self-start sm:self-center"
                   >
-                    Upgrade Plan
+                    Plan upgraden
                   </button>
                 </div>
               </div>

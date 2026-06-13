@@ -13,7 +13,7 @@ export const MONETIZATION_ENABLED = process.env.MONETIZATION_ENABLED === 'true';
 
 /** Monthly metered AI calls per plan. Only photo analysis is metered today. */
 export const AI_PLAN_LIMITS: Record<string, number> = {
-  free: Number(process.env.AI_LIMIT_FREE) || 15,
+  free: Number(process.env.AI_LIMIT_FREE) || 50,      // Test default: 50 calls
   starter: Number(process.env.AI_LIMIT_STARTER) || 500,
   pro: Infinity,
   unlimited: Infinity,
@@ -28,9 +28,9 @@ export function getPlanLimit(plan?: string): number {
 }
 
 /** Effective limit = plan limit + per-user permanent monthly bonus.
- *  Returns Infinity (unlimited) while monetization is disabled. */
+ *  Even when MONETIZATION_ENABLED=false, returns the configured limit for testing.
+ *  This allows testing quota behavior without flipping the monetization switch. */
 export function getEffectiveLimit(plan?: string, bonus = 0): number {
-  if (!MONETIZATION_ENABLED) return Infinity;
   const base = getPlanLimit(plan);
   return base === Infinity ? Infinity : base + (Number(bonus) || 0);
 }

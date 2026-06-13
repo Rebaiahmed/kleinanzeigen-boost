@@ -297,11 +297,11 @@ export function Settings() {
                   <div className="text-sm text-gray-600 leading-normal">
                     {isUnlimited ? (
                       <p className="font-semibold text-gray-800">
-                        {callsCount} Optimierungen genutzt. Du hast unbegrenzten Zugriff.
+                        {callsCount} Optimierungen genutzt. Unbegrenzter Zugriff aktiv.
                       </p>
                     ) : (
                       <p className="font-semibold text-gray-800">
-                        {callsCount} von {(limit || 0).toLocaleString('de-DE')} Optimierungen genutzt. Upgraden für unbegrenzten Zugriff.
+                        {callsCount} von {(limit || 0).toLocaleString('de-DE')} KI-Optimierungen verfügbar diesen Monat.
                       </p>
                     )}
                   </div>

@@ -21,14 +21,14 @@ const VintedLogo = () => (
 // Inline eBay Logo
 const EbayLogo = () => (
   <svg viewBox="0 0 42 16" className="h-6 w-auto shrink-0" xmlns="http://www.w3.org/2000/svg">
-    <text 
-      x="50%" 
-      y="50%" 
-      dominantBaseline="middle" 
-      textAnchor="middle" 
-      fontWeight="bold" 
-      fontSize="15" 
-      fontFamily="Arial, Helvetica, sans-serif" 
+    <text
+      x="50%"
+      y="50%"
+      dominantBaseline="middle"
+      textAnchor="middle"
+      fontWeight="bold"
+      fontSize="15"
+      fontFamily="Arial, Helvetica, sans-serif"
       letterSpacing="-0.5"
     >
       <tspan fill="#e53238">e</tspan>
@@ -36,6 +36,13 @@ const EbayLogo = () => (
       <tspan fill="#f5af02">a</tspan>
       <tspan fill="#86b817">y</tspan>
     </text>
+  </svg>
+);
+
+// Inline Facebook Logo
+const FacebookLogo = () => (
+  <svg viewBox="0 0 24 24" className="w-8 h-8 shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" fill="#1877F2"/>
   </svg>
 );
 
@@ -207,6 +214,37 @@ export function Settings() {
               <button
                 disabled
                 title="eBay-Integration kommt in Kürze"
+                className="w-full bg-gray-100 border border-gray-200 text-gray-400 font-bold py-2 px-4 rounded-sm text-[13px] cursor-not-allowed text-center"
+              >
+                Kommt bald
+              </button>
+            </div>
+          </div>
+          )}
+
+          {/* Facebook Marketplace Card — gated behind feature flag, hidden by default */}
+          {flags.enableFacebookMarketplace && (
+          <div className="border border-gray-200 rounded-lg p-5 flex flex-col justify-between bg-gray-50/30 opacity-70">
+            <div className="flex items-start gap-4">
+              <div className="w-16 h-16 bg-white border border-gray-200 rounded-lg flex items-center justify-center shrink-0">
+                <FacebookLogo />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-bold text-gray-700 flex flex-wrap items-center gap-1.5">
+                  Facebook Marketplace
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded-full border border-yellow-200">
+                    🚧 In Entwicklung
+                  </span>
+                </h3>
+                <p className="text-sm text-gray-500 mt-1 mb-2">
+                  Verkaufe deine Anzeigen direkt auf Facebook Marketplace und erreiche Millionen von Käufern.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <button
+                disabled
                 className="w-full bg-gray-100 border border-gray-200 text-gray-400 font-bold py-2 px-4 rounded-sm text-[13px] cursor-not-allowed text-center"
               >
                 Kommt bald

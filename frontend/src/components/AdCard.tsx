@@ -11,6 +11,7 @@ import {
   Loader2,
   Lock
 } from 'lucide-react';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
 export interface AdCardProps {
   ad: any;
@@ -127,6 +128,7 @@ export function AdCard({
   aiBlocked = false,
   aiWarning = false,
 }: AdCardProps) {
+  const flags = useFeatureFlags();
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [showEbayConfirm, setShowEbayConfirm] = useState(false);
   const [isPostingEbay, setIsPostingEbay] = useState(false);
@@ -702,35 +704,39 @@ export function AdCard({
             <span>KI-Opt</span>
           </button>
 
-          {/* Vinted — coming soon */}
-          <div className="relative flex-1 group">
-            <button
-              disabled
-              title="Vinted-Integration kommt in Kürze"
-              className="w-full border border-gray-200 rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 text-gray-400 bg-gray-50 cursor-not-allowed"
-            >
-              <span>Vinted</span>
-              <span>🚧</span>
-            </button>
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block bg-gray-800 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap z-10 pointer-events-none">
-              Vinted-Integration kommt in Kürze
+          {/* Vinted — gated behind feature flag */}
+          {flags.enableVinted && (
+            <div className="relative flex-1 group">
+              <button
+                disabled
+                title="Vinted-Integration kommt in Kürze"
+                className="w-full border border-gray-200 rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 text-gray-400 bg-gray-50 cursor-not-allowed"
+              >
+                <span>Vinted</span>
+                <span>🚧</span>
+              </button>
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block bg-gray-800 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap z-10 pointer-events-none">
+                Vinted-Integration kommt in Kürze
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* eBay — coming soon */}
-          <div className="relative flex-1 group">
-            <button
-              disabled
-              title="eBay-Integration kommt in Kürze"
-              className="w-full border border-gray-200 rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 text-gray-400 bg-gray-50 cursor-not-allowed"
-            >
-              <span>eBay</span>
-              <span>🚧</span>
-            </button>
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block bg-gray-800 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap z-10 pointer-events-none">
-              eBay-Integration kommt in Kürze
+          {/* eBay — gated behind feature flag */}
+          {flags.enableEbay && (
+            <div className="relative flex-1 group">
+              <button
+                disabled
+                title="eBay-Integration kommt in Kürze"
+                className="w-full border border-gray-200 rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 text-gray-400 bg-gray-50 cursor-not-allowed"
+              >
+                <span>eBay</span>
+                <span>🚧</span>
+              </button>
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block bg-gray-800 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap z-10 pointer-events-none">
+                eBay-Integration kommt in Kürze
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Mobile Actions Collapsed Trigger */}

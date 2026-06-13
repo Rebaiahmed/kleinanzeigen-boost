@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { SupportMe } from '../components/SupportMe';
 import { Heart, CheckCircle2, AlertCircle, RefreshCw, LogOut, Check } from 'lucide-react';
 import { Toast } from '../components/Toast';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
 const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -40,6 +41,7 @@ const EbayLogo = () => (
 
 export function Settings() {
   const navigate = useNavigate();
+  const flags = useFeatureFlags();
   const [ebayConnected, setEbayConnected] = useState(false);
   const [ebayUsername, setEbayUsername] = useState('');
   const [isLoadingEbay, setIsLoadingEbay] = useState(false);
@@ -146,8 +148,9 @@ export function Settings() {
       <section className="bg-white p-6 rounded-lg shadow-sm border border-ka-gray-200">
         <h2 className="text-xl font-semibold mb-6 text-ka-gray-900">Plattform-Verbindungen</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
-          {/* Vinted Platform Card — coming soon */}
+
+          {/* Vinted Platform Card — gated behind feature flag */}
+          {flags.enableVinted && (
           <div className="border border-gray-200 rounded-lg p-5 flex flex-col justify-between bg-gray-50/30 opacity-70">
             <div className="flex items-start gap-4">
               <div className="w-16 h-16 bg-white border border-gray-200 rounded-lg flex items-center justify-center shrink-0">
@@ -175,8 +178,10 @@ export function Settings() {
               </button>
             </div>
           </div>
+          )}
 
-          {/* eBay Platform Card */}
+          {/* eBay Platform Card — gated behind feature flag */}
+          {flags.enableEbay && (
           <div className="border border-gray-200 rounded-lg p-5 flex flex-col justify-between bg-gray-50/50 hover:shadow-md transition-shadow">
             <div className="flex items-start gap-4">
               <div className="w-16 h-16 bg-white border border-gray-150 rounded-lg flex items-center justify-center shrink-0">
@@ -208,6 +213,7 @@ export function Settings() {
               </button>
             </div>
           </div>
+          )}
 
         </div>
       </section>

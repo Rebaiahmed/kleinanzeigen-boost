@@ -1,6 +1,6 @@
 /**
  * Reply template injection for Kleinanzeigen messaging.
- * Detects when user is replying to a message and injects template picker UI.
+ * Simpler, more visible approach.
  */
 
 interface ReplyTemplate {
@@ -17,6 +17,7 @@ const log = (...args: any[]) => console.log('[AB-messaging]', ...args);
 
 let templateCache: ReplyTemplate[] = [];
 let isCachePopulated = false;
+let injectionAttempts = 0;
 
 /** Fetch reply templates from backend. */
 async function fetchTemplates(): Promise<ReplyTemplate[]> {
@@ -42,6 +43,7 @@ async function fetchTemplates(): Promise<ReplyTemplate[]> {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     templateCache = await res.json();
     isCachePopulated = true;
+    log('Fetched templates:', templateCache.length);
     return templateCache;
   } catch (err: any) {
     log('Failed to fetch templates:', err.message);
@@ -49,136 +51,132 @@ async function fetchTemplates(): Promise<ReplyTemplate[]> {
   }
 }
 
-/** Detect reply textarea and inject template picker. */
-function injectTemplatePickerUI() {
-  // Look for Kleinanzeigen's reply textarea — try multiple selectors
-  const selectors = [
-    'textarea[placeholder*="Nachricht"]',
-    'textarea[placeholder*="Antwort"]',
-    'textarea[placeholder*="Schreiben"]',
-    'textarea[aria-label*="Nachricht"]',
-    'textarea[aria-label*="Antwort"]',
-    'textarea',  // fallback: any textarea on the page
-    '[contenteditable="true"][role="textbox"]',
-  ];
-
-  let textarea: HTMLTextAreaElement | null = null;
-  for (const selector of selectors) {
-    textarea = document.querySelector<HTMLTextAreaElement>(selector);
-    if (textarea) {
-      log(`Found textarea with selector: ${selector}`);
-      break;
+/** Insert template text into input field. */
+function insertTemplate(element: HTMLElement, text: string) {
+  if (element instanceof HTMLTextAreaElement) {
+    const start = element.selectionStart;
+    const end = element.selectionEnd;
+    const before = element.value.substring(0, start);
+    const after = element.value.substring(end);
+    element.value = before + text + after;
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+    element.focus();
+    element.selectionStart = element.selectionEnd = start + text.length;
+  } else if (element.contentEditable === 'true') {
+    const sel = window.getSelection();
+    if (sel) {
+      const range = sel.getRangeAt(0);
+      const textNode = document.createTextNode(text);
+      range.insertNode(textNode);
+      range.setStartAfter(textNode);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      element.focus();
     }
   }
+}
 
-  if (!textarea) {
-    log('Reply textarea not found with selectors:', selectors);
-    // Log all textareas for debugging
-    const allTextareas = document.querySelectorAll('textarea');
-    log(`Total textareas on page: ${allTextareas.length}`);
-    allTextareas.forEach((ta, idx) => {
-      log(`textarea[${idx}]:`, {
-        placeholder: ta.placeholder,
-        ariaLabel: ta.getAttribute('aria-label'),
-        id: ta.id,
-        className: ta.className,
-      });
-    });
-    return;
-  }
+/** Show simple template picker UI. */
+function showTemplateModal(inputElement: HTMLElement) {
+  // Create modal backdrop
+  const backdrop = document.createElement('div');
+  backdrop.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: system-ui, sans-serif;
+  `;
 
-  // Don't inject twice
-  if (document.querySelector('[data-ab-template-picker]')) {
-    log('Template picker already injected');
-    return;
-  }
+  // Create modal content
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    max-width: 400px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    z-index: 10000;
+  `;
 
-  log('Found reply textarea, injecting template picker...');
+  // Header
+  const header = document.createElement('div');
+  header.style.cssText = `
+    padding: 16px;
+    border-bottom: 1px solid #e5e5e5;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  `;
+  header.innerHTML = `
+    <h3 style="margin:0; font-size:16px; font-weight:600; color:#333;">📋 Antwort-Vorlage einfügen</h3>
+    <button style="border:none; background:none; font-size:20px; cursor:pointer; color:#999;">✕</button>
+  `;
 
-  const container = document.createElement('div');
-  container.setAttribute('data-ab-template-picker', '1');
-  Object.assign(container.style, {
-    marginBottom: '8px',
-    padding: '8px 0',
-    borderBottom: '1px solid #e5e5e5',
-  } as CSSStyleDeclaration);
+  const closeBtn = header.querySelector('button');
+  const closeModal = () => {
+    backdrop.remove();
+  };
+  closeBtn?.addEventListener('click', closeModal);
 
-  const btn = document.createElement('button');
-  btn.innerHTML = '📋 Antwort-Vorlage';
-  Object.assign(btn.style, {
-    padding: '8px 12px',
-    background: '#A8C300',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '13px',
-    fontWeight: '600',
-    fontFamily: 'system-ui, sans-serif',
-    transition: 'background 0.2s',
-  } as CSSStyleDeclaration);
+  // Template list
+  const listContainer = document.createElement('div');
+  listContainer.style.cssText = `
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+  `;
 
-  btn.addEventListener('mouseenter', () => {
-    btn.style.background = '#96ae00';
-  });
-
-  btn.addEventListener('mouseleave', () => {
-    btn.style.background = '#A8C300';
-  });
-
-  btn.addEventListener('click', async () => {
-    log('Template picker clicked');
-    const templates = await fetchTemplates();
+  fetchTemplates().then((templates) => {
     if (templates.length === 0) {
-      alert('Keine Antwort-Vorlagen verfügbar');
+      listContainer.innerHTML = `
+        <div style="padding:20px; text-align:center; color:#999;">
+          Keine Vorlagen verfügbar
+        </div>
+      `;
       return;
     }
 
-    // Dropdown menu with KA styling
-    const menu = document.createElement('div');
-    Object.assign(menu.style, {
-      position: 'absolute',
-      background: '#fff',
-      border: '1px solid #ddd',
-      borderRadius: '4px',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
-      zIndex: '10000',
-      minWidth: '220px',
-      maxWidth: '300px',
-      maxHeight: '400px',
-      overflowY: 'auto',
-    } as CSSStyleDeclaration);
-
-    templates.forEach((template, index) => {
-      const item = document.createElement('div');
-      Object.assign(item.style, {
-        padding: '10px 12px',
-        cursor: 'pointer',
-        borderBottom: index < templates.length - 1 ? '1px solid #f0f0f0' : 'none',
-        fontSize: '13px',
-        transition: 'background 0.15s',
-        color: '#333',
-      } as CSSStyleDeclaration);
-
-      item.textContent = `${template.icon} ${template.title}`;
+    templates.forEach((template) => {
+      const item = document.createElement('button');
+      item.style.cssText = `
+        width: 100%;
+        padding: 12px 16px;
+        border: none;
+        border-bottom: 1px solid #f0f0f0;
+        text-align: left;
+        cursor: pointer;
+        background: white;
+        transition: background 0.2s;
+        font-family: system-ui, sans-serif;
+        font-size: 14px;
+      `;
+      item.innerHTML = `<strong>${template.icon} ${template.title}</strong><br><span style="color:#999; font-size:12px;">${template.content.substring(0, 60)}...</span>`;
 
       item.addEventListener('mouseenter', () => {
-        item.style.background = '#f0f5f0';
-        item.style.color = '#A8C300';
-        item.style.fontWeight = '500';
+        item.style.background = '#f5f5f5';
       });
-
       item.addEventListener('mouseleave', () => {
-        item.style.background = '';
-        item.style.color = '#333';
-        item.style.fontWeight = 'normal';
+        item.style.background = 'white';
       });
 
       item.addEventListener('click', async () => {
         log('Template selected:', template.title);
-        insertTemplate(textarea, template.content);
-        menu.remove();
-        // Track the copy
+        insertTemplate(inputElement, template.content);
+        closeModal();
+
+        // Track usage
         try {
           const token = await new Promise<string>((resolve) => {
             chrome.runtime.sendMessage({ type: 'GET_SESSION_TOKEN' }, (response) => {
@@ -190,71 +188,103 @@ function injectTemplatePickerUI() {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
           });
-        } catch (err: any) {
-          log('Failed to track template copy:', err.message);
+        } catch (e) {
+          log('Failed to track template usage');
         }
       });
 
-      menu.appendChild(item);
+      listContainer.appendChild(item);
     });
-
-    const rect = btn.getBoundingClientRect();
-    Object.assign(menu.style, {
-      top: `${rect.bottom + 4}px`,
-      left: `${rect.left}px`,
-    } as CSSStyleDeclaration);
-
-    document.body.appendChild(menu);
-
-    // Close menu when clicking outside
-    const closeMenu = () => {
-      menu.remove();
-      document.removeEventListener('click', closeMenu);
-    };
-
-    setTimeout(() => {
-      document.addEventListener('click', closeMenu);
-    }, 0);
   });
 
-  container.appendChild(btn);
+  modal.appendChild(header);
+  modal.appendChild(listContainer);
+  backdrop.appendChild(modal);
+  document.body.appendChild(backdrop);
 
-  // Insert before textarea
-  textarea.parentElement?.insertBefore(container, textarea);
+  closeModal(); // HACK: close on backdrop click
+  backdrop.addEventListener('click', (e) => {
+    if (e.target === backdrop) closeModal();
+  });
 }
 
-/** Insert template text into reply textarea. */
-function insertTemplate(textarea: HTMLTextAreaElement, text: string) {
-  const start = textarea.selectionStart;
-  const end = textarea.selectionEnd;
-  const before = textarea.value.substring(0, start);
-  const after = textarea.value.substring(end);
-  textarea.value = before + text + after;
+/** Try to inject button near any input/textarea on the page. */
+function injectTemplateButton() {
+  injectionAttempts++;
+  if (injectionAttempts > 100) {
+    log('Too many injection attempts, stopping');
+    return;
+  }
 
-  // Trigger change event for React
-  textarea.dispatchEvent(new Event('input', { bubbles: true }));
-  textarea.dispatchEvent(new Event('change', { bubbles: true }));
+  // Find any textarea on the page
+  const textareas = document.querySelectorAll('textarea');
+  log(`Found ${textareas.length} textarea(s)`);
 
-  // Focus and position cursor at end of inserted text
-  textarea.focus();
-  textarea.selectionStart = textarea.selectionEnd = start + text.length;
+  textareas.forEach((textarea) => {
+    // Skip if already has button
+    if (textarea.parentElement?.querySelector('[data-ab-template-btn]')) {
+      return;
+    }
+
+    log('Injecting button for textarea:', {
+      placeholder: textarea.placeholder,
+      ariaLabel: textarea.getAttribute('aria-label'),
+    });
+
+    // Create button
+    const btn = document.createElement('button');
+    btn.setAttribute('data-ab-template-btn', '1');
+    btn.style.cssText = `
+      display: block;
+      margin-top: 8px;
+      padding: 8px 16px;
+      background: #A8C300;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: system-ui, sans-serif;
+      transition: background 0.2s;
+    `;
+    btn.textContent = '📋 Vorlage einfügen';
+
+    btn.addEventListener('mouseenter', () => {
+      btn.style.background = '#96ae00';
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.background = '#A8C300';
+    });
+
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      log('Button clicked');
+      showTemplateModal(textarea);
+    });
+
+    // Insert button after textarea
+    textarea.parentElement?.insertBefore(btn, textarea.nextSibling);
+  });
 }
 
-/** Monitor for reply textarea and inject picker when it appears. */
+/** Monitor page for textareas and inject buttons. */
 export function initKaMessaging() {
-  log('Initializing messaging template injection...');
+  log('Initializing messaging...');
 
-  // Initial check
-  injectTemplatePickerUI();
+  // Initial injection
+  injectTemplateButton();
 
-  // Watch for dynamic content (SPA navigation)
+  // Watch for dynamic content
   const observer = new MutationObserver(() => {
-    injectTemplatePickerUI();
+    injectTemplateButton();
   });
 
   observer.observe(document.body, {
     childList: true,
     subtree: true,
-    attributes: true,
   });
+
+  log('Observer started');
 }

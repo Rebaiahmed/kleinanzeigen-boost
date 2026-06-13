@@ -8,12 +8,14 @@ export interface FeatureFlags {
   enableVinted: boolean;
   enableEbay: boolean;
   enableFacebookMarketplace: boolean;
+  enableAnalytics: boolean;
 }
 
 const DEFAULTS: FeatureFlags = {
   enableVinted: false,
   enableEbay: false,
   enableFacebookMarketplace: false,
+  enableAnalytics: false,
 };
 
 let cachedFlags: FeatureFlags = DEFAULTS;

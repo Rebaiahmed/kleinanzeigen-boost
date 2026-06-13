@@ -49,13 +49,39 @@ async function fetchTemplates(): Promise<ReplyTemplate[]> {
 
 /** Detect reply textarea and inject template picker. */
 function injectTemplatePickerUI() {
-  // Look for Kleinanzeigen's reply textarea
-  const textarea = document.querySelector<HTMLTextAreaElement>(
-    'textarea[placeholder*="Nachricht"], textarea[data-testid*="message"], [contenteditable="true"][role="textbox"]'
-  );
+  // Look for Kleinanzeigen's reply textarea — try multiple selectors
+  const selectors = [
+    'textarea[placeholder*="Nachricht"]',
+    'textarea[placeholder*="Antwort"]',
+    'textarea[placeholder*="Schreiben"]',
+    'textarea[aria-label*="Nachricht"]',
+    'textarea[aria-label*="Antwort"]',
+    'textarea',  // fallback: any textarea on the page
+    '[contenteditable="true"][role="textbox"]',
+  ];
+
+  let textarea: HTMLTextAreaElement | null = null;
+  for (const selector of selectors) {
+    textarea = document.querySelector<HTMLTextAreaElement>(selector);
+    if (textarea) {
+      log(`Found textarea with selector: ${selector}`);
+      break;
+    }
+  }
 
   if (!textarea) {
-    log('Reply textarea not found');
+    log('Reply textarea not found with selectors:', selectors);
+    // Log all textareas for debugging
+    const allTextareas = document.querySelectorAll('textarea');
+    log(`Total textareas on page: ${allTextareas.length}`);
+    allTextareas.forEach((ta, idx) => {
+      log(`textarea[${idx}]:`, {
+        placeholder: ta.placeholder,
+        ariaLabel: ta.getAttribute('aria-label'),
+        id: ta.id,
+        className: ta.className,
+      });
+    });
     return;
   }
 

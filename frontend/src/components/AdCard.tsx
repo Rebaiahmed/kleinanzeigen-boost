@@ -783,11 +783,11 @@ export function AdCard({
 
       </div>
 
-      {/* Expandable Analytics Panel */}
-      {showAnalytics && (
+      {/* Expandable Analytics Panel — gated behind feature flag */}
+      {showAnalytics && flags.enableAnalytics && (
         <div className="border-t border-ka-green/20 bg-green-50/40 p-3">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[12px] font-semibold text-ka-green uppercase tracking-wider">📊 Anzeigenanalytics</h3>
+            <h3 className="text-[12px] font-semibold text-ka-green uppercase tracking-wider">📊 Repost-Performance</h3>
             <button
               onClick={() => setShowAnalytics(false)}
               className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -795,22 +795,39 @@ export function AdCard({
               <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-3 text-[12px]">
-            <div className="bg-white rounded border border-ka-green/20 p-3 hover:shadow-sm transition-shadow">
-              <div className="text-gray-500 text-[10px] font-semibold uppercase tracking-wider mb-1">Reposts</div>
-              <div className="text-[20px] font-bold text-ka-green">{ad.trackedRepostsCount || 0}</div>
-              <div className="text-gray-500 text-[10px] mt-1.5">
-                {ad.lastRepostViewsGained !== undefined ? `+${ad.lastRepostViewsGained} zuletzt` : 'Keine Daten'}
+
+          {/* Per-repost data (mock) */}
+          <div className="space-y-2 max-h-[200px] overflow-y-auto">
+            {[
+              { date: 'Heute', views: 12, messages: 2, time: '14:30' },
+              { date: 'Gestern', views: 8, messages: 1, time: '10:15' },
+              { date: '2 Tage ago', views: 15, messages: 3, time: '09:00' },
+            ].map((repost, idx) => (
+              <div key={idx} className="bg-white rounded border border-ka-green/20 p-2 text-[11px]">
+                <div className="flex justify-between items-start mb-1">
+                  <span className="font-semibold text-gray-800">{repost.date}</span>
+                  <span className="text-gray-500 text-[10px]">{repost.time} Uhr</span>
+                </div>
+                <div className="flex gap-4">
+                  <div>
+                    <span className="text-gray-500">👁 Aufrufe:</span>
+                    <span className="font-bold text-ka-green ml-1">{repost.views}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">💬 Nachr.:</span>
+                    <span className="font-bold text-ka-green ml-1">{repost.messages}</span>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="bg-white rounded border border-ka-green/20 p-3 hover:shadow-sm transition-shadow">
-              <div className="text-gray-500 text-[10px] font-semibold uppercase tracking-wider mb-1">Aktive Tage</div>
-              <div className="text-[20px] font-bold text-ka-green">{calculateActiveDays(ad)}</div>
-              <div className="text-gray-500 text-[10px] mt-1.5">
-                {ad.views && calculateActiveDays(ad) > 0 ? `Ø ${calculateViewsPerDay(ad)}/Tag` : 'Ø - /Tag'}
-              </div>
-            </div>
+            ))}
           </div>
+        </div>
+      )}
+
+      {/* Placeholder when feature is disabled */}
+      {showAnalytics && !flags.enableAnalytics && (
+        <div className="border-t border-gray-200 bg-gray-50 p-3 text-center">
+          <p className="text-[12px] text-gray-500">Analytics-Feature ist noch nicht aktiviert</p>
         </div>
       )}
 

@@ -9,6 +9,7 @@ export interface FeatureFlags {
   enableVinted: boolean;
   enableEbay: boolean;
   enableFacebookMarketplace: boolean;
+  enableAnalytics: boolean;
 }
 
 function parseEnvBool(value: string | undefined, defaultVal: boolean): boolean {
@@ -21,6 +22,8 @@ export const FEATURE_FLAGS: FeatureFlags = {
   enableVinted: parseEnvBool(process.env.ENABLE_VINTED, false),
   enableEbay: parseEnvBool(process.env.ENABLE_EBAY, false),
   enableFacebookMarketplace: parseEnvBool(process.env.ENABLE_FACEBOOK_MARKETPLACE, false),
+  // Per-repost analytics — default OFF until UI is finalized
+  enableAnalytics: parseEnvBool(process.env.ENABLE_ANALYTICS, false),
 };
 
 /**

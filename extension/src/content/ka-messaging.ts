@@ -15,11 +15,12 @@ interface ReplyTemplate {
 
 const log = (...args: any[]) => console.log('[AB-messaging]', ...args);
 
-let templateCache: ReplyTemplate[] | null = null;
+let templateCache: ReplyTemplate[] = [];
+let isCachePopulated = false;
 
 /** Fetch reply templates from backend. */
 async function fetchTemplates(): Promise<ReplyTemplate[]> {
-  if (templateCache) return templateCache;
+  if (isCachePopulated) return templateCache;
 
   try {
     const token = await new Promise<string>((resolve) => {
@@ -40,6 +41,7 @@ async function fetchTemplates(): Promise<ReplyTemplate[]> {
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     templateCache = await res.json();
+    isCachePopulated = true;
     return templateCache;
   } catch (err: any) {
     log('Failed to fetch templates:', err.message);

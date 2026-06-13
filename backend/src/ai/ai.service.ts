@@ -297,7 +297,9 @@ export class AiService {
 
       const usageData = {
         month: currentMonth,
-        callsCount: (sameMonth ? base.callsCount || 0 : 0) + (metered ? 1 : 0),
+        // Count ALL AI calls (metered + unmetered) for dashboard display
+        // The 'metered' flag only controls whether it counts toward the plan limit
+        callsCount: (sameMonth ? base.callsCount || 0 : 0) + 1,
         promptTokens: (sameMonth ? base.promptTokens || 0 : 0) + promptTokens,
         candidatesTokens: (sameMonth ? base.candidatesTokens || 0 : 0) + candidatesTokens,
         estimatedCostUsd: (sameMonth ? base.estimatedCostUsd || 0 : 0) + estimateCostUsd(modelName, promptTokens, candidatesTokens),

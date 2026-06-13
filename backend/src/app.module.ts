@@ -14,6 +14,7 @@ import { EbayModule } from './ebay/ebay.module';
 import { ReplyTemplatesModule } from './reply-templates/reply-templates.module';
 import { AdminModule } from './admin/admin.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { ConfigController } from './config/config.controller';
 import { HealthController } from './health/health.controller';
 
 @Module({
@@ -36,7 +37,7 @@ import { HealthController } from './health/health.controller';
     NotificationsModule,
     // TODO: Import Users Modules
   ],
-  controllers: [HealthController],
+  controllers: [ConfigController, HealthController],
   providers: [
     {
       provide: APP_GUARD,

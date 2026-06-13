@@ -331,8 +331,8 @@ export function useAdsActions(): AdsActionsReturn {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
         controller.abort();
-        console.warn('[KI-Opt] Request aborted after 30s timeout');
-      }, 30_000);
+        console.warn('[KI-Opt] Request aborted after 60s timeout');
+      }, 60_000);
 
       try {
         console.log(`[KI-Opt] POST /ai/optimize-ad — title: "${title?.slice(0, 40)}", category: "${category}"`);

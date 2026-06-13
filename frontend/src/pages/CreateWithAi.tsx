@@ -281,6 +281,10 @@ export function CreateWithAi() {
           // User has exhausted their paid monthly quota → show upgrade prompt
           setErrorMessage(data.message || 'Dein monatliches KI-Limit wurde erreicht.');
           setUpgradeLink(data.upgradeLink || '/einstellungen');
+        } else if (code === 'AI_TIMEOUT') {
+          // AI request timed out → retryable, no upgrade needed
+          setErrorMessage('Die KI-Analyse dauert länger als erwartet. Bitte versuche es in wenigen Minuten erneut.');
+          setUpgradeLink(null);
         } else {
           // Temporary API quota (Gemini / all providers busy) → soft message, no upgrade prompt
           setErrorMessage('Die KI-Dienste sind momentan ausgelastet. Bitte versuche es in wenigen Minuten erneut.');

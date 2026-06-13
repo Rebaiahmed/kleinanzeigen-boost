@@ -51,7 +51,12 @@ export class AiService {
     }
   }
 
-  private async executeWithFallback(contents: any[], systemInstruction: string, generationConfig: any): Promise<{ responseText: string, promptTokenCount: number, candidatesTokenCount: number, modelName: string }> {
+  private async executeWithFallback(
+    contents: any[],
+    systemInstruction: string,
+    generationConfig: any,
+    options: { timeoutMs?: number } = {},
+  ): Promise<{ responseText: string, promptTokenCount: number, candidatesTokenCount: number, modelName: string }> {
     // Free-first: $0 models are tried before any paid model. Free tiers have tight
     // rate limits, so under load we fall through to paid — that reduces cost, not
     // eliminates it. `vision` marks models that accept image input; text-only models
@@ -107,7 +112,7 @@ export class AiService {
             },
             // requestOptions — the SDK aborts the request after `timeout` ms.
             // (timeout belongs here, NOT in generationConfig, where it's ignored.)
-            { timeout: AI_CONFIG.geminiTimeoutMs },
+            { timeout: options.timeoutMs || AI_CONFIG.geminiTimeoutMs },
           );
 
           let result = await model.generateContent(contents);
@@ -190,7 +195,7 @@ export class AiService {
                 'HTTP-Referer': 'https://anzeigenboost.de',
                 'X-Title': 'AnzeigenBoost',
               },
-              timeout: AI_CONFIG.openRouterTimeoutMs,
+              timeout: options.timeoutMs || AI_CONFIG.openRouterTimeoutMs,
             }
           );
 
@@ -224,7 +229,7 @@ export class AiService {
                     'HTTP-Referer': 'https://anzeigenboost.de',
                     'X-Title': 'AnzeigenBoost',
                   },
-                  timeout: AI_CONFIG.openRouterTimeoutMs,
+                  timeout: options.timeoutMs || AI_CONFIG.openRouterTimeoutMs,
                 }
               );
 
@@ -248,17 +253,27 @@ export class AiService {
           };
         }
       } catch (error: any) {
-        this.logger.warn(`[AI Service] ${modelInfo.name} failed: ${error.message}. Falling back...`);
+        const isTimeout = error.code === 'ECONNABORTED' || error.message?.includes('timeout') || error.message?.includes('deadline');
+        const logMsg = isTimeout
+          ? `[AI Service] ${modelInfo.name} timeout (${options.timeoutMs || AI_CONFIG.openRouterTimeoutMs}ms exceeded). Falling back...`
+          : `[AI Service] ${modelInfo.name} failed: ${error.message}. Falling back...`;
+        this.logger.warn(logMsg);
         lastError = error;
         continue;
       }
     }
 
     this.logger.error('[AI Service] All models in the fallback chain are exhausted.', lastError);
+
+    // Distinguish timeout from hard failure
+    const isTimeout = lastError?.code === 'ECONNABORTED' || lastError?.message?.includes('timeout') || lastError?.message?.includes('deadline');
+
     throw new HttpException(
       {
-        message: 'Alle KI-Anbieter sind momentan ausgelastet. Bitte versuche es in wenigen Minuten erneut.',
-        code: 'ALL_PROVIDERS_BUSY',
+        message: isTimeout
+          ? 'KI-Analyse dauert länger als erwartet. Bitte versuche es in wenigen Minuten erneut.'
+          : 'Alle KI-Anbieter sind momentan ausgelastet. Bitte versuche es in wenigen Minuten erneut.',
+        code: isTimeout ? 'AI_TIMEOUT' : 'ALL_PROVIDERS_BUSY',
       },
       HttpStatus.TOO_MANY_REQUESTS
     );
@@ -393,7 +408,8 @@ export class AiService {
         {
           responseMimeType: 'application/json',
           maxOutputTokens: 1100,
-        }
+        },
+        { timeoutMs: AI_CONFIG.imageAnalysisTimeoutMs }
       );
       responseText = fallbackResult.responseText;
       modelUsed = fallbackResult.modelName;

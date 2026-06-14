@@ -35,7 +35,11 @@ function setNativeValue(el: HTMLInputElement | HTMLTextAreaElement, value: strin
 function attachTestPhotoMainWorld() {
   try {
     chrome.runtime.sendMessage({ type: 'AB_INJECT_PHOTO_TEST' }, (resp) => {
-      if (chrome.runtime.lastError) { log('inject failed:', chrome.runtime.lastError.message); return; }
+      // Manifest V3: must check lastError to avoid "Unchecked runtime.lastError" warnings
+      if (chrome.runtime.lastError) {
+        log('inject failed:', chrome.runtime.lastError.message);
+        return;
+      }
       if (!resp?.ok) log('inject reported failure:', resp?.error);
     });
   } catch (e: any) {
@@ -69,7 +73,11 @@ async function runTestFill() {
   attachTestPhotoMainWorld();   // legacy attempt (kept for comparison; fails on KA)
   try {
     chrome.runtime.sendMessage({ type: 'AB_CDP_UPLOAD_TEST' }, (resp) => {
-      if (chrome.runtime.lastError) { log('CDP test failed:', chrome.runtime.lastError.message); return; }
+      // Manifest V3: must check lastError to avoid "Unchecked runtime.lastError" warnings
+      if (chrome.runtime.lastError) {
+        log('CDP test failed:', chrome.runtime.lastError.message);
+        return;
+      }
       log('CDP test result:', JSON.stringify(resp));
     });
   } catch (e: any) {
@@ -126,10 +134,17 @@ function injectRepostButtons() {
         chrome.runtime.sendMessage({ type: 'AB_REPOST_CREATE_TEST', adId }, (resp) => {
           // The tab usually navigates during the flow, so the real result comes
           // via a desktop notification from the background. This callback may not fire.
-          if (chrome.runtime.lastError) { log('engine error:', chrome.runtime.lastError.message); return; }
+          // Manifest V3: must check lastError to avoid "Unchecked runtime.lastError" warnings
+          if (chrome.runtime.lastError) {
+            log('engine error:', chrome.runtime.lastError.message);
+            return;
+          }
           log('engine result:', JSON.stringify(resp));
         });
-      } catch (err: any) { log('trigger threw:', err.message); btn.disabled = false; }
+      } catch (err: any) {
+        log('trigger threw:', err.message);
+        btn.disabled = false;
+      }
     };
     card.appendChild(btn);
   });
@@ -156,18 +171,34 @@ export function initKaRepost() {
     // Diagnostic for the simulated scheduler.
     if (t === 'AB_SIM_TEST') {
       log('firing scheduler diagnostic → check service-worker console for [BG][sim]');
-      try { chrome.runtime.sendMessage({ type: 'AB_SIM_TEST' }, (r) => log('sim test result:', JSON.stringify(r))); }
-      catch (e: any) { log('sim test threw:', e.message); }
+      try {
+        chrome.runtime.sendMessage({ type: 'AB_SIM_TEST' }, (r) => {
+          // Manifest V3: must check lastError to avoid "Unchecked runtime.lastError" warnings
+          if (chrome.runtime.lastError) {
+            log('sim test error:', chrome.runtime.lastError.message);
+            return;
+          }
+          log('sim test result:', JSON.stringify(r));
+        });
+      } catch (e: any) {
+        log('sim test threw:', e.message);
+      }
     }
     // v1 real repost (CREATE-ONLY, no delete) — forwards to the background engine.
     if (t === 'AB_REPOST_CREATE' && event.data?.adId) {
       log('forwarding AB_REPOST_CREATE for ad', event.data.adId, '→ background engine (watch the service-worker console for [AB-engine] logs)');
       try {
         chrome.runtime.sendMessage({ type: 'AB_REPOST_CREATE_TEST', adId: String(event.data.adId) }, (resp) => {
-          if (chrome.runtime.lastError) { log('engine error:', chrome.runtime.lastError.message); return; }
+          // Manifest V3: must check lastError to avoid "Unchecked runtime.lastError" warnings
+          if (chrome.runtime.lastError) {
+            log('engine error:', chrome.runtime.lastError.message);
+            return;
+          }
           log('engine result:', JSON.stringify(resp));
         });
-      } catch (e: any) { log('forward threw:', e.message); }
+      } catch (e: any) {
+        log('forward threw:', e.message);
+      }
     }
   });
   log('content ready. Real repost test (create-only): window.postMessage({type:"AB_REPOST_CREATE", adId:"<AD_ID>"},"*")');

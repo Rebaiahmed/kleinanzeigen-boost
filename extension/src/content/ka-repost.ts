@@ -91,13 +91,32 @@ function injectRepostButtons() {
     if (!adId) return;
     const btn = document.createElement('button');
     btn.setAttribute('data-ab-repost-btn', '1');
-    btn.textContent = '🔄 Repost-Test (Duplikat)';
+    btn.textContent = '🔄 Neu stellen';
+    // Match Kleinanzeigen native button style: outlined white pill with green text
+    // Inspect with DevTools and adjust border/color values to match exact native styling
     Object.assign(btn.style, {
-      display: 'inline-block', margin: '6px 0', padding: '6px 12px',
-      background: '#A8C300', color: '#fff', border: 'none', borderRadius: '8px',
-      cursor: 'pointer', fontSize: '12px', fontWeight: '700',
-      fontFamily: 'system-ui, sans-serif',
+      display: 'inline-block',
+      padding: '6px 14px',
+      background: '#fff',
+      color: '#005d97',                    // KA brand green (adjust to match DevTools inspection)
+      border: '1px solid #d0d0d0',         // Light gray border (adjust to match DevTools inspection)
+      borderRadius: '20px',                // Pill shape (fully rounded)
+      cursor: 'pointer',
+      fontSize: '12px',
+      fontWeight: '400',                   // Normal weight (not bold) like native buttons
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      transition: 'all 0.2s ease',
+      lineHeight: '1.4',
     } as CSSStyleDeclaration);
+    // Hover state: match native button hover behavior
+    btn.onmouseover = () => {
+      btn.style.background = '#f5f5f5';
+      btn.style.borderColor = '#999';
+    };
+    btn.onmouseout = () => {
+      btn.style.background = '#fff';
+      btn.style.borderColor = '#d0d0d0';
+    };
     btn.onclick = (e) => {
       e.preventDefault(); e.stopPropagation();
       if (!confirm('Repost-TEST: erstellt ein DUPLIKAT dieser Anzeige (löscht nichts). Fortfahren?')) return;

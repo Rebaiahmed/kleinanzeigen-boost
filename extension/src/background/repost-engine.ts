@@ -82,12 +82,21 @@ async function setFileInput(target: Target, selector: string, paths: string[]): 
 function downloadPhoto(url: string, name: string): Promise<string> {
   return new Promise((resolve, reject) => {
     chrome.downloads.download({ url, filename: `anzeigenboost/${name}`, conflictAction: 'overwrite' }, (id) => {
-      if (chrome.runtime.lastError || id == null) { reject(new Error(chrome.runtime.lastError?.message || 'dl failed')); return; }
+      if (chrome.runtime.lastError || id == null) {
+        reject(new Error(chrome.runtime.lastError?.message || 'dl failed'));
+        return;
+      }
       const onChanged = (d: chrome.downloads.DownloadDelta) => {
         if (d.id !== id || !d.state) return;
         if (d.state.current === 'complete') {
           chrome.downloads.onChanged.removeListener(onChanged);
-          chrome.downloads.search({ id }, (items) => items?.[0]?.filename ? resolve(items[0].filename) : reject(new Error('no path')));
+          chrome.downloads.search({ id }, (items) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error('downloads.search error: ' + chrome.runtime.lastError.message));
+              return;
+            }
+            items?.[0]?.filename ? resolve(items[0].filename) : reject(new Error('no path'));
+          });
         } else if (d.state.current === 'interrupted') {
           chrome.downloads.onChanged.removeListener(onChanged);
           reject(new Error('dl interrupted'));
@@ -178,8 +187,15 @@ export async function executeRepostCreateOnly(tabId: number, adId: string): Prom
   const target: Target = { tabId };
   let step = 'attach';
   try {
-    await new Promise<void>((resolve, reject) =>
-      chrome.debugger.attach(target, '1.3', () => chrome.runtime.lastError ? reject(new Error(chrome.runtime.lastError.message)) : resolve()));
+    await new Promise<void>((resolve, reject) => {
+      chrome.debugger.attach(target, '1.3', () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+        resolve();
+      });
+    });
     await cdp(target, 'Page.enable').catch(() => {});
     await cdp(target, 'DOM.enable').catch(() => {});
     log('▶ repost (create-only) start ad=', adId);
@@ -200,12 +216,26 @@ export async function executeRepostCreateOnly(tabId: number, adId: string): Prom
     step = 'create';
     const finalUrl = await createAd(target, data, paths);
 
-    await new Promise<void>((r) => chrome.debugger.detach(target, () => r()));
+    await new Promise<void>((r) => {
+      chrome.debugger.detach(target, () => {
+        if (chrome.runtime.lastError) {
+          log('debugger.detach error:', chrome.runtime.lastError.message);
+        }
+        r();
+      });
+    });
     log('■ done. Check Kleinanzeigen for a NEW duplicate ad with photos.');
     return { ok: true, step, finalUrl };
   } catch (e: any) {
     log('✗ failed at step', step, ':', e.message);
-    await new Promise<void>((r) => chrome.debugger.detach(target, () => r())).catch(() => {});
+    await new Promise<void>((r) => {
+      chrome.debugger.detach(target, () => {
+        if (chrome.runtime.lastError) {
+          log('debugger.detach error during cleanup:', chrome.runtime.lastError.message);
+        }
+        r();
+      });
+    }).catch(() => {});
     return { ok: false, step, error: e.message };
   }
 }

@@ -36,9 +36,21 @@ chrome.alarms.create('periodic-sync', { periodInMinutes: 30 });
 /** Pop an alert() on an open Kleinanzeigen tab (no OS-notification dependency). */
 function alertOnKaTab(text: string) {
   chrome.tabs.query({}, (tabs) => {
+    if (chrome.runtime.lastError) {
+      console.warn('[BG][sim] tabs.query error:', chrome.runtime.lastError.message);
+      return;
+    }
     const t = tabs.find((tab) => /kleinanzeigen\.de/.test(tab.url || ''));
-    if (t?.id) chrome.tabs.sendMessage(t.id, { type: 'AB_SIM_ALERT', text }, () => void chrome.runtime.lastError);
-    else console.warn('[BG][sim] no open kleinanzeigen.de tab to show the alert');
+    if (t?.id) {
+      chrome.tabs.sendMessage(t.id, { type: 'AB_SIM_ALERT', text }, () => {
+        if (chrome.runtime.lastError) {
+          console.warn('[BG][sim] sendMessage error:', chrome.runtime.lastError.message);
+          return;
+        }
+      });
+    } else {
+      console.warn('[BG][sim] no open kleinanzeigen.de tab to show the alert');
+    }
   });
 }
 
@@ -159,6 +171,11 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
   // Store JWT token in session storage (called after login)
   if (message.type === 'STORE_SESSION_TOKEN') {
     chrome.storage.session.set({ token: message.token }, () => {
+      if (chrome.runtime.lastError) {
+        console.warn('[BG] storage.session.set error:', chrome.runtime.lastError.message);
+        sendResponse({ success: false, error: chrome.runtime.lastError.message });
+        return;
+      }
       sendResponse({ success: true });
     });
     return true;
@@ -167,12 +184,22 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
   // Get JWT token from session storage (used by content scripts)
   if (message.type === 'GET_SESSION_TOKEN') {
     chrome.storage.session.get(['token'], ({ token }: any) => {
+      if (chrome.runtime.lastError) {
+        console.warn('[BG] storage.session.get error:', chrome.runtime.lastError.message);
+        sendResponse({ token: null });
+        return;
+      }
       if (token) {
         console.log('[BG] Sending token from session storage');
         sendResponse({ token });
       } else {
         // Fallback: try to get from local storage (for development)
         chrome.storage.local.get(['token'], ({ token: localToken }: any) => {
+          if (chrome.runtime.lastError) {
+            console.warn('[BG] storage.local.get error:', chrome.runtime.lastError.message);
+            sendResponse({ token: null });
+            return;
+          }
           console.log('[BG] Sending token from local storage:', localToken ? 'found' : 'not found');
           sendResponse({ token: localToken || null });
         });
@@ -358,7 +385,14 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
 
   // Logout
   if (message.type === 'LOGOUT') {
-    chrome.storage.session.remove(['token'], () => sendResponse({ success: true }));
+    chrome.storage.session.remove(['token'], () => {
+      if (chrome.runtime.lastError) {
+        console.warn('[BG] storage.session.remove error:', chrome.runtime.lastError.message);
+        sendResponse({ success: false, error: chrome.runtime.lastError.message });
+        return;
+      }
+      sendResponse({ success: true });
+    });
     return true;
   }
 });
@@ -413,9 +447,15 @@ async function runCdpUploadTest(tabId: number): Promise<{ ok: boolean; filesLeng
     }));
     console.log('[AB-cdp] test image downloaded to:', filePath, 'bytes=', fileBytes);
 
-    await new Promise<void>((resolve, reject) =>
-      chrome.debugger.attach(target, '1.3', () => chrome.runtime.lastError ? reject(new Error(chrome.runtime.lastError.message)) : resolve()),
-    );
+    await new Promise<void>((resolve, reject) => {
+      chrome.debugger.attach(target, '1.3', () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+        resolve();
+      });
+    });
     console.log('[AB-cdp] debugger attached');
 
     await cdp(target, 'DOM.enable');
@@ -439,11 +479,25 @@ async function runCdpUploadTest(tabId: number): Promise<{ ok: boolean; filesLeng
     }
     console.log('[AB-cdp] ✓ input.files.length after CDP upload =', filesLength, '→ WATCH the form for a preview');
 
-    await new Promise<void>((resolve) => chrome.debugger.detach(target, () => resolve()));
+    await new Promise<void>((resolve) => {
+      chrome.debugger.detach(target, () => {
+        if (chrome.runtime.lastError) {
+          console.warn('[AB-cdp] debugger.detach error:', chrome.runtime.lastError.message);
+        }
+        resolve();
+      });
+    });
     return { ok: true, filesLength, filePath, fileBytes };
   } catch (e: any) {
     console.warn('[AB-cdp] ✗ failed:', e.message);
-    await new Promise<void>((resolve) => chrome.debugger.detach(target, () => resolve())).catch(() => {});
+    await new Promise<void>((resolve) => {
+      chrome.debugger.detach(target, () => {
+        if (chrome.runtime.lastError) {
+          console.warn('[AB-cdp] debugger.detach error during cleanup:', chrome.runtime.lastError.message);
+        }
+        resolve();
+      });
+    }).catch(() => {});
     return { ok: false, error: e.message, fileBytes };
   }
 }

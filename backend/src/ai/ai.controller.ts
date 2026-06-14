@@ -1,5 +1,6 @@
 import { Controller, Post, Get, Body, UseGuards, UseInterceptors, UploadedFiles, Req, HttpException, HttpStatus } from '@nestjs/common';
 import { AiService } from './ai.service';
+import { FirebaseService } from '../firebase/firebase.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
@@ -7,7 +8,10 @@ import { MAX_PHOTOS, MAX_PHOTO_BYTES } from '../common/constants/upload.constant
 
 @Controller('api/ai')
 export class AiController {
-  constructor(private readonly aiService: AiService) {}
+  constructor(
+    private readonly aiService: AiService,
+    private readonly firebaseService: FirebaseService,
+  ) {}
 
   /**
    * GET /api/ai/health (no auth guard — used by the panel health indicator)
@@ -95,6 +99,31 @@ export class AiController {
       throw new HttpException('Mindestens ein Foto muss hochgeladen werden.', HttpStatus.BAD_REQUEST);
     }
     return this.aiService.analyzePhotos(req.user.userId, files, hint, language);
+  }
+
+  // Price suggestion POC: analyze ad + suggest price using mock comparables + LLM
+  @UseGuards(JwtAuthGuard)
+  @Post('suggest-price')
+  async suggestPriceForAd(
+    @Req() req: any,
+    @Body() body: { adId: string }
+  ) {
+    console.log(`[Price Suggestion] Request for ad ${body.adId}`);
+    try {
+      // Fetch the ad
+      const db = this.firebaseService.firestore;
+      const adDoc = await db.collection('users').doc(req.user.userId).collection('ads').doc(String(body.adId)).get();
+      if (!adDoc.exists) throw new Error('Ad not found');
+      const ad = { id: adDoc.id, ...adDoc.data() };
+
+      const priceSuggestionService = new (require('./price-suggestion.service').PriceSuggestionService)();
+      const result = await priceSuggestionService.suggestPrice(this.aiService, ad);
+      console.log(`[Price Suggestion] ✅ Suggested ${result.suggestedLow}-${result.suggestedHigh}€`);
+      return result;
+    } catch (err: any) {
+      console.error(`[Price Suggestion] ❌ Error: ${err.message}`);
+      throw err;
+    }
   }
 
   // Photo feedback: analyze ad photos for quality score + suggestions (metered, cached)

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { PhotoFeedbackModal } from './PhotoFeedbackModal';
+import { SuggestPriceButton } from './SuggestPriceButton';
 
 export interface AdCardProps {
   ad: any;
@@ -504,12 +505,29 @@ export function AdCard({
                     ⏸ Pausiert — Anzeige ist {repostLockedLabel}
                   </span>
                 ) : !autoRepostChecked && ad.repostDisabledReason ? (
-                  <span
-                    title={ad.repostDisabledReason}
-                    className="text-[12px] block text-red-600 font-medium"
-                  >
-                    ⚠️ Nach mehreren Fehlversuchen deaktiviert
-                  </span>
+                  <div className="mt-1">
+                    <span
+                      title={ad.repostDisabledReason}
+                      className="text-[12px] block text-red-600 font-medium mb-1"
+                    >
+                      ⚠️ {ad.repostDisabledReason}
+                    </span>
+                    <button
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        if (!onUpdateFields) return;
+                        try {
+                          await onUpdateFields(ad.id, { autoRepost: true, repostFailureCount: 0, repostDisabledReason: null });
+                          setAutoRepostChecked(true);
+                        } catch (err) {
+                          console.error('Failed to re-enable auto-repost:', err);
+                        }
+                      }}
+                      className="text-[11px] font-bold text-blue-600 hover:underline"
+                    >
+                      [Erneut aktivieren]
+                    </button>
+                  </div>
                 ) : (
                   <span
                     onClick={() => autoRepostChecked && setIsPopoverOpen(true)}
@@ -811,6 +829,11 @@ export function AdCard({
                 Vinted-Integration kommt in Kürze
               </div>
             </div>
+          )}
+
+          {/* Price Suggestion POC — gated behind feature flag */}
+          {flags.enablePriceSuggestion && (
+            <SuggestPriceButton ad={ad} />
           )}
 
           {/* eBay — gated behind feature flag */}

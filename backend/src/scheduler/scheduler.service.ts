@@ -456,15 +456,28 @@ export class SchedulerService {
         const MAX_REPOST_FAILURES = SCHEDULER_CONFIG.maxRepostFailures;
         const failureCount = (adData.repostFailureCount || 0) + 1;
 
+        // Build user-friendly error message
+        const errorMessages: Record<string, string> = {
+          SESSION_EXPIRED: 'Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.',
+          IP_BLOCKED: 'Dein IP wurde vorübergehend gesperrt. Versuche es später erneut.',
+          CAPTCHA_DETECTED: 'CAPTCHA erkannt. Bitte melde dich manuell an.',
+          TIMEOUT: 'Zeitüberschreitung beim Neuposten. Das Netzwerk ist möglicherweise langsam.',
+          VERIFICATION_FAILED: 'Die Anzeige wurde gelöscht oder ist nicht mehr live.',
+          UNKNOWN: 'Unbekannter Fehler beim Neuposten.',
+        };
+
+        const userFriendlyMessage = errorMessages[errorCode] || `Fehler: ${error.message}`;
+
         if (failureCount >= MAX_REPOST_FAILURES) {
           await adRef.update({
             status: AdStatus.ACTIVE,
             pendingRepostSince: null,
             autoRepost: false,
             repostFailureCount: failureCount,
-            repostDisabledReason: `Auto-Repost nach ${MAX_REPOST_FAILURES} Fehlversuchen automatisch deaktiviert. Letzter Fehler: ${error.message}`,
+            repostDisabledReason: userFriendlyMessage,
             repostDisabledAt: new Date().toISOString(),
             nextRepostAt: null,
+            repostDisabledErrorCode: errorCode,
           });
 
           // Write a notification the dashboard can surface (both persistent + live SSE)

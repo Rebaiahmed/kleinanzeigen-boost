@@ -11,6 +11,7 @@ export interface FeatureFlags {
   enableFacebookMarketplace: boolean;
   enableAnalytics: boolean;
   enablePhotoFeedback: boolean;
+  enablePriceSuggestion: boolean;
 }
 
 function parseEnvBool(value: string | undefined, defaultVal: boolean): boolean {
@@ -27,6 +28,8 @@ export const FEATURE_FLAGS: FeatureFlags = {
   enableAnalytics: parseEnvBool(process.env.ENABLE_ANALYTICS, false),
   // Photo quality feedback — default OFF until ready
   enablePhotoFeedback: parseEnvBool(process.env.ENABLE_PHOTO_FEEDBACK, false),
+  // Price suggestion POC — default OFF until concept proven
+  enablePriceSuggestion: parseEnvBool(process.env.ENABLE_PRICE_SUGGESTION, false),
 };
 
 /**

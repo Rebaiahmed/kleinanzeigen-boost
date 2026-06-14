@@ -54,12 +54,12 @@ export function SuggestPriceButton({ ad }: SuggestPriceButtonProps) {
   };
 
   return (
-    <>
+    <div className="flex-1 flex flex-col">
       <button
         onClick={handleClick}
         disabled={state === 'loading'}
         title="Preisvorschlag basierend auf ähnlichen Anzeigen"
-        className="flex-1 border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors whitespace-nowrap border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+        className="border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors whitespace-nowrap border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-50"
       >
         <span className="shrink-0">💶</span>
         <span>
@@ -68,20 +68,20 @@ export function SuggestPriceButton({ ad }: SuggestPriceButtonProps) {
       </button>
 
       {state === 'done' && result && (
-        <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded text-xs">
-          <div className="mb-2">
+        <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded text-xs">
+          <div className="mb-1.5">
             <strong className="text-gray-900">
-              Preis-Vorschlag: {result.suggestedLow} – {result.suggestedHigh} €
+              {result.suggestedLow} – {result.suggestedHigh} €
             </strong>
           </div>
-          <div className="mb-2">
-            Konfidenz:{' '}
+          <div className="mb-1.5">
             <span className={`font-medium ${confidenceColor[result.confidence]}`}>
               {confidenceLabel[result.confidence]}
             </span>
-            {' '}({result.comparablesUsed} ähnliche Anzeigen)
+            {' '}
+            <span className="text-gray-600">({result.comparablesUsed} vergleichbar)</span>
           </div>
-          <p className="text-gray-600 mb-2 italic">{result.reasoning}</p>
+          <p className="text-gray-600 mb-1.5 italic text-[10px]">{result.reasoning}</p>
           <a
             href={`https://www.kleinanzeigen.de/s-suchanfrage.html?keywords=${encodeURIComponent(ad.title)}`}
             target="_blank"
@@ -92,6 +92,6 @@ export function SuggestPriceButton({ ad }: SuggestPriceButtonProps) {
           </a>
         </div>
       )}
-    </>
+    </div>
   );
 }

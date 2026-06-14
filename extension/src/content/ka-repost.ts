@@ -99,31 +99,40 @@ function injectRepostButtons() {
     if (!adId) return;
     const btn = document.createElement('button');
     btn.setAttribute('data-ab-repost-btn', '1');
-    btn.textContent = '🔄 Neu stellen';
-    // Match Kleinanzeigen native button style: outlined white pill with green text
-    // Inspect with DevTools and adjust border/color values to match exact native styling
+    btn.innerHTML = '<span style="display:inline-flex;align-items:center;justify-content:center;gap:4px;"><span>🔄</span><span>Neu stellen</span></span>';
+    // Match Kleinanzeigen native button style from "Bearbeiten" button
+    // Structure: <a class="inline-flex items-center justify-center ... border-2 border-solid border-utility text-interactive bg-transparent ...">
     Object.assign(btn.style, {
-      display: 'inline-block',
-      padding: '6px 14px',
-      background: '#fff',
-      color: '#005d97',                    // KA brand green (adjust to match DevTools inspection)
-      border: '1px solid #d0d0d0',         // Light gray border (adjust to match DevTools inspection)
-      borderRadius: '20px',                // Pill shape (fully rounded)
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '4px',
+      padding: '8px 16px',                 // px-medium = ~16px
+      background: 'transparent',           // Native: bg-transparent
+      color: '#1976d2',                    // text-interactive (KA blue, adjust if needed)
+      border: '2px solid #e0e0e0',         // border-2 border-utility (light gray)
+      borderRadius: '9999px',              // rounded-full (pill shape)
       cursor: 'pointer',
-      fontSize: '12px',
-      fontWeight: '400',                   // Normal weight (not bold) like native buttons
+      fontSize: '14px',
+      fontWeight: '500',                   // text-bodyRegularStrong
       fontFamily: 'system-ui, -apple-system, sans-serif',
-      transition: 'all 0.2s ease',
-      lineHeight: '1.4',
+      transition: 'all 0.15s ease-in-out',
+      whiteSpace: 'nowrap',
+      textDecoration: 'none',
+      boxSizing: 'border-box',
+      minHeight: '40px',                   // h-xlarge
     } as CSSStyleDeclaration);
-    // Hover state: match native button hover behavior
+
+    // Hover state: match native button behavior (lighter background + secondary color)
     btn.onmouseover = () => {
-      btn.style.background = '#f5f5f5';
-      btn.style.borderColor = '#999';
+      btn.style.borderColor = '#1976d2';   // hover:border-secondary
+      btn.style.background = '#e3f2fd';    // hover:bg-secondaryContainer (light blue)
+      btn.style.color = '#0d47a1';         // hover:text-onSecondaryContainer (darker blue)
     };
     btn.onmouseout = () => {
-      btn.style.background = '#fff';
-      btn.style.borderColor = '#d0d0d0';
+      btn.style.background = 'transparent';
+      btn.style.borderColor = '#e0e0e0';
+      btn.style.color = '#1976d2';
     };
     btn.onclick = (e) => {
       e.preventDefault(); e.stopPropagation();

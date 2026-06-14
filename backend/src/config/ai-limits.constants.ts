@@ -13,14 +13,14 @@ export const MONETIZATION_ENABLED = process.env.MONETIZATION_ENABLED === 'true';
 
 /** Monthly metered AI calls per plan. Only photo analysis is metered today. */
 export const AI_PLAN_LIMITS: Record<string, number> = {
-  free: Number(process.env.AI_LIMIT_FREE) || 50,      // Test default: 50 calls
+  free: Number(process.env.AI_LIMIT_FREE) || 50,      // Phase 1: soft limit (no enforcement), track usage
   starter: Number(process.env.AI_LIMIT_STARTER) || 500,
   pro: Infinity,
   unlimited: Infinity,
 };
 
 /** Max reply templates a free-plan user may store. */
-export const FREE_TEMPLATE_LIMIT = Number(process.env.FREE_TEMPLATE_LIMIT) || 3;
+export const FREE_TEMPLATE_LIMIT = Number(process.env.FREE_TEMPLATE_LIMIT) || 10;  // Phase 1: soft limit, track usage
 
 export function getPlanLimit(plan?: string): number {
   const key = (plan || 'free').toLowerCase();

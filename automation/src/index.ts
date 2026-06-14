@@ -23,7 +23,15 @@ const visibleLoginJobs = new Map<string, {
 app.use((req, res, next) => {
   const secret = req.header('X-Internal-Secret');
   if (secret !== internalSecret) {
-    return res.status(403).json({ error: 'Forbidden' });
+    console.error(
+      `[FORBIDDEN 403] X-Internal-Secret mismatch on ${req.method} ${req.path}: ` +
+      `received='${secret || '(missing)'}' vs configured='${internalSecret}'. ` +
+      `Check that INTERNAL_SECRET in automation/.env matches backend/.env.`,
+    );
+    return res.status(403).json({
+      error: 'Forbidden',
+      detail: 'X-Internal-Secret mismatch — check INTERNAL_SECRET in automation/.env and backend/.env match',
+    });
   }
   next();
 });

@@ -23,23 +23,36 @@ export class AutomationService {
   /** Standard POST — long timeout (120s) for browser automation tasks. */
   async callAutomationWorker(endpoint: string, payload: any): Promise<any> {
     try {
-      this.logger.log(`Calling automation worker: ${endpoint}`);
+      this.logger.debug(
+        `[AutomationService] POST /${endpoint} with secret=${this.internalSecret ? '***' : 'UNSET'} ` +
+        `to ${this.workerUrl}`,
+      );
+
       const response = await axios.post(`${this.workerUrl}/${endpoint}`, payload, {
         headers: {
           'Content-Type': 'application/json',
-          'X-Internal-Secret': this.internalSecret,
+          'X-Internal-Secret': this.internalSecret || '',
         },
         timeout: 120000, // Browser automation can take a while
       });
 
       return response.data;
     } catch (error: any) {
+      // Debug 403 errors specifically — likely a secret mismatch
+      if (error.response?.status === 403) {
+        this.logger.error(
+          `[Forbidden 403] Automation worker rejected request to '${endpoint}'. ` +
+          `This is likely a secret mismatch: backend has secret='${this.internalSecret}', ` +
+          `but worker rejected it. Verify INTERNAL_SECRET matches in both backend/.env and automation/.env`,
+        );
+      }
+
       // The worker returns its real reason in the response body ({ error, step }).
       // Surface that instead of axios's opaque "Request failed with status code 500".
       const workerError = error.response?.data?.error;
       const workerStep = error.response?.data?.step;
       this.logger.error(
-        `Automation worker '${endpoint}' failed: ${workerError || error.message}` +
+        `Automation worker '${endpoint}' failed (${error.response?.status || 'unknown status'}): ${workerError || error.message}` +
         (workerStep ? ` (step=${workerStep})` : ''),
       );
       if (workerError === 'SESSION_EXPIRED') {

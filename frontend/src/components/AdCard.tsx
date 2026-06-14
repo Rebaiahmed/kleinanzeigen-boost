@@ -133,8 +133,6 @@ function calculateViewsPerDay(ad: any): number {
 }
 
 async function fetchPhotoFeedback(adId: string): Promise<any> {
-  console.log('[Photo Feedback] 📸 Frontend: Sending request with adId:', adId);
-
   if (!adId || typeof adId !== 'string') {
     throw new Error(`Ungültige Ad-ID: ${adId} (type: ${typeof adId})`);
   }
@@ -144,7 +142,6 @@ async function fetchPhotoFeedback(adId: string): Promise<any> {
 
   try {
     const payload = { adId };
-    console.log('[Photo Feedback] 📤 Sending payload:', payload);
 
     const res = await fetch(`${apiUrl}/ai/photo-feedback`, {
       method: 'POST',
@@ -156,7 +153,6 @@ async function fetchPhotoFeedback(adId: string): Promise<any> {
     });
 
     const data = await res.json();
-    console.log('[Photo Feedback] 📥 Response:', data);
 
     if (!res.ok) {
       throw new Error(data.message || `HTTP ${res.status}`);
@@ -164,7 +160,6 @@ async function fetchPhotoFeedback(adId: string): Promise<any> {
 
     return data;
   } catch (err: any) {
-    console.error('[Photo Feedback] ❌ Error:', err.message);
     throw new Error(err.message || 'Fehler beim Abrufen der Foto-Analyse');
   }
 }
@@ -788,12 +783,6 @@ export function AdCard({
           {/* Photo Feedback */}
           <button
             onClick={async () => {
-              console.log('[AdCard] Photo Feedback clicked:', {
-                adId: ad.id,
-                adImages: ad.images,
-                adPictureUrls: ad.pictureUrls,
-                allAdKeys: Object.keys(ad).slice(0, 20),
-              });
               setShowPhotoFeedbackModal(true);
               setIsLoadingPhotoFeedback(true);
               setPhotoFeedbackError(null);

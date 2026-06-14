@@ -31,13 +31,6 @@ export function PhotoFeedbackModal({
     coverage: 'Abdeckung',
   };
 
-  useEffect(() => {
-    console.log(`[PhotoFeedbackModal] Photos received:`, {
-      count: initialPhotos?.length || 0,
-      photos: initialPhotos,
-      filtered: photos,
-    });
-  }, [photos, initialPhotos]);
 
   if (!isOpen) return null;
 

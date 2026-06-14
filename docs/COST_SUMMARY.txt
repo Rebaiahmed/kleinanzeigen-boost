@@ -1,0 +1,220 @@
+================================================================================
+                    KLEINZEIGEN BOOST — COST & PRICING SUMMARY
+================================================================================
+
+EXECUTIVE SUMMARY
+─────────────────────────────────────────────────────────────────────────────
+Your Cost Per User:           €0.22 - €0.45 (marginal)
+Revenue Per User:             €0 (Free), €4.99 (Starter), €9.99 (Pro)
+Breakeven:                    ~25 Starter paying users
+Gross Margin at 100 users:    73% (very healthy for SaaS)
+Free tier sustainable until:  200+ users ✓
+
+PRICING TIERS
+─────────────────────────────────────────────────────────────────────────────
+╔═══════════╦═══════════╦═══════════╦═══════════╗
+║  Feature  ║   FREE    ║ STARTER   ║   PRO     ║
+║           ║   €0/mo   ║ €4.99/mo  ║ €9.99/mo  ║
+╠═══════════╬═══════════╬═══════════╬═══════════╣
+║ Photo AI  ║ 15/month  ║ 500/month ║ Unlimited ║
+║ Templates ║ 3 total   ║ Unlimited ║ Unlimited ║
+║ Auto-post ║ 3 ads     ║ 15 ads    ║ Unlimited ║
+║ eBay      ║ —         ║ —         ║ ✓ Beta    ║
+║ Support   ║ Community ║ Email     ║ Priority  ║
+╚═══════════╩═══════════╩═══════════╩═══════════╝
+
+COST BREAKDOWN (Monthly)
+─────────────────────────────────────────────────────────────────────────────
+Infrastructure:
+  - VPS (auto-repost scheduler):        €9/month
+  - Firebase (storage + database):      €0 (free tier) → €5 at 100+ users
+  - KLAZ API (price suggestions):       €0 (free tier) → €19/month at scale
+
+AI / API Costs:
+  - Gemini vision (photos):             $0 (free tier covers 1000s/month)
+  - Text LLM (templates, optimization): $0 (free tier)
+  - Fallback (rare):                    $0.0001 - $0.001 per call
+
+Per-User Cost:
+  - Free user:      €0.22/month (marginal)
+  - Starter user:   €0.38/month
+  - Pro user:       €0.83/month
+
+REVENUE SCALE
+─────────────────────────────────────────────────────────────────────────────
+5 Users:
+  Cost: €9/mo (VPS only)
+  Revenue: €0 - €25 (if 5 Starter users)
+  Status: PRE-REVENUE ⚠️
+
+20 Users:
+  Assume: 15 Free, 5 Starter
+  Cost: €28/mo
+  Revenue: €25/mo
+  Status: BREAKEVEN ✓
+
+50 Users:
+  Assume: 30 Free, 17 Starter, 3 Pro
+  Cost: €48/mo
+  Revenue: €115/mo (€85 Starter + €30 Pro)
+  Margin: 70% ✅
+
+100 Users:
+  Assume: 60 Free, 30 Starter, 10 Pro
+  Cost: €73/mo
+  Revenue: €250/mo (€150 Starter + €100 Pro)
+  Margin: 71% ✅
+
+500 Users:
+  Assume: 300 Free, 150 Starter, 50 Pro
+  Cost: €350/mo (upgraded VPS)
+  Revenue: €1,250/mo (€750 Starter + €500 Pro)
+  Margin: 72% ✅
+
+FEATURE COSTS
+─────────────────────────────────────────────────────────────────────────────
+Photo Feedback (Vision AI):
+  Per analysis: $0 (Gemini free tier)
+  User limits: 15 free, 500 starter, unlimited pro
+  Typical user: 2-3/month = sustainable free forever
+
+Price Suggestion (KLAZ API + LLM):
+  Per suggestion: €0.02 (KLAZ) + $0 (LLM free tier)
+  Free tier covers ~150 searches for all free users combined
+  Starter/Pro: share €19/month KLAZ cost
+
+Reply Templates (Text LLM):
+  Per template: $0 (Gemma free)
+  Unlimited generation = no cost to you
+  User limits: 3 free, unlimited starter/pro
+
+Auto-Repost Scheduler (VPS):
+  Cost: €9/month VPS (amortized across all users)
+  Per user: €0.15-0.25 (at 100 users)
+  User limits: 3 free, 15 starter, unlimited pro
+
+RECOMMENDED LAUNCH SEQUENCE
+─────────────────────────────────────────────────────────────────────────────
+Phase 1: FREE ONLY (Now - Week 4)
+  - All features unlimited
+  - Cost: €9/month
+  - Goal: Get 50 free users, validate demand
+
+Phase 2: ADD STARTER (Week 5-8)
+  - Launch €4.99/month tier
+  - Soft upgrade prompts (no hard limits yet)
+  - Cost: €9 + €19 KLAZ = €28/month
+  - Goal: Convert 20% of users = 10 paying users = break even
+
+Phase 3: ADD PRO + ENFORCE LIMITS (Week 9-12)
+  - Launch €9.99/month tier
+  - Hard limits on free tier (15 photos, 3 templates)
+  - Cost: Same (€28/month)
+  - Goal: 30% Starter, 10% Pro, 60% Free
+  - Revenue: €300+/month
+
+Phase 4: OPTIMIZE (Month 4+)
+  - Monitor CAC (customer acquisition cost)
+  - Optimize messaging based on conversion data
+  - Consider annual billing (17% discount = better retention)
+
+KEY METRICS TO MONITOR
+─────────────────────────────────────────────────────────────────────────────
+Monthly Recurring Revenue (MRR):
+  Target: €25 by week 8, €100 by week 12, €1,000 by month 6
+
+Conversion Rate (Free → Starter):
+  Target: 10-20% month 1, 25-30% by month 3
+
+Churn Rate:
+  Target: <5% per month (very good for SaaS)
+
+Cost Per User (CAC):
+  If marketing: $0-5 via organic (best case)
+  If paid ads: $10-20 per customer (evaluate ROI)
+
+Lifetime Value (LTV):
+  Starter: €4.99 × 12 months avg = €60 (excellent for free product)
+  Pro: €9.99 × 12 months avg = €120
+
+LTV / CAC Ratio:
+  Target: >3.0 (you're healthy at >1.5)
+
+PROFITABILITY TIMELINE
+─────────────────────────────────────────────────────────────────────────────
+Month 1:   Spend €9, earn €0     → -€9 (acquisition)
+Month 2:   Spend €28, earn €25   → -€3 (near breakeven)
+Month 3:   Spend €48, earn €115  → +€67 (profitable!)
+Month 6:   Spend €100, earn €500 → +€400
+Month 12:  Spend €150, earn €1,250 → +€1,100
+
+Year 1 Total Net Revenue: €8,000 - €15,000 (depending on conversion rates)
+
+WHAT TO CHARGE FOR
+─────────────────────────────────────────────────────────────────────────────
+💰 STARTER €4.99/month:
+  - Photo analyses: 15 → 500 (33x upgrade!)
+  - Templates: 3 → unlimited
+  - Auto-repost: 3 → 15 ads
+  - Perfect for: Sellers with 10+ ads who need more automation
+
+💎 PRO €9.99/month:
+  - Everything unlimited
+  - eBay cross-posting (exclusive)
+  - Vinted templates (exclusive)
+  - Priority support
+  - Perfect for: Power users, multi-channel resellers
+
+WHAT TO KEEP FREE
+─────────────────────────────────────────────────────────────────────────────
+✅ Ad optimization (text AI, cheap)
+✅ Reply templates (3 templates, drives engagement)
+✅ Basic auto-repost (3 ads, proves value)
+✅ Email notifications (retention)
+✅ Analytics (basic)
+✅ Photo upload & editing
+✅ All core ad management features
+
+DON'T CHARGE FOR (kills adoption):
+❌ Email support
+❌ API access (unless B2B)
+❌ Basic analytics
+❌ Search & filtering
+❌ Profile management
+
+ASSUMPTIONS
+─────────────────────────────────────────────────────────────────────────────
+- Typical user: 5 ads/month
+- Free user: 2-3 photo analyses, 1 price suggestion, 2 templates/month
+- Conversion to Starter: 10-20% month 1, 25-40% by month 6
+- Conversion to Pro: 5-10% (power users only)
+- Churn: 3-5%/month initially, stabilizes at 2-3%
+- Retention improves with engagement and features
+
+RISK MITIGATION
+─────────────────────────────────────────────────────────────────────────────
+Gemini free tier exhausted?
+  → Use free OpenRouter (Gemma, Llama) — no cost increase
+
+Firebase free tier exceeded?
+  → Upgrade read/writes only (~$5/month at 100 users)
+  → Keep storage on free tier by archiving old photos
+
+KLAZ API becomes paid-only?
+  → Price suggestion is non-core feature
+  → Can disable gracefully or absorb €0.02/suggestion cost
+
+User churn too high?
+  → Improve onboarding (tutorial, example ads)
+  → Add educational content about ROI
+  → Email campaigns to inactive users
+
+Premium tier not converting?
+  → Test lower price (€3.99, €7.99) or different features
+  → Add 7-day free trial for new users
+  → Bundle with support/tutorials
+
+================================================================================
+RECOMMENDATION: Launch free, add Starter at week 5, Pro at week 9.
+Breakeven: ~3 months. Scale to €1,000+/month by month 6.
+================================================================================

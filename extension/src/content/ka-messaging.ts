@@ -252,30 +252,38 @@ function injectTemplateButton() {
       ariaLabel: textarea.getAttribute('aria-label'),
     });
 
-    // Create button
+    // Create button — match Kleinanzeigen's secondary button style
+    // (outlined, subtle, matches native chat controls)
     const btn = document.createElement('button');
     btn.setAttribute('data-ab-template-btn', '1');
     btn.style.cssText = `
-      display: block;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
       margin-top: 8px;
-      padding: 8px 16px;
-      background: #A8C300;
-      color: white;
-      border: none;
-      border-radius: 4px;
+      padding: 8px 14px;
+      background: transparent;
+      color: #1976d2;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 12px;
+      font-weight: 500;
       font-family: system-ui, sans-serif;
-      transition: background 0.2s;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      line-height: 1;
     `;
-    btn.textContent = '📋 Vorlage einfügen';
+    btn.innerHTML = '<span style="font-size: 14px;">📋</span><span>Vorlage</span>';
 
     btn.addEventListener('mouseenter', () => {
-      btn.style.background = '#96ae00';
+      btn.style.borderColor = '#1976d2';
+      btn.style.background = '#e3f2fd';
     });
     btn.addEventListener('mouseleave', () => {
-      btn.style.background = '#A8C300';
+      btn.style.background = 'transparent';
+      btn.style.borderColor = '#e0e0e0';
     });
 
     btn.addEventListener('click', (e) => {

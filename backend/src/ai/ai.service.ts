@@ -761,6 +761,41 @@ ${JSON.stringify(dataset)}`;
   }> {
     const db = this.firebaseService.firestore;
 
+    // Return mock data in development mode for testing
+    if (process.env.ENABLE_MOCK_PHOTO_FEEDBACK === 'true') {
+      this.logger.log(`[Photo Feedback] MOCK MODE - Returning mock feedback for ad ${adId}`);
+
+      // Get real photos from the ad for carousel
+      const adDoc = await db.collection('users').doc(userId).collection('ads').doc(adId).get();
+      let photoUrls: string[] = [];
+      if (adDoc.exists) {
+        const ad = adDoc.data()!;
+        photoUrls = (ad.images || ad.pictureUrls || []).filter((p: any) => p) as string[];
+        this.logger.log(`[Photo Feedback] Found ${photoUrls.length} photos for carousel: ${photoUrls.map(p => p.substring(0, 50) + '...').join(', ')}`);
+      }
+
+      return {
+        overall: 72,
+        scores: {
+          lighting: 80,
+          clarity: 60,
+          background: 70,
+          composition: 78,
+          coverage: 65,
+        },
+        suggestions: [
+          'Schärfe erhöhen: Verwende ein Stativ und stelle die Kamera auf den Autofokus ein. Das sorgt für kristallklare Details.',
+          'Hintergrund aufräumen: Entferne Unordnung im Hintergrund. Ein neutraler, sauberer Hintergrund wirkt professioneller.',
+          'Größe zeigen: Füge ein Objekt zum Größenvergleich hinzu (z.B. eine Hand, ein Lineal), damit Käufer die Größe besser einschätzen können.',
+        ],
+        strengths: [
+          'Gute allgemeine Beleuchtung und Farben',
+          'Gut zentrierter Artikel mit angenehmer Komposition',
+        ],
+        analyzedAt: new Date().toISOString(),
+      };
+    }
+
     // 1. Fetch user tier + check quota
     const userDoc = await db.collection('users').doc(userId).get();
     const plan = userDoc.data()?.tier || userDoc.data()?.plan || 'free';
@@ -776,22 +811,13 @@ ${JSON.stringify(dataset)}`;
       if (data.month === currentMonth) callsCount = data.callsCount || 0;
     }
 
-    // 2. Enforce quota (photo feedback is expensive, limit per tier)
-    const photoFeedbackQuotas: Record<string, number> = {
-      free: 3,
-      starter: 15,
-      pro: 100,
-      unlimited: 1000,
-    };
-    const quota = photoFeedbackQuotas[plan] || 3;
+    // 2. Enforce quota (use same quota system as AI optimizations)
+    const { limit: quota } = await this.getUserUsage(userId);
 
-    // Note: Using same counter as photo analysis (both are metered vision calls)
+    // Note: Using same counter as all other AI calls
     if (callsCount >= quota) {
       throw new HttpException(
-        {
-          message: 'Du hast dein Kontingent für Foto-Check erreicht. Upgrade für mehr.',
-          code: 'PHOTO_FEEDBACK_LIMIT_REACHED',
-        },
+        `KI-Kontingent erreicht (${callsCount}/${quota}). Resets am 1. nächsten Monat.`,
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
@@ -803,9 +829,20 @@ ${JSON.stringify(dataset)}`;
     }
 
     const ad = adDoc.data()!;
-    let photoUrls = ad.images || ad.pictureUrls || [];
+    let photoUrls = ad.pictures || ad.images || ad.pictureUrls || [];
     if (typeof photoUrls === 'string') photoUrls = [photoUrls];
     photoUrls = (photoUrls || []).filter((p: any) => p);
+
+    // Fallback: use single image if no photo array exists
+    if (photoUrls.length === 0 && (ad.image || ad.adImage)) {
+      photoUrls = [ad.image || ad.adImage];
+      this.logger.log(`[Photo Feedback] Using fallback thumbnail image`);
+    }
+
+    this.logger.log(`[Photo Feedback] 📸 Ad fetched — found ${photoUrls.length} photo(s)`);
+    if (photoUrls.length > 0) {
+      this.logger.log(`[Photo Feedback]   Photos: ${photoUrls.slice(0, 2).map((u: string) => u.substring(0, 60) + '...').join(', ')}`);
+    }
 
     if (photoUrls.length === 0) {
       throw new HttpException('Keine Fotos in der Anzeige gefunden', HttpStatus.BAD_REQUEST);
@@ -899,8 +936,9 @@ Respond ONLY with valid JSON, no markdown, no extra text:
         },
       });
 
-    // Increment usage (photo feedback is metered like photo analysis)
-    const newCallsCount = (usageDoc.data()?.callsCount || 0) + 1;
+    // Increment usage (photo feedback costs 2x quota due to vision model cost)
+    const quotaCost = 2; // Vision analysis is ~2x more expensive than text
+    const newCallsCount = (usageDoc.data()?.callsCount || 0) + quotaCost;
     await usageRef.set(
       {
         month: currentMonth,
@@ -910,7 +948,8 @@ Respond ONLY with valid JSON, no markdown, no extra text:
       { merge: true },
     );
 
-    this.logger.log(`[Photo Feedback] Analyzed ad ${adId} (month: ${currentMonth}, usage: ${newCallsCount})`);
+    this.logger.log(`[Photo Feedback] ✅ Analyzed ad ${adId} (month: ${currentMonth}, usage: ${newCallsCount}/${quota}, cost: ${quotaCost})`);
+    this.logger.log(`[Photo Feedback]    Overall: ${feedbackData.overall}/100, Dimensions: ${Object.keys(feedbackData.scores).length}`);
 
     return {
       overall: feedbackData.overall,

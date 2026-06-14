@@ -105,7 +105,29 @@ export class AiController {
     @Req() req: any,
     @Body() body: { adId: string }
   ) {
-    console.log(`[Photo Feedback] Request for ad ${body.adId} by user ${req.user?.userId}`);
-    return this.aiService.getPhotoFeedback(req.user.userId, body.adId);
+    const startTime = Date.now();
+    const userId = req.user?.userId;
+    const adId = body?.adId;
+
+    console.log(`[Photo Feedback API] 📸 Request received — userId: ${userId}, adId: "${adId}", body:`, body);
+
+    if (!userId) {
+      throw new HttpException('Authentifizierung erforderlich', HttpStatus.UNAUTHORIZED);
+    }
+    if (!adId || typeof adId !== 'string' || adId.trim() === '') {
+      console.error(`[Photo Feedback API] ❌ Invalid adId: "${adId}" (type: ${typeof adId})`);
+      throw new HttpException('Ad ID ist erforderlich', HttpStatus.BAD_REQUEST);
+    }
+
+    try {
+      const result = await this.aiService.getPhotoFeedback(userId, adId);
+      const elapsed = Date.now() - startTime;
+      console.log(`[Photo Feedback API] ✅ Success — ${elapsed}ms, overall: ${result.overall}, scoreKeys: ${Object.keys(result.scores).join(', ')}`);
+      return result;
+    } catch (err: any) {
+      const elapsed = Date.now() - startTime;
+      console.error(`[Photo Feedback API] ❌ Error after ${elapsed}ms — ${err.message}`);
+      throw err;
+    }
   }
 }

@@ -89,6 +89,11 @@ export class AdsController {
     return this.adsService.deleteAd(req.user.userId, adId);
   }
 
+  @Post('clear-all')
+  async clearAllAds(@Req() req: any) {
+    return this.adsService.clearAllAds(req.user.userId);
+  }
+
   @Post('draft')
   async saveDraft(@Req() req: any, @Body() adData: SaveDraftDto) {
     return this.adsService.saveDraft(req.user.userId, adData);

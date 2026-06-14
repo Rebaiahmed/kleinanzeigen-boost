@@ -9,6 +9,7 @@ export interface FeatureFlags {
   enableEbay: boolean;
   enableFacebookMarketplace: boolean;
   enableAnalytics: boolean;
+  enablePhotoFeedback: boolean;
 }
 
 const DEFAULTS: FeatureFlags = {
@@ -16,6 +17,7 @@ const DEFAULTS: FeatureFlags = {
   enableEbay: false,
   enableFacebookMarketplace: false,
   enableAnalytics: false,
+  enablePhotoFeedback: false,
 };
 
 let cachedFlags: FeatureFlags = DEFAULTS;

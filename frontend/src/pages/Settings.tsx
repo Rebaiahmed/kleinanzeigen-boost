@@ -264,7 +264,7 @@ export function Settings() {
           <div className="text-sm text-gray-500 animate-pulse py-4">Lade KI-Nutzungsdaten...</div>
         ) : (
           aiUsage && (() => {
-            const { callsCount, limit, unlimited } = aiUsage;
+            const { callsCount, limit, unlimited = false } = aiUsage as any;
             // Use the 'unlimited' flag from backend (limit will be null when unlimited)
             const isUnlimited = unlimited === true || limit === null;
             const pct = isUnlimited ? 0 : Math.min(100, Math.round((callsCount / (limit || 1)) * 100));

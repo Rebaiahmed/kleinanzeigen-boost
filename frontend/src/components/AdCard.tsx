@@ -12,6 +12,7 @@ import {
   Lock
 } from 'lucide-react';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import { PhotoFeedbackModal } from './PhotoFeedbackModal';
 
 export interface AdCardProps {
   ad: any;
@@ -130,6 +131,43 @@ function calculateViewsPerDay(ad: any): number {
   return Math.round((ad.views || 0) / activeDays);
 }
 
+async function fetchPhotoFeedback(adId: string): Promise<any> {
+  console.log('[Photo Feedback] 📸 Frontend: Sending request with adId:', adId);
+
+  if (!adId || typeof adId !== 'string') {
+    throw new Error(`Ungültige Ad-ID: ${adId} (type: ${typeof adId})`);
+  }
+
+  const token = localStorage.getItem('kb_session') || localStorage.getItem('token');
+  const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
+
+  try {
+    const payload = { adId };
+    console.log('[Photo Feedback] 📤 Sending payload:', payload);
+
+    const res = await fetch(`${apiUrl}/ai/photo-feedback`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    console.log('[Photo Feedback] 📥 Response:', data);
+
+    if (!res.ok) {
+      throw new Error(data.message || `HTTP ${res.status}`);
+    }
+
+    return data;
+  } catch (err: any) {
+    console.error('[Photo Feedback] ❌ Error:', err.message);
+    throw new Error(err.message || 'Fehler beim Abrufen der Foto-Analyse');
+  }
+}
+
 export function AdCard({
   ad,
   onAction,
@@ -165,6 +203,12 @@ export function AdCard({
 
   // Analytics panel state
   const [showAnalytics, setShowAnalytics] = useState(false);
+
+  // Photo feedback state
+  const [isLoadingPhotoFeedback, setIsLoadingPhotoFeedback] = useState(false);
+  const [photoFeedback, setPhotoFeedback] = useState<any | null>(null);
+  const [photoFeedbackError, setPhotoFeedbackError] = useState<string | null>(null);
+  const [showPhotoFeedbackModal, setShowPhotoFeedbackModal] = useState(false);
 
   // Auto-repost is gated when the listing isn't active on Kleinanzeigen.
   // State is refreshed on every sync, so this clears when a reservation is lifted.
@@ -722,6 +766,36 @@ export function AdCard({
             <span>KI-Opt</span>
           </button>
 
+
+          {/* Photo Feedback */}
+          <button
+            onClick={async () => {
+              console.log('[AdCard] Photo Feedback clicked:', {
+                adId: ad.id,
+                adImages: ad.images,
+                adPictureUrls: ad.pictureUrls,
+                allAdKeys: Object.keys(ad).slice(0, 20),
+              });
+              setShowPhotoFeedbackModal(true);
+              setIsLoadingPhotoFeedback(true);
+              setPhotoFeedbackError(null);
+              setPhotoFeedback(null);
+              try {
+                const result = await fetchPhotoFeedback(String(ad.id));
+                setPhotoFeedback(result);
+              } catch (err: any) {
+                setPhotoFeedbackError(err.message);
+              }
+              setIsLoadingPhotoFeedback(false);
+            }}
+            disabled={isLoadingPhotoFeedback}
+            title="Foto-Qualität analysieren (kostet 1 Analyse-Guthaben)"
+            className="flex-1 border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+          >
+            <span>📷</span>
+            <span>{isLoadingPhotoFeedback ? 'Analysiert…' : 'Foto-Check'}</span>
+          </button>
+
           {/* Vinted — gated behind feature flag */}
           {flags.enableVinted && (
             <div className="relative flex-1 group">
@@ -756,19 +830,6 @@ export function AdCard({
             </div>
           )}
 
-          {/* Analytics */}
-          <button
-            onClick={() => setShowAnalytics(!showAnalytics)}
-            className={`flex-1 border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors ${
-              showAnalytics
-                ? 'border-ka-green text-ka-green bg-green-50'
-                : 'border-gray-300 text-gray-700 hover:border-ka-green hover:text-ka-green hover:bg-green-50'
-            }`}
-            title="Anzeigenanalytics anzeigen"
-          >
-            <span>📊</span>
-            <span>Analytics</span>
-          </button>
         </div>
 
         {/* Mobile Actions Collapsed Trigger */}
@@ -830,6 +891,35 @@ export function AdCard({
           <p className="text-[12px] text-gray-500">Analytics-Feature ist noch nicht aktiviert</p>
         </div>
       )}
+
+
+      {/* Photo Feedback Modal */}
+      <PhotoFeedbackModal
+        isOpen={showPhotoFeedbackModal}
+        onClose={() => setShowPhotoFeedbackModal(false)}
+        feedback={photoFeedback}
+        photos={(() => {
+          const pics = (ad.pictures || ad.images || ad.pictureUrls || []).filter((p: any) => p);
+          if (pics.length === 0 && (ad.image || ad.adImage)) {
+            return [ad.image || ad.adImage];
+          }
+          return pics;
+        })()}
+        isLoading={isLoadingPhotoFeedback}
+        error={photoFeedbackError}
+        onRetry={async () => {
+          setIsLoadingPhotoFeedback(true);
+          setPhotoFeedbackError(null);
+          setPhotoFeedback(null);
+          try {
+            const result = await fetchPhotoFeedback(ad.id);
+            setPhotoFeedback(result);
+          } catch (err: any) {
+            setPhotoFeedbackError(err.message);
+          }
+          setIsLoadingPhotoFeedback(false);
+        }}
+      />
 
       {/* Mobile Bottom Sheet Modal */}
       {isBottomSheetOpen && (

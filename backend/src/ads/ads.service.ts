@@ -27,6 +27,17 @@ export class AdsService {
     return { success: true, ads };
   }
 
+  async clearAllAds(userId: string) {
+    const db = this.firebaseService.firestore;
+    const adsCol = db.collection('users').doc(userId).collection('ads');
+    const snapshot = await adsCol.get();
+    const batch = db.batch();
+    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+    this.logger.log(`✓ Cleared ${snapshot.docs.length} ads for user ${userId}`);
+    return { success: true, cleared: snapshot.docs.length };
+  }
+
   async getSchedulerStatus() {
     const db = this.firebaseService.firestore;
     const doc = await db.collection('meta').doc('schedulerMeta').get();
@@ -65,6 +76,8 @@ export class AdsService {
     if (ads.length > 0) {
       const s = ads[0];
       this.logger.log(`importAds state sample → status=${s.status} adStatus=${s.adStatus} state=${s.state} reserved=${s.reserved} flags=${JSON.stringify(s.flags)} → mapped=${this.mapListingState(s)}`);
+      this.logger.log(`importAds photo fields → pictureUrls=${Array.isArray(s.pictureUrls) ? s.pictureUrls.length : 'N/A'}, pictures=${Array.isArray(s.pictures) ? s.pictures.length : 'N/A'}, imageCount=${s.imageCount}`);
+      if (s.pictureUrls) this.logger.log(`  Sample pictureUrls[0]: ${typeof s.pictureUrls[0] === 'object' ? JSON.stringify(s.pictureUrls[0]).substring(0, 100) : s.pictureUrls[0]?.substring(0, 100)}`);
     }
 
     if (ads.length > 0) {
@@ -82,12 +95,30 @@ export class AdsService {
           const src = rawImage.src || rawImage.url || rawImage.href || Object.values(rawImage)[0];
           image = typeof src === 'string' ? (src.startsWith('http') ? src : `https://www.kleinanzeigen.de${src}`) : null;
         }
+
+        // Extract all photo URLs (from pictureUrls or pictures array)
+        let pictures: string[] = [];
+        const rawPictures = ad.pictureUrls || ad.pictures || ad.images || [];
+        if (Array.isArray(rawPictures)) {
+          pictures = rawPictures
+            .map((pic: any) => {
+              if (typeof pic === 'string') {
+                return pic.startsWith('http') ? pic : `https://www.kleinanzeigen.de${pic}`;
+              } else if (pic && typeof pic === 'object') {
+                const url = pic.src || pic.url || pic.href || Object.values(pic)[0];
+                return typeof url === 'string' ? (url.startsWith('http') ? url : `https://www.kleinanzeigen.de${url}`) : null;
+              }
+              return null;
+            })
+            .filter((url: any) => url !== null);
+        }
+
         const views = ad.viewCount ?? ad.views ?? 0;
         const messages = ad.replies ?? ad.messages ?? 0;
         const listingState = this.mapListingState(ad);
         // Re-checked on every sync: a lifted reservation flips listingState back
         // to 'active', clearing the badge and re-enabling auto-repost.
-        const normalized: any = { ...ad, image, views, messages, listingState, syncedAt: new Date().toISOString() };
+        const normalized: any = { ...ad, image, pictures, views, messages, listingState, syncedAt: new Date().toISOString() };
         // firstSyncedAt is set ONCE, on first import (merge preserves it after),
         // so newly-appeared ads can be sorted to the top ("Neueste zuerst").
         if (!existingIds.has(docId)) normalized.firstSyncedAt = new Date().toISOString();

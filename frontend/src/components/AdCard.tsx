@@ -767,7 +767,7 @@ export function AdCard({
             onClick={() => onAIOptimize(ad.id)}
             title={aiBlocked ? 'Monatslimit erreicht' : aiWarning ? 'Fast am Limit' : 'KI-Optimierung'}
             disabled={aiBlocked}
-            className={`flex-1 border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors ${
+            className={`flex-1 border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors whitespace-nowrap ${
               aiBlocked
                 ? 'border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50'
                 : aiWarning
@@ -775,10 +775,9 @@ export function AdCard({
                 : 'border-gray-300 text-gray-700 hover:border-green-600 hover:text-green-600 hover:bg-green-50'
             }`}
           >
-            <Sparkles className={`w-3.5 h-3.5 ${aiBlocked ? 'text-gray-300' : aiWarning ? 'text-yellow-500' : 'text-green-600'}`} />
+            <Sparkles className={`w-3.5 h-3.5 shrink-0 ${aiBlocked ? 'text-gray-300' : aiWarning ? 'text-yellow-500' : 'text-green-600'}`} />
             <span>KI-Opt</span>
           </button>
-
 
           {/* Photo Feedback */}
           <button
@@ -797,9 +796,9 @@ export function AdCard({
             }}
             disabled={isLoadingPhotoFeedback}
             title="Foto-Qualität analysieren (kostet 1 Analyse-Guthaben)"
-            className="flex-1 border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+            className="flex-1 border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors whitespace-nowrap border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-50"
           >
-            <span>📷</span>
+            <span className="shrink-0">📷</span>
             <span>{isLoadingPhotoFeedback ? 'Analysiert…' : 'Foto-Check'}</span>
           </button>
 

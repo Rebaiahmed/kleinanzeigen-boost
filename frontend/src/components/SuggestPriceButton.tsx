@@ -59,9 +59,9 @@ export function SuggestPriceButton({ ad }: SuggestPriceButtonProps) {
         onClick={handleClick}
         disabled={state === 'loading'}
         title="Preisvorschlag basierend auf ähnlichen Anzeigen"
-        className="flex-1 border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+        className="flex-1 border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors whitespace-nowrap border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-50"
       >
-        <span>💶</span>
+        <span className="shrink-0">💶</span>
         <span>
           {state === 'loading' ? 'Analysiere…' : state === 'error' ? 'Erneut versuchen' : 'Preis'}
         </span>

@@ -1,0 +1,3268 @@
+{
+  "success": true,
+  "message": "Kleinanzeigen live search completed",
+  "data": {
+    "meta": {
+      "page": 0,
+      "size": 31,
+      "total": 20647,
+      "exact_total": true,
+      "has_next_page": true,
+      "next_page": 1,
+      "source": "live"
+    },
+    "ads": [
+      {
+        "ad_id": "3435009289",
+        "title": "iPhone 13 + Zubehör",
+        "description": "Verkaufe hier mein Iphone 13 + hülle und seperates Ladekabel. Das iphone hat 128gb und die Akku-Kapazität liegt bei 77%. Das Iphone ist an sich in einem guten Zustand weisst auf normale gebrauchspuren auf. Die originale Verpackung gibt es nicht me...",
+        "price": {
+          "amount": 300,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/d9/d9b20aea-a36b-4679-8f24-8d8cea26d18b?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/cf/cf8c4c12-3b4c-478d-b66f-fe4016d44b74?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/ce/ce79be59-a55b-4149-b94c-76ca6434253c?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/fa/fabc9678-ba84-4cbd-8134-04d7a3cabef3?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/fc/fcc952f1-6e73-4ff2-b2ec-5315af7119de?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-zubehoer/3435009289-173-4170"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-zubehoer/3435009289-173-4170",
+        "views": null,
+        "created_at": "2026-06-14T10:45:37.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "4170",
+          "name": "08468 Reichenbach (Vogtland)",
+          "city": "Reichenbach (Vogtland)",
+          "state": "Sachsen",
+          "zip": "08468",
+          "latitude": 50.620365,
+          "longitude": 12.321797,
+          "radius": 4.18
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "weiß",
+                "label": "Weiß"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "device_and_equipment",
+                "label": "Gerät & Zubehör"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "ok",
+                "label": "Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Weiß",
+          "Gerät & Zubehör": "Gerät & Zubehör",
+          "Zustand": "Gut"
+        }
+      },
+      {
+        "ad_id": "3435006930",
+        "title": "iPhone 13 128gb",
+        "description": "Verkaufe hier mein handy da dies nicht mehr benutzt wird. Es hat noch 85% akkukapazität und hält super",
+        "price": {
+          "amount": 230,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/86/86434379-3ef7-4c40-8969-0e5abab305fd?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/99/991144a4-4433-42a3-a5c3-b502d22f0537?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-128gb/3435006930-173-2925"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-128gb/3435006930-173-2925",
+        "views": null,
+        "created_at": "2026-06-14T10:44:10.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "2925",
+          "name": "31319 Sehnde",
+          "city": "Sehnde",
+          "state": "Niedersachsen",
+          "zip": "31319",
+          "latitude": 52.31343,
+          "longitude": 9.975787,
+          "radius": 6.37
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "grün",
+                "label": "Grün"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_device",
+                "label": "Gerät"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Grün",
+          "Gerät & Zubehör": "Gerät",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3435005786",
+        "title": "iPhone 13 128GB",
+        "description": "Verkaufe hier mein iPhone 13 mit 128 GB Speicherplatz. Akkukapazität: 79% Läuft Flüssig ohne Probleme, und läuft trotzdem noch lang genug. Das Gerät befindet sich technisch in einem einwandfreien Zustand. Alle Funktionen...",
+        "price": {
+          "amount": 220,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/57/576f2c02-4902-4a9c-970c-01eec7d1a402?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/73/736f9448-8f64-4c65-a946-1b88d6ae69b8?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/10/100f29cc-b856-4dcb-8349-508f37d79166?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/8e/8e31008e-d07d-441d-8ca8-fd5eef636e54?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/6c/6c5d7d6b-8d4b-4ea9-abff-0144f14878c1?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/fe/fe7bf57a-2c22-4740-8cf9-d212c3543d90?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/42/4266b0e8-6468-4c89-aa7e-65c006126729?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/9b/9b4ed4c3-7d80-44d8-a8a8-0ba93c0c6678?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/7f/7fd50e0f-b02c-4655-b941-177652603042?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-128gb/3435005786-173-2404"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-128gb/3435005786-173-2404",
+        "views": null,
+        "created_at": "2026-06-14T10:43:27.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "2404",
+          "name": "06849 Dessau-Roßlau",
+          "city": "Dessau-Roßlau",
+          "state": "Sachsen-Anhalt",
+          "zip": "06849",
+          "latitude": 51.79878,
+          "longitude": 12.25223,
+          "radius": 3.26
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "blau",
+                "label": "Blau"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_device",
+                "label": "Gerät"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "ok",
+                "label": "Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Blau",
+          "Gerät & Zubehör": "Gerät",
+          "Zustand": "Gut"
+        }
+      },
+      {
+        "ad_id": "3435005424",
+        "title": "iPhone 13mini Iphone 13Pro IPhone 11 iPhone 14 Hülle Bumper",
+        "description": "Diverse iPhone-Hüllen zu verkaufen Ich verkaufe verschiedene Hüllen für: • iPhone 11 • iPhone 13 • iPhone 13 Pro • iPhone 13 Mini • iPhone 14 Verschiedene Farben und Modelle vorhanden. Teilweise neu und unbenutzt, teilweise gebraucht...",
+        "price": {
+          "amount": 1,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/c5/c5604e13-57b4-4a76-a8a6-1a8f7deeefbd?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/26/267d5739-2e8f-4b7e-b599-ea800bb21ae7?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/87/876ee337-ce6a-4b4d-8881-259b304ee778?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/26/26836c03-49da-45dc-87fb-f53f136fb462?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/95/957b35ec-ac01-4046-a02a-f7cbf3e98052?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/1a/1a4c628c-ee25-41d8-890b-637e1da620c9?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/fe/fed98665-b034-46c7-8935-a68562d85a04?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/af/af63248f-292d-4063-a1e3-edff967c2ae7?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/73/73520c1d-5a81-42a3-a1a6-057ccc4f7bc2?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/d1/d1e9325c-5030-4fff-903a-2a1f2313e594?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/77/77da0fbe-f11a-4a6c-823a-18543855ef37?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/0f/0f99934b-455e-4821-97ce-af76547e4f2c?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f9/f9beddc8-cb26-4e26-ac42-365939e065f9?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/06/0697fc5a-7648-425d-9b51-f066e2af2b51?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/cf/cf05715a-427b-4b66-b339-797109241969?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/3d/3df98d5f-06fd-40e3-af10-ee60a4f3fd31?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/ae/ae9ceaa6-05d4-4938-af13-9550625bc59d?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/iphone-13mini-iphone-13pro-iphone-11-iphone-14-huelle-bumper/3435005424-173-6455"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/iphone-13mini-iphone-13pro-iphone-11-iphone-14-huelle-bumper/3435005424-173-6455",
+        "views": null,
+        "created_at": "2026-06-14T10:43:13.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "6455",
+          "name": "81673 Berg-am-Laim",
+          "city": "Berg-am-Laim",
+          "state": "Bayern",
+          "zip": "81673",
+          "latitude": 48.126297,
+          "longitude": 11.633073,
+          "radius": 1.59
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_equipment",
+                "label": "Zubehör"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Gerät & Zubehör": "Zubehör",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3435004592",
+        "title": "3x Original Apple iPhone 13 Pro Max MagSafe Silikon Case Hüllen",
+        "description": "Original Apple iPhone 13 Pro Max MagSafe Silikon Case Hüllen Zustand - sehr gut, kaum benutzt Lieferumfang: * 3 Stück - Original Apple iPhone 13 Pro Max MagSafe Silikon Case Hüllen Besichtigung und...",
+        "price": {
+          "amount": 65,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/22/22a03e71-119d-40ab-b529-3c217fdabfee?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/64/64522a5d-aa91-4d1e-b695-d2ef8caaa68c?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/3x-original-apple-iphone-13-pro-max-magsafe-silikon-case-huellen/3435004592-173-6936"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/3x-original-apple-iphone-13-pro-max-magsafe-silikon-case-huellen/3435004592-173-6936",
+        "views": null,
+        "created_at": "2026-06-14T10:42:43.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "6936",
+          "name": "96450 Coburg",
+          "city": "Coburg",
+          "state": "Bayern",
+          "zip": "96450",
+          "latitude": 50.2557,
+          "longitude": 10.955082,
+          "radius": 3.15
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "sonstige",
+                "label": "Andere Farben"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_equipment",
+                "label": "Zubehör"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Andere Farben",
+          "Gerät & Zubehör": "Zubehör",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3435002207",
+        "title": "Apple iPhone 13 Pro mit Verpackung",
+        "description": "Apple iPhone 13 Pro mit Verpackung Biete hier mein iPhone 13 Pro zum Verkauf an. Das Gerät funktioniert technisch einwandfrei. Face ID funktioniert ohne Probleme und die aktuelle iOS-Version ist installiert. Zum...",
+        "price": {
+          "amount": 230,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/57/5772bad0-4fc7-4d37-85a7-d8f3cd49bcb3?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/ae/ae382bc2-50b8-41bd-8ccd-4f4b23f1cfce?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f5/f5486cac-4d62-445b-a828-72ba495a3ccb?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/18/180f99c8-54ee-4273-882c-9b2ba856ec47?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/53/535cf09b-91f3-4543-84e9-ef33749b46e1?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/66/6640462e-7301-4024-a545-3a29cf1771c9?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/c4/c4952699-396f-48af-b5b0-e1e0898dcaeb?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/95/95f0dbfa-f286-4990-9adb-df47b132bcb3?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/9b/9b59e38d-4794-4549-91ed-950d578d6bc2?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/b7/b7e7e1f7-be9f-4f91-ad6f-9c7d8202af52?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/a2/a22ba687-7fe9-487a-9087-b8f899a23174?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/apple-iphone-13-pro-mit-verpackung/3435002207-173-3460"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/apple-iphone-13-pro-mit-verpackung/3435002207-173-3460",
+        "views": null,
+        "created_at": "2026-06-14T10:41:09.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "3460",
+          "name": "13407 Reinickendorf",
+          "city": "Reinickendorf",
+          "state": "Berlin",
+          "zip": "13407",
+          "latitude": 52.573658,
+          "longitude": 13.351446,
+          "radius": 1.57
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "schwarz",
+                "label": "Schwarz"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_device",
+                "label": "Gerät"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "ok",
+                "label": "Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Schwarz",
+          "Gerät & Zubehör": "Gerät",
+          "Zustand": "Gut"
+        }
+      },
+      {
+        "ad_id": "3435001198",
+        "title": "⭐ Apple iPhone 13 mini Case Hülle NEU schwarz ⭐",
+        "description": "- neu, Verpackung ungeöffnet Versand gern möglich (z.B. als Brief), PayPal vorhanden Privatverkauf ohne Garantie",
+        "price": {
+          "amount": 8,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/84/8444d918-3bf0-43f6-acaf-14b9418a322f?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/15/15d94a53-bd33-40a0-b001-a1319170ea4a?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/-apple-iphone-13-mini-case-huelle-neu-schwarz-/3435001198-173-23971"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/-apple-iphone-13-mini-case-huelle-neu-schwarz-/3435001198-173-23971",
+        "views": null,
+        "created_at": "2026-06-14T10:40:31.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "23971",
+          "name": "01309 Striesen-Süd",
+          "city": "Striesen-Süd",
+          "state": "Sachsen",
+          "zip": "01309",
+          "latitude": 51.03621,
+          "longitude": 13.788532,
+          "radius": 5
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "schwarz",
+                "label": "Schwarz"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_equipment",
+                "label": "Zubehör"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "new",
+                "label": "Neu"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Schwarz",
+          "Gerät & Zubehör": "Zubehör",
+          "Zustand": "Neu"
+        }
+      },
+      {
+        "ad_id": "3434999480",
+        "title": "iPhone 13 Mini 128GB Grün mit 3 Hüllen",
+        "description": "Ich biete hier mein gut erhaltenes iPhone 13 Mini in Grün mit 128GB Speicher an. Dazu gibt es drei passende Hüllen, die das Handy optimal schützen. * iPhone 13 Mini, 128GB Speicher * Attraktives grünes Finish * Inklusive drei...",
+        "price": {
+          "amount": 250,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": true,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/4d/4d0a8c7d-36df-4753-83e5-a8e9f1f06498?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/99/99922b5a-57b8-46c1-9fd0-2c7d213ae0d9?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/02/02af3aff-d8e7-411d-818a-ba9b91d555a7?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f7/f77abcd6-b950-44a8-94fd-ecbfc6154e82?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/68/68e31695-07eb-483c-bbc5-5c417b708bd0?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/9d/9d8b04cc-b53b-4e4b-9bfe-b76aaded61ce?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-mini-128gb-gruen-mit-3-huellen/3434999480-173-3262"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-mini-128gb-gruen-mit-3-huellen/3434999480-173-3262",
+        "views": null,
+        "created_at": "2026-06-14T10:39:26.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "3262",
+          "name": "21337 Lüneburg",
+          "city": "Lüneburg",
+          "state": "Niedersachsen",
+          "zip": "21337",
+          "latitude": 53.246677,
+          "longitude": 10.442937,
+          "radius": 4.43
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "grün",
+                "label": "Grün"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_device",
+                "label": "Gerät"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Grün",
+          "Gerät & Zubehör": "Gerät",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3434984111",
+        "title": "Iphone 13 pro Max",
+        "description": "Ich verkaufe mein iPhone 13 Pro Max mit 128 GB Speicher in der Farbe Gold. Das Gerät befindet sich in einem sehr guten und gepflegten Zustand und funktioniert einwandfrei. Es wurde stets sorgfältig genutzt. Der Akku befindet sich...",
+        "price": {
+          "amount": 380,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/58/582599a2-ac38-458d-a07e-335f986549d7?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/20/2085074a-a058-46c0-ab8d-4a5283cb249d?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/13/13c36e37-4077-490c-aafd-d102d6497c94?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/26/26bfc7a2-ed82-4526-9928-49cddfc2c564?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-pro-max/3434984111-173-6099"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-pro-max/3434984111-173-6099",
+        "views": null,
+        "created_at": "2026-06-14T10:39:20.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "6099",
+          "name": "91522 Ansbach",
+          "city": "Ansbach",
+          "state": "Bayern",
+          "zip": "91522",
+          "latitude": 49.29993,
+          "longitude": 10.559576,
+          "radius": 6.5
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "gold",
+                "label": "Gold"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_device",
+                "label": "Gerät"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Gold",
+          "Gerät & Zubehör": "Gerät",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3434999102",
+        "title": "Kamera Linsen Schutz für iPhone 13 Pro&#x2F;Pro Max, NEU",
+        "description": "Ich biete hier einen neuen Kamera Linsen Schutz von JETech für das iPhone 13 Pro oder 13 Pro Max an. Dieser Protector ist original verpackt und unbenutzt. Er schützt deine Kameralinse zuverlässig vor Kratzern und Beschädigungen. * Ultra...",
+        "price": {
+          "amount": 7,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": true,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/32/32bace31-ac42-41e1-8c4e-95009d4cbdf2?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/23/23c4289f-aba0-4eda-8d59-6e80a9d269cb?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/a8/a8a76e93-aa03-4bc6-b0d6-53a68b5cece8?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/kamera-linsen-schutz-fuer-iphone-13-pro-pro-max-neu/3434999102-173-17207"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/kamera-linsen-schutz-fuer-iphone-13-pro-pro-max-neu/3434999102-173-17207",
+        "views": null,
+        "created_at": "2026-06-14T10:39:11.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "17207",
+          "name": "85235 Odelzhausen",
+          "city": "Odelzhausen",
+          "state": "Bayern",
+          "zip": "85235",
+          "latitude": 48.31003,
+          "longitude": 11.19308,
+          "radius": 9.71
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_equipment",
+                "label": "Zubehör"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "new",
+                "label": "Neu"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Gerät & Zubehör": "Zubehör",
+          "Zustand": "Neu"
+        }
+      },
+      {
+        "ad_id": "3434920166",
+        "title": "IPhone 13 pro max 256 Akku 84% funktioniert top",
+        "description": "Verkaufe iPhone 13 pro max 256 GB FUNKTIONIERT EINWANDFREI sehr gut zustand Funktioniert alles Akku ist top Privatverkauf keine Garantie keine Rücknahme nur abholen keine Versand",
+        "price": {
+          "amount": 370,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/c5/c599b019-97d4-4572-ac5c-c65d610cb082?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/83/83316563-74ec-45d6-ab2e-6cf75578308e?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/dd/dd744c61-9947-4996-865d-be8d39aa53b6?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/5f/5fb41ed9-a22f-4b4b-a1a6-22441bbaca71?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/c6/c6e01ce8-6627-473a-b283-884658d26177?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f8/f8bacc30-0fa1-4977-9e71-8698c860a5a2?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/a6/a6940b8e-be35-43fd-bf57-3c69d5887ce5?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-pro-max-256-akku-84-funktioniert-top/3434920166-173-1836"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-pro-max-256-akku-84-funktioniert-top/3434920166-173-1836",
+        "views": null,
+        "created_at": "2026-06-14T10:39:07.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "1836",
+          "name": "32052 Herford",
+          "city": "Herford",
+          "state": "Nordrhein-Westfalen",
+          "zip": "32052",
+          "latitude": 52.09197,
+          "longitude": 8.650065,
+          "radius": 4.26
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "grün",
+                "label": "Grün"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "device_and_equipment",
+                "label": "Gerät & Zubehör"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "ok",
+                "label": "Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Grün",
+          "Gerät & Zubehör": "Gerät & Zubehör",
+          "Zustand": "Gut"
+        }
+      },
+      {
+        "ad_id": "3434998741",
+        "title": "iPhone 13 Pink 128 GB - Akku 74 % – Panzerglas + Kabel",
+        "description": "Ich verkaufe mein iPhone 13 in Pink. Das iPhone befindet sich in einem sehr guten gebrauchten Zustand und wurde stets sorgfältig behandelt. ✅ Modell: iPhone 13 ✅ Farbe: Pink ✅ Zustand: gebraucht, sehr gut erhalten ✅...",
+        "price": {
+          "amount": 230,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/9c/9c7f02f0-6f37-4965-849f-6c00ec76812c?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/28/28c2751b-2e7b-4356-81ff-ae873552e050?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/40/40cb02c5-c3f4-401f-85b6-66e197595fa1?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/3f/3f86c4e0-eb01-4bc2-ac1e-3a14195da9f0?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/df/df02f37d-20a8-433d-93dc-9ac930207e38?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f7/f7bd699e-86c9-4f69-b546-ce0e56255a0c?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/de/dedcdd75-9a74-4bc7-a6f9-5deb6c339642?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/47/47f38aeb-d188-49e6-a01c-9cac7e9ae67d?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/c1/c1722154-5895-41f6-8d54-8da51986b887?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/79/7938eae4-6fed-4ab8-a132-e3ec4fedc1b6?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-pink-128-gb-akku-74-panzerglas-kabel/3434998741-173-3170"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-pink-128-gb-akku-74-panzerglas-kabel/3434998741-173-3170",
+        "views": null,
+        "created_at": "2026-06-14T10:38:58.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "3170",
+          "name": "30163 Vahrenwald-List",
+          "city": "Vahrenwald-List",
+          "state": "Niedersachsen",
+          "zip": "30163",
+          "latitude": 52.39964,
+          "longitude": 9.749383,
+          "radius": 1.52
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "pink",
+                "label": "Pink"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_device",
+                "label": "Gerät"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Pink",
+          "Gerät & Zubehör": "Gerät",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3434998442",
+        "title": "iPhone 13 Blau",
+        "description": "Hallo zusammen,ich verkaufe hier mein treues iPhone 13 in der wunderschönen Farbe Blau [Speichergröße, 128GB] – Guter Zustand mit OVP & Extra Kabeln. Das Gerät funktioniert technisch einwandfrei und hat mich nie im Stich gelassen. Da ich auf...",
+        "price": {
+          "amount": 310,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": true,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/97/97572433-6b53-488e-bd8b-b4c5f7ebb789?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/26/26a245c4-6cb3-405f-9d18-f0f720a8c895?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/7c/7c2c8f00-91fc-4886-a359-034e9cea59b9?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f9/f936afdc-cd61-40e1-a0bc-96d9d20df286?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/e7/e7bdb421-d686-4aa1-8653-704d3e6cacff?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/5c/5cebeae7-e85c-437d-89e0-20019533c4ef?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/b6/b6f53636-c85e-4db1-a91d-054f77fba3ee?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/a2/a2d69bf7-f02c-4aea-aed9-60867b1dccca?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/2c/2c0ec28b-4997-41c5-9585-635e563a8fd5?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/4a/4a4eb891-0484-4922-aaf3-f338c76cd158?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/50/50f6376b-1de9-4ad3-a802-f567211b2d3e?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/bc/bc298d62-329b-459c-8c46-5a68905f781c?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/3e/3ebf3a5a-afb8-4a8b-b49d-cc133a892bae?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-blau/3434998442-173-7737"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-blau/3434998442-173-7737",
+        "views": null,
+        "created_at": "2026-06-14T10:38:46.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "7737",
+          "name": "14776 Brandenburg an der Havel",
+          "city": "Brandenburg an der Havel",
+          "state": "Brandenburg",
+          "zip": "14776",
+          "latitude": 52.387714,
+          "longitude": 12.560811,
+          "radius": 3.76
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "blau",
+                "label": "Blau"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "device_and_equipment",
+                "label": "Gerät & Zubehör"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "ok",
+                "label": "Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Blau",
+          "Gerät & Zubehör": "Gerät & Zubehör",
+          "Zustand": "Gut"
+        }
+      },
+      {
+        "ad_id": "3434998435",
+        "title": "iPhone 13 Pro Max Sierra Blau 256 Gb ProMax",
+        "description": "Ich biete mein iPhone 13 Pro Max mit 256GB Sierra Blue Speicher zum Verkauf an. * Speicher: 256 GB * Batteriezustand: 81 % * Das Gerät funktioniert einwandfrei Lieferumfang: * Originalverpackung * 2 m...",
+        "price": {
+          "amount": 370,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": true,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/17/173615e7-9468-44df-9c6f-5ea3c5a90084?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f5/f50dc41f-3c97-4719-95ec-936c56dbff26?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f2/f24ba109-5f88-4d5d-b494-65a36ff5eaac?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/15/15cc64da-cbbb-4943-adf0-9353610e26c6?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/4c/4c50c7eb-c042-496a-ba4f-f66e2e6e40cd?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/70/702c9123-9770-4f4f-835e-f8a993775107?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/18/18c9be48-a68c-4862-b6ce-a5e7b8c124c6?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/03/03dd9a0e-cffb-4a10-a399-9c73135bed89?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-pro-max-sierra-blau-256-gb-promax/3434998435-173-3007"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-pro-max-sierra-blau-256-gb-promax/3434998435-173-3007",
+        "views": null,
+        "created_at": "2026-06-14T10:38:46.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "3007",
+          "name": "26316 Varel",
+          "city": "Varel",
+          "state": "Niedersachsen",
+          "zip": "26316",
+          "latitude": 53.39452,
+          "longitude": 8.140413,
+          "radius": 7.07
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "blau",
+                "label": "Blau"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_device",
+                "label": "Gerät"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Blau",
+          "Gerät & Zubehör": "Gerät",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3434998205",
+        "title": "iPhone 13 Hüllen – Verschiedene Farben & Designs",
+        "description": "Ich biete hier eine Auswahl an stilvollen iPhone 13 Hüllen an, die dein Handy optimal schützen und ihm einen neuen Look verleihen. Es sind verschiedene Farben und Muster dabei, sodass für jeden Geschmack etwas Passendes dabei ist. *...",
+        "price": {
+          "amount": null,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/78/78b653ad-5a88-445d-bc1a-e9ed7b58add7?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-huellen-verschiedene-farben-designs/3434998205-173-16348"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-huellen-verschiedene-farben-designs/3434998205-173-16348",
+        "views": null,
+        "created_at": "2026-06-14T10:38:36.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "16348",
+          "name": "81735 Berg-am-Laim",
+          "city": "Berg-am-Laim",
+          "state": "Bayern",
+          "zip": "81735",
+          "latitude": 48.11052,
+          "longitude": 11.639726,
+          "radius": 1.64
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sonstige",
+                "label": "Weitere Handys & Telefone"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "device_and_equipment",
+                "label": "Gerät & Zubehör"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Weitere Handys & Telefone",
+          "Gerät & Zubehör": "Gerät & Zubehör",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3434997816",
+        "title": "iPhone 12 &#x2F; 64 GB &#x2F; Grün &#x2F; 88% Akku &#x2F; Tausch 13,14,15,16,17 Pro",
+        "description": "Hallo, FESTPREIS 135€ kaufen oder lassen! Ohne Ladekabel 125€! Anfragen bezüglich Verhandlung blockiere ich unbeantwortet. Verkaufe iPhone 12 in Weiß - 64 GB - 87% Akku Kapazität - Vollfunktionsfähig &#x2F;...",
+        "price": {
+          "amount": 135,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/d8/d863d421-3ca8-467a-baf3-d71b73418b20?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/b7/b7f138ba-537b-4353-9bb6-3171dd08a856?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/9f/9f0a3af6-2294-4725-8225-04aedbb1e0b4?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/6e/6e53b2f7-7a8e-45a8-92ef-9bac4fbb4d26?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f9/f9726e58-ae2a-47a0-a2a7-b48028267f88?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/30/30561897-5b36-467a-955f-bef871bf6d31?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/bc/bc0c9634-075b-4147-9998-f77a52e12984?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/88/88207ffb-a8e1-44a0-81fb-36c2a745ad21?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/b9/b930b0a0-19cd-4fd1-89ac-5e6d6d479d01?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/iphone-12-64-gb-gruen-88-akku-tausch-13-14-15-16-17-pro/3434997816-173-1964"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/iphone-12-64-gb-gruen-88-akku-tausch-13-14-15-16-17-pro/3434997816-173-1964",
+        "views": null,
+        "created_at": "2026-06-14T10:38:21.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "1964",
+          "name": "41236 Mönchengladbach",
+          "city": "Mönchengladbach",
+          "state": "Nordrhein-Westfalen",
+          "zip": "41236",
+          "latitude": 51.161648,
+          "longitude": 6.4482927,
+          "radius": 1.6
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "grün",
+                "label": "Grün"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_device",
+                "label": "Gerät"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Grün",
+          "Gerät & Zubehör": "Gerät",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3434997244",
+        "title": "iPhone 13 128 GB blau",
+        "description": "Zu verkaufen ist ein orginal verpacktes iPhone 13. Gerät wurde noch nie ausgepackt. Ist an dem versiegelten Karton erkennbar. Da ich die Versiegelung des original Kartons nicht zerstören möchte, kann ich leider keine Bilder vom Gerät...",
+        "price": {
+          "amount": 350,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": true,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/e8/e8e48459-6f6f-4dfe-9ccc-820abdffc4d5?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-128-gb-blau/3434997244-173-1459"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-128-gb-blau/3434997244-173-1459",
+        "views": null,
+        "created_at": "2026-06-14T10:38:01.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "1459",
+          "name": "57413 Finnentrop",
+          "city": "Finnentrop",
+          "state": "Nordrhein-Westfalen",
+          "zip": "57413",
+          "latitude": 51.208904,
+          "longitude": 8.01829,
+          "radius": 6.67
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "blau",
+                "label": "Blau"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_device",
+                "label": "Gerät"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "new",
+                "label": "Neu"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Blau",
+          "Gerät & Zubehör": "Gerät",
+          "Zustand": "Neu"
+        }
+      },
+      {
+        "ad_id": "3434997001",
+        "title": "iPhone 13 128GB Rot",
+        "description": "Das iPhone ist ideal für den täglichen Gebrauch und bietet eine hervorragende Kamera sowie eine intuitive Bedienung. Es hat die üblichen Gebrauchsspuren, die bei einem gebrauchten Handy zu erwarten sind, ist aber voll funktionsfähig. Bei...",
+        "price": {
+          "amount": 179,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": true,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/06/06df51a7-a950-4637-9fde-b992846bf00c?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/1d/1defcb1b-fe20-4a4d-b323-369d3d4faedf?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-128gb-rot/3434997001-173-4094"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-128gb-rot/3434997001-173-4094",
+        "views": null,
+        "created_at": "2026-06-14T10:37:52.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "4094",
+          "name": "02708 Löbau",
+          "city": "Löbau",
+          "state": "Sachsen",
+          "zip": "02708",
+          "latitude": 51.0774,
+          "longitude": 14.6555805,
+          "radius": 3.27
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "rot",
+                "label": "Rot"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_device",
+                "label": "Gerät"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Rot",
+          "Gerät & Zubehör": "Gerät",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3434996874",
+        "title": "Apple IPhone 13 128 GB gebraucht",
+        "description": "-Gerät: IPhone 13 -Farbe: Pink -Speicherplatz: 128 GB -Macke oben rechts auf dem Bildschirm (s. Fotos) Lieferung ohne Zubehör, aber in Originalverpackung (s. Fotos) Das Handy kann entweder in Ahlen abgeholt...",
+        "price": {
+          "amount": 165,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/ad/ad0a6aec-9d42-49f9-a8ed-5a8efefc6e9b?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/bb/bb10e742-3093-4eef-ab29-a13195ceaa96?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/8f/8f82c9e4-d784-4719-83e0-571ab7eee657?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f4/f4aca851-c644-4a28-a69c-7a41dbe14e92?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/7d/7d50be3a-f91f-47cb-9a2c-527754834905?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/apple-iphone-13-128-gb-gebraucht/3434996874-173-1905"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/apple-iphone-13-128-gb-gebraucht/3434996874-173-1905",
+        "views": null,
+        "created_at": "2026-06-14T10:37:46.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "1905",
+          "name": "59227 Ahlen",
+          "city": "Ahlen",
+          "state": "Nordrhein-Westfalen",
+          "zip": "59227",
+          "latitude": 51.789135,
+          "longitude": 7.8843045,
+          "radius": 5.81
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "rose_gold",
+                "label": "Roségold"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_device",
+                "label": "Gerät"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "ok",
+                "label": "Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Roségold",
+          "Gerät & Zubehör": "Gerät",
+          "Zustand": "Gut"
+        }
+      },
+      {
+        "ad_id": "3434995179",
+        "title": "iPhone 13 mini",
+        "description": "iPhone 13mini , 128gb . Der Akku hat eine Kapazität von 79%. Das iPhone hat keinerlei Schäden, lediglich, am unteren Rand ist die Farbe etwas angegangen. Dazu gibt es sechs verschiedene passende Hüllen und ein Ladekabel",
+        "price": {
+          "amount": 220,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/ed/ed5c7cd7-a2cd-43b5-a36b-34383037dbe4?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/29/29ff24d3-71c7-41cf-8175-bcd7d1e3cd49?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/46/469cb9af-6289-4ff7-b564-db7662ec7c33?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/67/67a55bf9-dd3d-4e72-bc65-522077d6e04b?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f9/f94de01e-a086-4e06-b83f-470b770cbbe7?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/46/467cd7fd-41ad-4a16-b03c-b4b3d64cc775?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/59/59a84ba8-76fa-4911-809a-ac14076eef99?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/a8/a8c5d198-8251-4db0-adab-25678a3eca16?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/b2/b2fdcb0d-a993-449f-ab7d-cbc20243d554?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f5/f5623708-5b73-4631-871c-465723fd7045?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/70/708f2f39-a0f9-4c92-890b-f18bfeb5b0bf?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/83/83bb6a4e-8b5c-4f49-9c48-00750008b1f3?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/5c/5c9324d3-21f8-42a2-9493-19adc501a80f?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/52/52bf290f-b5b6-497e-aec8-1c97c3ea6b58?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-mini/3434995179-173-26352"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-mini/3434995179-173-26352",
+        "views": null,
+        "created_at": "2026-06-14T10:36:42.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "26352",
+          "name": "44229 Löttringhausen",
+          "city": "Löttringhausen",
+          "state": "Nordrhein-Westfalen",
+          "zip": "44229",
+          "latitude": 51.451458,
+          "longitude": 7.4471226,
+          "radius": 5
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "rot",
+                "label": "Rot"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_device",
+                "label": "Gerät"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Rot",
+          "Gerät & Zubehör": "Gerät",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3434994534",
+        "title": "iPhone 13 mini 128gb",
+        "description": "iPhone 13 mini 128gb Alles funktioniert einwandfrei Alles original",
+        "price": {
+          "amount": 100,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/df/df471310-71a2-457b-a514-5fc864fc05ea?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/a0/a0bcf86f-3a8c-4e2e-89de-759b8d133e10?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/b2/b285695a-5b55-4948-94b3-92953bf3c893?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/b7/b7cc85fc-fe72-4ee3-a5d0-c37df53229ac?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-mini-128gb/3434994534-173-7"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-mini-128gb/3434994534-173-7",
+        "views": null,
+        "created_at": "2026-06-14T10:36:19.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "7",
+          "name": "27568 Bremerhaven",
+          "city": "Bremerhaven",
+          "state": "Bremen",
+          "zip": "27568",
+          "latitude": 53.566,
+          "longitude": 8.566357,
+          "radius": 2.41
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "blau",
+                "label": "Blau"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_device",
+                "label": "Gerät"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "ok",
+                "label": "Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Blau",
+          "Gerät & Zubehör": "Gerät",
+          "Zustand": "Gut"
+        }
+      },
+      {
+        "ad_id": "3434993610",
+        "title": "Disney Handy Hülle iPhone 13",
+        "description": "Für i phon 13",
+        "price": {
+          "amount": 15,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/89/89109fc1-ca0f-416b-aa0f-ed6ec519c22e?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/disney-handy-huelle-iphone-13/3434993610-173-1803"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/disney-handy-huelle-iphone-13/3434993610-173-1803",
+        "views": null,
+        "created_at": "2026-06-14T10:35:44.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "1803",
+          "name": "45964 Gladbeck",
+          "city": "Gladbeck",
+          "state": "Nordrhein-Westfalen",
+          "zip": "45964",
+          "latitude": 51.568447,
+          "longitude": 6.9784636,
+          "radius": 2.11
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "sonstige",
+                "label": "Andere Farben"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_equipment",
+                "label": "Zubehör"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "new",
+                "label": "Neu"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Andere Farben",
+          "Gerät & Zubehör": "Zubehör",
+          "Zustand": "Neu"
+        }
+      },
+      {
+        "ad_id": "3434993493",
+        "title": "iPhone 13 pro 128gb blue",
+        "description": "Nur personlich in Molbergen",
+        "price": {
+          "amount": 300,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/53/533acfce-5c27-4fb8-891c-0c74a298cb87?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/8e/8efd29bd-928b-458c-a85a-a1755f4e60f1?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-pro-128gb-blue/3434993493-173-17538"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-pro-128gb-blue/3434993493-173-17538",
+        "views": null,
+        "created_at": "2026-06-14T10:35:39.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "17538",
+          "name": "49696 Molbergen",
+          "city": "Molbergen",
+          "state": "Niedersachsen",
+          "zip": "49696",
+          "latitude": 52.857834,
+          "longitude": 7.9192543,
+          "radius": 2.79
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "blau",
+                "label": "Blau"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_device",
+                "label": "Gerät"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "ok",
+                "label": "Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Blau",
+          "Gerät & Zubehör": "Gerät",
+          "Zustand": "Gut"
+        }
+      },
+      {
+        "ad_id": "3434992931",
+        "title": "Apple iPhone 13 128GB blau  90 % Akku Kapazität sehr guter",
+        "description": "Verkaufe mein iPhone 13 im sehr guten Zustand keine Schäden nur minimale und übliche kleinst Kratzer. Original Kabel und Verpackung vorhanden ohne Schäden. Akku Kapazität 90% Versand und Abholung vor Ort in Wildau 15745 möglich.<br...",
+        "price": {
+          "amount": 259,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": true,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/a4/a4b86b84-1d28-413b-8e45-bb393781917a?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/fc/fc163b8e-c1c8-401e-8e47-a1d95a242131?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/7c/7cc993f7-daf7-4bb2-a92a-d0792f8cd225?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/59/599df085-847c-4931-bac5-d18c5640d956?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/12/12a1d34a-4c5e-425b-9698-6859b5baf4af?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/52/5211885f-4b10-4294-ae56-993ccc094477?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f7/f7e23df9-fa3d-4a77-8e70-89d454c1da43?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/7e/7ed352b2-44d1-4c34-91ab-a6384ce10f11?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/9f/9f7926d5-d516-4410-9d43-cf26aa8e95f1?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/81/81285763-930c-42b3-802e-b241294c0657?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/0e/0ee97705-f0bf-4ffb-b0dd-76f016f15898?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/79/795ca9b8-9188-4a74-807a-c51905e39116?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/e8/e8b20a49-ab7c-4845-90d1-e430173e1ed5?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/apple-iphone-13-128gb-blau-90-akku-kapazitaet-sehr-guter/3434992931-173-7912"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/apple-iphone-13-128gb-blau-90-akku-kapazitaet-sehr-guter/3434992931-173-7912",
+        "views": null,
+        "created_at": "2026-06-14T10:35:16.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "7912",
+          "name": "15745 Wildau",
+          "city": "Wildau",
+          "state": "Brandenburg",
+          "zip": "15745",
+          "latitude": 52.317043,
+          "longitude": 13.62239,
+          "radius": 1.25
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "blau",
+                "label": "Blau"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_device",
+                "label": "Gerät"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Blau",
+          "Gerät & Zubehör": "Gerät",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3434992816",
+        "title": "iPhone 13 Pro Max 256GB - Gold - Tadelloser Zustand",
+        "description": "Hallo zusammen, ich verkaufe hier mein iPhone 13 Pro Max in der eleganten Farbe Gold mit großzügigen 256 GB Speicherplatz. Das Gerät befindet sich in einem tadellosen, absolut neuwertigen Zustand und funktioniert technisch...",
+        "price": {
+          "amount": 280,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f5/f5a622e0-5903-4151-a4ee-72d36caba8da?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/11/116becd4-49bc-4996-84fb-130f36439175?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-pro-max-256gb-gold-tadelloser-zustand/3434992816-173-2898"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-pro-max-256gb-gold-tadelloser-zustand/3434992816-173-2898",
+        "views": null,
+        "created_at": "2026-06-14T10:35:12.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "2898",
+          "name": "30982 Pattensen",
+          "city": "Pattensen",
+          "state": "Niedersachsen",
+          "zip": "30982",
+          "latitude": 52.268578,
+          "longitude": 9.763412,
+          "radius": 6.29
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "gold",
+                "label": "Gold"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_device",
+                "label": "Gerät"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Gold",
+          "Gerät & Zubehör": "Gerät",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3420711912",
+        "title": "iPhone 13 Pro 128GB inkl. 1 Jahr Gewährleistung",
+        "description": "iPhone Refurbished - Generalüberholt + 1 Jahr Gewährleistung auf das Gerät! Überzeugen Sie sich selbst vom Preis-Leistungsverhältnis: ✅ Zustand: sehr gut ✅ Akkukapazität 100% ✅ genauestens überprüft und in...",
+        "price": {
+          "amount": 280,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f7/f7ce894b-2ebb-4372-9330-86b9f37e11d5?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/00/00270a30-9eea-45e4-8b40-e701da743324?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/78/788ed5c9-8f4b-4317-ba42-2e48e00506c0?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/29/29e0c9dd-7a04-4a7b-b854-027a80304759?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/fb/fb5f3a95-5016-4e08-87a2-7a60ffdafdf1?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-pro-128gb-inkl-1-jahr-gewaehrleistung/3420711912-173-2456"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-pro-128gb-inkl-1-jahr-gewaehrleistung/3420711912-173-2456",
+        "views": null,
+        "created_at": "2026-06-14T10:34:06.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": "i-Project Thermomix Verkauf",
+          "type": "COMMERCIAL",
+          "account_type": "PRO",
+          "store_id": "125926",
+          "store_title": "i-Project Thermomix Verkauf",
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "2456",
+          "name": "38118 Braunschweig",
+          "city": "Braunschweig",
+          "state": "Niedersachsen",
+          "zip": "38118",
+          "latitude": 52.259712,
+          "longitude": 10.498239,
+          "radius": 1.62
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "schwarz",
+                "label": "Schwarz"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "device_and_equipment",
+                "label": "Gerät & Zubehör"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Schwarz",
+          "Gerät & Zubehör": "Gerät & Zubehör",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3434990002",
+        "title": "iPhone 13 mini, Starlight, 128GB TOP!",
+        "description": "iPhone ist gebraucht, jedoch ohne Kratzer und Macken und voll funktionsfähig. Akku-Kapazität zuletzt bei 77%. Aktuell befindet sich noch eine Panzerglasfolie auf dem iPhone. Ware kommt aus einem Nichtraucherhaushalt!<br...",
+        "price": {
+          "amount": 220,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": true,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/c1/c1239afd-e6ab-4ba7-b60a-e62195ab50cb?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/17/17b16ca1-c1d7-4344-90f6-c9495a249052?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/b8/b8d440d0-f45a-4805-97c9-02058ae72367?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-mini-starlight-128gb-top-/3434990002-173-6481"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-mini-starlight-128gb-top-/3434990002-173-6481",
+        "views": null,
+        "created_at": "2026-06-14T10:33:25.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "6481",
+          "name": "81827 Trudering-Riem",
+          "city": "Trudering-Riem",
+          "state": "Bayern",
+          "zip": "81827",
+          "latitude": 48.108067,
+          "longitude": 11.688173,
+          "radius": 2.93
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "weiß",
+                "label": "Weiß"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "device_and_equipment",
+                "label": "Gerät & Zubehör"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Weiß",
+          "Gerät & Zubehör": "Gerät & Zubehör",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3434988493",
+        "title": "SKS Handyhülle 11646 IPhone 13 Pro Max",
+        "description": "SKS Handyhülle für IPhone 13 Pro Max Privatverkauf daher keine Garantie oder Rücknahme",
+        "price": {
+          "amount": 15,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/9a/9a7744a7-9210-4ae0-9976-e1db63ef8c35?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/81/817c7413-b613-4314-85f2-0022384692d6?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/sks-handyhuelle-11646-iphone-13-pro-max/3434988493-217-18754"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/sks-handyhuelle-11646-iphone-13-pro-max/3434988493-217-18754",
+        "views": null,
+        "created_at": "2026-06-14T10:32:30.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "18754",
+          "name": "90491 Nürnberg (Mittelfr)",
+          "city": "Nürnberg (Mittelfr)",
+          "state": "Bayern",
+          "zip": "90491",
+          "latitude": 49.45203,
+          "longitude": 11.07675,
+          "radius": 0.62
+        },
+        "category": {
+          "id": "217",
+          "name": "Fahrräder & Zubehör",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "fahrraeder.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "zubehoer",
+                "label": "Zubehör"
+              }
+            ]
+          },
+          {
+            "name": "fahrraeder.type",
+            "label": "Typ",
+            "values": [
+              {
+                "value": "sonstiges",
+                "label": "Andere Fahrräder"
+              }
+            ]
+          },
+          {
+            "name": "fahrraeder.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "ok",
+                "label": "Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Zubehör",
+          "Typ": "Andere Fahrräder",
+          "Zustand": "Gut"
+        }
+      },
+      {
+        "ad_id": "3434986886",
+        "title": "iPhone 13 Midnight Black 128GB",
+        "description": "Kein Versandt und Paypal!!! Nur Abholung!!! Hiermit verkaufe ich mein IPhone 13 in Midnight black mit 128GB. Das Handy funktioniert einwandfrei. Display hat keine Kratzer das immer ein Folie getragen wurde. An den...",
+        "price": {
+          "amount": 200,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/91/913d8560-50ff-4039-94a7-fb33d6a380d9?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/61/615f35f7-5bc9-484d-bb11-35d36b8d7b10?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/59/59ec6d26-43c7-4be6-af33-b4dd699451da?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/e1/e10530a5-ea9b-4a2b-a214-1b490c018717?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/bd/bd470d4a-0f35-4a93-ab85-d00d04288a40?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/65/65667dab-02d6-4704-8c80-ed2ff8c3118a?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/79/7959164c-c3a8-4453-aa46-93ea34e4789d?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/03/0333d23a-dddd-401b-a0ee-2db9f0527518?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/ac/ac5f2512-94bd-4f8f-970b-df40dc06ac95?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/27/2791250c-3c35-4a0d-aca1-7d88aee5c6fc?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/cf/cf31b12e-007c-4932-bf34-5132499b62c1?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-midnight-black-128gb/3434986886-173-3070"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-midnight-black-128gb/3434986886-173-3070",
+        "views": null,
+        "created_at": "2026-06-14T10:31:30.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "3070",
+          "name": "30827 Garbsen",
+          "city": "Garbsen",
+          "state": "Niedersachsen",
+          "zip": "30827",
+          "latitude": 52.444923,
+          "longitude": 9.624131,
+          "radius": 4.18
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "schwarz",
+                "label": "Schwarz"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_device",
+                "label": "Gerät"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "alright",
+                "label": "In Ordnung"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Schwarz",
+          "Gerät & Zubehör": "Gerät",
+          "Zustand": "In Ordnung"
+        }
+      },
+      {
+        "ad_id": "3434986832",
+        "title": "Iphone 13 pro 128GB 77%akku",
+        "description": "Ich verkaufe mein iPhone 13 Pro mit 128 GB Speicher. Das Gerät wurde benutzt, funktioniert aber weiterhin sehr gut. Zustand: * Das Display hat einige leichte Kratzer, jedoch keine Risse oder Brüche. * Der Akku ist deutlich...",
+        "price": {
+          "amount": 280,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/5e/5e4a1044-39c2-4d04-bf49-427b98cdbe20?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/e3/e30725b0-afd1-48da-be4d-92cfbbf57f20?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/60/6011ad82-2a0e-490e-bf1e-00a72d499ec4?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/90/908633a5-957b-4564-b95b-dc3e17fae1c8?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/b5/b5479477-b412-4296-90b4-455a31e2eda2?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/0a/0adcddbf-52e5-4190-b74d-2f8211cdaca7?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/6c/6c5bc398-c1bf-4399-86f9-decba78e112f?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/7c/7c641ffa-bbc8-45e8-b343-6d3523ebfef5?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/2f/2f180159-7d5f-4483-abb7-7e4ac4d53ed2?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/1e/1e393331-9378-4429-b583-921beb45935e?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-pro-128gb-77-akku/3434986832-173-9283"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/iphone-13-pro-128gb-77-akku/3434986832-173-9283",
+        "views": null,
+        "created_at": "2026-06-14T10:31:28.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "9283",
+          "name": "70173 Stuttgart-Mitte",
+          "city": "Stuttgart-Mitte",
+          "state": "Baden-Württemberg",
+          "zip": "70173",
+          "latitude": 48.782703,
+          "longitude": 9.182863,
+          "radius": 0.64
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "weiß",
+                "label": "Weiß"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "only_device",
+                "label": "Gerät"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Farbe": "Weiß",
+          "Gerät & Zubehör": "Gerät",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "2216217552",
+        "title": "Suche Apple iPhone 17 - 16 - 15 - 14 - 13 - iPad - iMac - MacBook",
+        "description": "Suche dringend Apple iPhone X, XS, XR, 11, 12, 13, 14, 15. 16, 17, SE (2020&#x2F;2022) zu kaufen, auch suchen wir ständig Apple Produkte wie Apple TV, iPad, iMac, MacBook und Apple Zubehör zu kaufen. Bitte nur anbieten wenn in Berlin und...",
+        "price": {
+          "amount": null,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/b9/b9de452f-f734-4ea7-b6c8-e20db93c3f64?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/suche-apple-iphone-17-16-15-14-13-ipad-imac-macbook/2216217552-173-3489"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/suche-apple-iphone-17-16-15-14-13-ipad-imac-macbook/2216217552-173-3489",
+        "views": null,
+        "created_at": "2026-06-14T10:30:30.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": "An und Verkauf Prenzlauer Berg - Fairer Ankauf - Bargeld sofort - Wir freuen uns auf Ihren Besuch",
+          "type": "COMMERCIAL",
+          "account_type": "PRO",
+          "store_id": "7222",
+          "store_title": "An und Verkauf Prenzlauer Berg - Fairer Ankauf - Bargeld sofort - Wir freuen uns auf Ihren Besuch",
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "3489",
+          "name": "10435 Prenzlauer Berg",
+          "city": "Prenzlauer Berg",
+          "state": "Berlin",
+          "zip": "10435",
+          "latitude": 52.5391,
+          "longitude": 13.4233,
+          "radius": 0.77
+        },
+        "category": {
+          "id": "173",
+          "name": "Handy & Telefon",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "handy_telekom.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "apple",
+                "label": "Apple"
+              }
+            ]
+          },
+          {
+            "name": "handy_telekom.device_equipment",
+            "label": "Gerät & Zubehör",
+            "values": [
+              {
+                "value": "device_and_equipment",
+                "label": "Gerät & Zubehör"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Apple",
+          "Gerät & Zubehör": "Gerät & Zubehör"
+        }
+      }
+    ]
+  },
+  "request_id": "08c946b1-cd8a-45b8-b354-6b1eb31d586c"
+}

@@ -1,4 +1,5 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import * as https from 'https';
 
 interface Comparable {
   title: string;
@@ -7,26 +8,93 @@ interface Comparable {
   url?: string;
 }
 
+interface KlazAdResponse {
+  ad_id: string;
+  title: string;
+  price: { amount: number; currency_code: string };
+  created_at: string;
+  details?: Record<string, string>;
+  ad_url?: string;
+}
+
 @Injectable()
 export class PriceSuggestionService {
   private readonly logger = new Logger(PriceSuggestionService.name);
+  private readonly klazApiKey = process.env.KLAZ_API_KEY;
+  private readonly klazApiBase = 'https://api.kleinanzeigen-agent.de/api/v2/kleinanzeigen/search';
 
-  // POC: mocked comparables (hardcoded realistic data)
-  // TODO: replace with real getComparables(query) after LLM step is proven
-  private mockComparables: Record<string, Comparable[]> = {
-    'iphone 13': [
-      { title: 'iPhone 13 128GB Schwarz', price: 650, condition: 'wie neu', url: 'https://kleinanzeigen.de' },
-      { title: 'iPhone 13 256GB Blau', price: 700, condition: 'wie neu', url: 'https://kleinanzeigen.de' },
-      { title: 'iPhone 13 128GB - Kratzer', price: 580, condition: 'gut', url: 'https://kleinanzeigen.de' },
-      { title: 'iPhone 13 256GB Graphit', price: 680, condition: 'wie neu', url: 'https://kleinanzeigen.de' },
-      { title: 'iPhone 12 64GB (nicht 13!)', price: 450, condition: 'wie neu', url: 'https://kleinanzeigen.de' },
-    ],
-  };
+  private fetchFromKlazApi(query: string): Promise<KlazAdResponse[]> {
+    return new Promise((resolve, reject) => {
+      const url = `${this.klazApiBase}?q=${encodeURIComponent(query)}`;
+
+      const options = {
+        hostname: 'api.kleinanzeigen-agent.de',
+        path: `/api/v2/kleinanzeigen/search?q=${encodeURIComponent(query)}`,
+        method: 'GET',
+        headers: {
+          'klaz_key': this.klazApiKey,
+          'User-Agent': 'kleinzeigen-bot/1.0',
+        },
+      };
+
+      const req = https.request(options, (res) => {
+        let data = '';
+
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+
+        res.on('end', () => {
+          if (res.statusCode !== 200) {
+            this.logger.error(`[KLAZ API] HTTP ${res.statusCode}`);
+            reject(new Error(`KLAZ API returned ${res.statusCode}`));
+            return;
+          }
+
+          try {
+            const json = JSON.parse(data);
+            if (!json.success || !json.data?.ads) {
+              reject(new Error('Invalid KLAZ response'));
+              return;
+            }
+            resolve(json.data.ads);
+          } catch (e) {
+            reject(e);
+          }
+        });
+      });
+
+      req.on('error', reject);
+      req.end();
+    });
+  }
 
   async getComparables(query: string): Promise<Comparable[]> {
-    // POC: return mocked data based on query keywords
-    const key = query.toLowerCase().split(' ')[0];
-    return this.mockComparables[key] || this.mockComparables['iphone 13']; // default fallback
+    if (!this.klazApiKey) {
+      this.logger.warn('[Price] No KLAZ_API_KEY set, using fallback');
+      return [];
+    }
+
+    try {
+      this.logger.log(`[Price] Fetching comparables for: "${query}"`);
+      const ads = await this.fetchFromKlazApi(query);
+
+      // Filter to items with numeric prices and map to Comparable format
+      const comparables: Comparable[] = ads
+        .filter((ad) => ad.price && typeof ad.price.amount === 'number' && ad.price.amount > 0)
+        .map((ad) => ({
+          title: ad.title,
+          price: ad.price.amount,
+          condition: ad.details?.['Zustand'] || undefined,
+          url: ad.ad_url,
+        }));
+
+      this.logger.log(`[Price] Got ${comparables.length} comparables from KLAZ (${ads.length} total)`);
+      return comparables;
+    } catch (err: any) {
+      this.logger.error(`[Price] KLAZ fetch failed: ${err.message}`);
+      return [];
+    }
   }
 
   async suggestPrice(
@@ -44,33 +112,48 @@ export class PriceSuggestionService {
       const comparables = await this.getComparables(ad.title);
       this.logger.log(`[Price] Got ${comparables.length} comparables for "${ad.title}"`);
 
-      // 2. Call LLM
-      const prompt = `You are a pricing assistant for the German classifieds site Kleinanzeigen.
-The user wants to price this item:
-Title: ${ad.title}
-Description: ${ad.description || 'keine'}
-Condition: ${ad.condition || 'unbekannt'}
+      if (comparables.length === 0) {
+        throw new Error('No comparables found');
+      }
 
-Here are current similar listings on Kleinanzeigen:
+      // 2. Call LLM with filtering instructions
+      const prompt = `You are a pricing assistant for the German classifieds site Kleinanzeigen.
+
+USER'S ITEM:
+Title: ${ad.title}
+Description: ${ad.description || '(keine)'}
+Condition: ${ad.condition || '(unbekannt)'}
+
+COMPARABLE LISTINGS (raw from Kleinanzeigen API):
 ${JSON.stringify(comparables, null, 2)}
 
-Tasks:
-1. From the comparables, identify which are genuinely similar to the user's item (same type, similar condition).
-2. Suggest a fair price RANGE (low–high in EUR).
-3. Give ONE short sentence of reasoning.
+FILTER & ANALYZE:
+1. Keep ONLY listings that are genuinely similar:
+   - Same product type/model as the user's item
+   - Similar condition (Wie Neu ≈ Sehr Gut ≈ Gut; don't mix with "Befriedigend")
+   - Drop: accessories, parts, bundles, unrelated models, or items with missing/zero prices
 
-Be honest about uncertainty. If comparables are too different or too few, say so and give a wide range.
+2. From the filtered list, calculate:
+   - Price range (min–max of valid comparables in EUR)
+   - Confidence level:
+     * HIGH: 15+ filtered comparables
+     * MEDIUM: 8–14 filtered comparables
+     * LOW: 1–7 filtered comparables
 
-Respond ONLY with valid JSON:
+3. Provide ONE short sentence reasoning explaining the range.
+
+If you filter to 0 items, set confidence to "low" and give a wide range (±30% of first listing).
+
+Respond ONLY with valid JSON, no markdown or prose:
 {
   "suggestedLow": <number>,
   "suggestedHigh": <number>,
   "confidence": "low" | "medium" | "high",
-  "reasoning": "<one sentence>",
-  "comparablesUsed": <number>
+  "reasoning": "<one sentence in German>",
+  "comparablesUsed": <number of filtered items>
 }`;
 
-      const systemPrompt = 'You are a pricing expert for German classifieds. Return JSON only, no prose.';
+      const systemPrompt = 'You are a pricing expert for German classifieds. Respond with JSON only.';
 
       const result = await aiService.executeWithFallback(
         [prompt],
@@ -86,7 +169,7 @@ Respond ONLY with valid JSON:
         .trim();
       const suggestion = JSON.parse(jsonText);
 
-      this.logger.log(`[Price] Suggestion: ${suggestion.suggestedLow}-${suggestion.suggestedHigh}€ (confidence: ${suggestion.confidence})`);
+      this.logger.log(`[Price] Suggestion: ${suggestion.suggestedLow}-${suggestion.suggestedHigh}€ (confidence: ${suggestion.confidence}, ${suggestion.comparablesUsed} comparables)`);
       return suggestion;
     } catch (err: any) {
       this.logger.error(`[Price] Error: ${err.message}`);

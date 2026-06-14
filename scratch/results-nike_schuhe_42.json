@@ -1,0 +1,3628 @@
+{
+  "success": true,
+  "message": "Kleinanzeigen live search completed",
+  "data": {
+    "meta": {
+      "page": 0,
+      "size": 31,
+      "total": 24881,
+      "exact_total": true,
+      "has_next_page": true,
+      "next_page": 1,
+      "source": "live"
+    },
+    "ads": [
+      {
+        "ad_id": "3435007036",
+        "title": "neuw Turnschuhe Nike Jordan Mars 270 42 Sneaker Basketball Schuhe",
+        "description": "Verkaufe hier diese Nike Schuhe, die kaum getragen wurden. Der Nike Jordan Mars 270 kombiniert ikonisches Basketball-Design mit modernem Tragekomfort. Inspiriert von klassischen Air Jordan-Modellen, vereint er markante Elemente wie die...",
+        "price": {
+          "amount": 32,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/33/33a09bf0-b13f-438e-8253-d15e8bc50ace?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/ad/adf3b5dc-572d-4661-9bd9-5f833b68e375?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/9a/9a330ca3-284a-40db-ade0-23deff8972f3?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/ef/ef48c0d4-ec7d-4b45-a656-53741e63852b?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/neuw-turnschuhe-nike-jordan-mars-270-42-sneaker-basketball-schuhe/3435007036-158-1799"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/neuw-turnschuhe-nike-jordan-mars-270-42-sneaker-basketball-schuhe/3435007036-158-1799",
+        "views": null,
+        "created_at": "2026-06-14T10:44:15.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "1799",
+          "name": "53842 Troisdorf",
+          "city": "Troisdorf",
+          "state": "Nordrhein-Westfalen",
+          "zip": "53842",
+          "latitude": 50.844414,
+          "longitude": 7.1705465,
+          "radius": 2.96
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42",
+                "label": "42"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "schwarz",
+                "label": "Schwarz"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42",
+          "Farbe": "Schwarz",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3435005402",
+        "title": "Nike Mind 001 Schwarz 42",
+        "description": "Stylische und bequeme Nike Mules in Schwarz mit auffälliger orangefarbener Sohle. Leicht, angenehm zu tragen und perfekt für Alltag, Freizeit, Urlaub oder den Sommer. Sehr guter Zustand, sauber und gepflegt. Die Sohle und das Obermaterial sind ebe...",
+        "price": {
+          "amount": 71,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": true,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/ae/ae0f6d8e-1ddb-4907-9881-19db1f639b4e?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/6e/6e83145b-bf06-4f9d-b153-3b618dde411e?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/38/387d87e1-cf9b-42f2-a328-401678022a70?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/ef/ef7b9617-5e32-47d8-ad1a-c858f0e24b8f?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/8e/8e660630-93f2-485d-80c4-9c11a1d101f8?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-mind-001-schwarz-42/3435005402-158-3836"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-mind-001-schwarz-42/3435005402-158-3836",
+        "views": null,
+        "created_at": "2026-06-14T10:43:12.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "3836",
+          "name": "01099 Neustadt",
+          "city": "Neustadt",
+          "state": "Sachsen",
+          "zip": "01099",
+          "latitude": 51.0766,
+          "longitude": 13.7556,
+          "radius": 3.99
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42",
+                "label": "42"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "schwarz",
+                "label": "Schwarz"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42",
+          "Farbe": "Schwarz",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3435003130",
+        "title": "Nike Jordan Air Sneaker Herren Gr. 42,5 weiß",
+        "description": "Ich biete hier ein Paar weiße Nike Jordan Air Sneaker in Größe 42,5 an. Diese Schuhe wurden nur wenige Male getragen und sind in einem top Zustand. * Klassisches Jordan-Design in Weiß * Mit dem ikonischen Jumpman-Logo an der Seite<br...",
+        "price": {
+          "amount": 60,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/8c/8cad3461-9ae8-461b-b5d9-cfc6f691bb56?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-jordan-air-sneaker-herren-gr-42-5-weiss/3435003130-158-2762"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-jordan-air-sneaker-herren-gr-42-5-weiss/3435003130-158-2762",
+        "views": null,
+        "created_at": "2026-06-14T10:41:44.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "2762",
+          "name": "26676 Barßel",
+          "city": "Barßel",
+          "state": "Niedersachsen",
+          "zip": "26676",
+          "latitude": 53.14657,
+          "longitude": 7.793563,
+          "radius": 6.45
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42.5",
+                "label": "42.5"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "weiß",
+                "label": "Weiß"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42.5",
+          "Farbe": "Weiß",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3435001913",
+        "title": "NIKE Sneaker",
+        "description": "NIKE Sneaker, kaum getragen. NUR Abholung in Düsseldorf-Pempelfort Nur Barzahlung! Privatverkauf unter Ausschluss jeglicher Gewähr­leistung für Sachmängel“",
+        "price": {
+          "amount": 20,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/ba/bab87382-d79b-4421-bb0a-bf1bfb1b002d?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/81/816eaa14-cfee-4998-b91a-e39b4776280d?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/9f/9f0ebf41-c362-4476-9a4f-2a57a5ea3375?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/3f/3f3512ec-4321-4126-b393-ded1ac62a76f?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-sneaker/3435001913-159-2082"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-sneaker/3435001913-159-2082",
+        "views": null,
+        "created_at": "2026-06-14T10:40:59.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "2082",
+          "name": "40477 Pempelfort",
+          "city": "Pempelfort",
+          "state": "Nordrhein-Westfalen",
+          "zip": "40477",
+          "latitude": 51.23846,
+          "longitude": 6.784977,
+          "radius": 0.58
+        },
+        "category": {
+          "id": "159",
+          "name": "Damenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_damen.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_damen.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_damen.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42.5",
+                "label": "42.5"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_damen.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "beige",
+                "label": "Beige"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_damen.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42.5",
+          "Farbe": "Beige",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3435001160",
+        "title": "Nike Air Zoom Pegasus 42",
+        "description": "Nike Pegasus Premium Herren, Größe 41. Neu mit Etikett, ungetragen. Air Zoom-Dämpfung für hohen Tragekomfort. Original und in einwandfreiem Zustand.",
+        "price": {
+          "amount": 90,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": true,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/40/40d1820e-7f10-4b80-abbc-1522a313cc75?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/42/423ea2ce-f5d6-4fd8-b4c7-37a4234d1b98?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/88/88318fdd-641a-4503-98f8-2eedfdc041e8?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/9d/9db78392-c6cb-4e93-9d27-cfc35b0177d4?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/56/56ca78e2-5be6-414a-93e7-877b151ca740?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-air-zoom-pegasus-42/3435001160-158-24"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-air-zoom-pegasus-42/3435001160-158-24",
+        "views": null,
+        "created_at": "2026-06-14T10:40:29.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "24",
+          "name": "28219 Walle",
+          "city": "Walle",
+          "state": "Bremen",
+          "zip": "28219",
+          "latitude": 53.1138,
+          "longitude": 8.803206,
+          "radius": 3.27
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "41",
+                "label": "41"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "schwarz",
+                "label": "Schwarz"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "new_with_tag",
+                "label": "Neu mit Etikett"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "41",
+          "Farbe": "Schwarz",
+          "Zustand": "Neu mit Etikett"
+        }
+      },
+      {
+        "ad_id": "3435000319",
+        "title": "Nike Air Max Sneaker Gr. 42,5 Neu Schwarz Weiß Lila",
+        "description": "Ich biete hier ein Paar neue Nike Air Max Sneaker in Größe 42,5 an. Diese stylischen Schuhe kommen in einer coolen Farbkombination aus Schwarz, Weiß und Lila und sind perfekt für Sport und Freizeit. * Größe: 42,5 * Farben: Schwarz,...",
+        "price": {
+          "amount": 85,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": true,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/3c/3ce1cf45-aba5-4101-a104-8c98bc374ee2?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/0d/0d963be1-cfbc-4de7-8ee7-9417f74f8c33?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/fe/fe61fef1-3428-47e8-b50f-329c9a6295b2?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/20/20cf2108-d74d-4bac-ace7-311f18174f43?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-air-max-sneaker-gr-42-5-neu-schwarz-weiss-lila/3435000319-158-1160"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-air-max-sneaker-gr-42-5-neu-schwarz-weiss-lila/3435000319-158-1160",
+        "views": null,
+        "created_at": "2026-06-14T10:39:59.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "1160",
+          "name": "50226 Frechen",
+          "city": "Frechen",
+          "state": "Nordrhein-Westfalen",
+          "zip": "50226",
+          "latitude": 50.90894,
+          "longitude": 6.7920995,
+          "radius": 5.61
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42.5",
+                "label": "42.5"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "schwarz",
+                "label": "Schwarz"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "new",
+                "label": "Neu"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42.5",
+          "Farbe": "Schwarz",
+          "Zustand": "Neu"
+        }
+      },
+      {
+        "ad_id": "3434996549",
+        "title": "Nike Dunk Low babyblue blau Gr 42,5 US 9",
+        "description": "Nur 1 Saison getragen. Privatverkauf.",
+        "price": {
+          "amount": 30,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/0a/0a4ce578-d6f2-42e5-9843-45eb43d34a9b?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/99/99af02cb-54c8-4ef4-99a3-0e7eef0930a2?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/2b/2bf4e78c-3279-45ff-b350-a4036de91846?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-dunk-low-babyblue-blau-gr-42-5-us-9/3434996549-158-1889"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-dunk-low-babyblue-blau-gr-42-5-us-9/3434996549-158-1889",
+        "views": null,
+        "created_at": "2026-06-14T10:37:33.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "1889",
+          "name": "50259 Pulheim",
+          "city": "Pulheim",
+          "state": "Nordrhein-Westfalen",
+          "zip": "50259",
+          "latitude": 50.99303,
+          "longitude": 6.786288,
+          "radius": 9.81
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42.5",
+                "label": "42.5"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "sonstige",
+                "label": "Andere Farben"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "ok",
+                "label": "Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42.5",
+          "Farbe": "Andere Farben",
+          "Zustand": "Gut"
+        }
+      },
+      {
+        "ad_id": "3434994289",
+        "title": "Nike SB Chron 2, Coral-Mint, fast neu",
+        "description": "Verkaufe meine Nikes mit einzigartiger Farbkombo. 2 mal getragen. Bitte nur Selbstabholung.",
+        "price": {
+          "amount": 25,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/38/3876ab3e-67db-42c8-bd05-e1d2227fb17e?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/14/14a2a14e-77ab-4f39-9017-517c34ba0578?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/cd/cd3664d6-917e-4967-89f8-ec7a58a6a21c?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-sb-chron-2-coral-mint-fast-neu/3434994289-158-3351"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-sb-chron-2-coral-mint-fast-neu/3434994289-158-3351",
+        "views": null,
+        "created_at": "2026-06-14T10:36:08.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "3351",
+          "name": "10249 Friedrichshain",
+          "city": "Friedrichshain",
+          "state": "Berlin",
+          "zip": "10249",
+          "latitude": 52.525867,
+          "longitude": 13.436318,
+          "radius": 1.25
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42.5",
+                "label": "42.5"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "sonstige",
+                "label": "Andere Farben"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42.5",
+          "Farbe": "Andere Farben",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3434988146",
+        "title": "Nike Legend React Herrwn Gr. 42 *neuwertig*",
+        "description": "Nike Legend React Herrwn Gr. 42 *neuwertig* ACHTUNG!!! Aufgrund negativer Erfahrungen bezüglich Verlässlichkeit auf Käuferseite werden keine Reservierungen mehr vorgenommen! Wer zuerst kommt oder bezahlt, erhält den Artikel!<br...",
+        "price": {
+          "amount": 30,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/b4/b4f0db62-031e-4ddd-a224-23df38eeaaca?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/72/72376319-3c76-4a09-9269-ac3532a3d934?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/50/5004299f-d610-4b21-8f45-06c3cd03a680?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/8f/8f6156e7-36fb-4d54-80fc-3a875c6f90a4?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/2c/2cd4cf4e-23a4-4099-9093-f24693837560?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-legend-react-herrwn-gr-42-neuwertig-/3434988146-159-1918"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-legend-react-herrwn-gr-42-neuwertig-/3434988146-159-1918",
+        "views": null,
+        "created_at": "2026-06-14T10:32:17.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "1918",
+          "name": "47877 Willich",
+          "city": "Willich",
+          "state": "Nordrhein-Westfalen",
+          "zip": "47877",
+          "latitude": 51.26081,
+          "longitude": 6.5075707,
+          "radius": 1.39
+        },
+        "category": {
+          "id": "159",
+          "name": "Damenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_damen.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_damen.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_damen.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42",
+                "label": "42"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_damen.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "schwarz",
+                "label": "Schwarz"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_damen.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42",
+          "Farbe": "Schwarz",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3434982508",
+        "title": "Nike Sportbeutel mit Schuhe Gr.42",
+        "description": "Nike Sportbeutel und Schuhe Gr.42 Privatverkauf Ks",
+        "price": {
+          "amount": 8,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": true,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/1b/1b3024cb-6e95-4b57-8067-6ab977a6244c?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/e2/e257e638-0bae-4f62-957c-68a80d4df201?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/1f/1f224d22-7663-488f-bac3-928f84b7191c?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/8e/8ef6b7d4-023b-48e4-bdad-98e6179ab37c?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/41/41cf94bb-771f-45ac-89e6-a6fc8d7d6e04?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-sportbeutel-mit-schuhe-gr-42/3434982508-156-9341"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-sportbeutel-mit-schuhe-gr-42/3434982508-156-9341",
+        "views": null,
+        "created_at": "2026-06-14T10:28:45.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "9341",
+          "name": "89079 Ulm",
+          "city": "Ulm",
+          "state": "Baden-Württemberg",
+          "zip": "89079",
+          "latitude": 48.338844,
+          "longitude": 9.946418,
+          "radius": 6.2
+        },
+        "category": {
+          "id": "156",
+          "name": "Taschen & Accessoires",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "accessoires_schmuck.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "taschen_rucksaecke",
+                "label": "Taschen & Rucksäcke"
+              }
+            ]
+          },
+          {
+            "name": "accessoires_schmuck.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          },
+          {
+            "name": "accessoires_schmuck.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "grau",
+                "label": "Grau"
+              }
+            ]
+          },
+          {
+            "name": "accessoires_schmuck.material",
+            "label": "Material",
+            "values": [
+              {
+                "value": "other",
+                "label": "Sonstige"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Taschen & Rucksäcke",
+          "Zustand": "Sehr Gut",
+          "Farbe": "Grau",
+          "Material": "Sonstige"
+        }
+      },
+      {
+        "ad_id": "3434982346",
+        "title": "Nike Herrn  Air Force  One shadow SE Barely Grn&#x2F;Wht&#x2F;PLT Violet.",
+        "description": "Nike Air Force 1 Zu verkaufen gebraucht.",
+        "price": {
+          "amount": 95,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": true,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/4b/4b5049a7-af52-4953-a23c-b36b009cb713?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/4d/4defc867-b6d8-4b4f-b673-2bc5fff90a61?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-herrn-air-force-one-shadow-se-barely-grn-wht-plt-violet-/3434982346-159-3166"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-herrn-air-force-one-shadow-se-barely-grn-wht-plt-violet-/3434982346-159-3166",
+        "views": null,
+        "created_at": "2026-06-14T10:28:38.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "3166",
+          "name": "30179 Nord",
+          "city": "Nord",
+          "state": "Niedersachsen",
+          "zip": "30179",
+          "latitude": 52.4124,
+          "longitude": 9.757545,
+          "radius": 2.44
+        },
+        "category": {
+          "id": "159",
+          "name": "Damenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_damen.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_damen.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_damen.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42",
+                "label": "42"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_damen.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "grün",
+                "label": "Grün"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_damen.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42",
+          "Farbe": "Grün",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3434980727",
+        "title": "NIKE AIR Zoom 2000 zm air Größe 42...neuwertig",
+        "description": "Biete sehr wenig getragene NIKE AIR !!! Neuwertig !!! Herren Sportschuhe Größe 42",
+        "price": {
+          "amount": 45,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/7a/7a4502d9-02a1-4da8-a527-2cc25ed67456?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/86/86e28cf5-0de7-4112-ae2a-11eb372ccedd?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f0/f08f2570-ba7e-47ae-b281-0bb713147e35?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/6d/6d62ae5c-9035-45ae-add9-56e5b1dace32?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/37/37eface6-f618-4e46-ad5f-4f5583e66034?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/6a/6aabae9d-69b4-45e8-87b6-fd60aa02a219?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/5e/5e784529-1ff4-4e09-91ae-2884fe09ef71?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/c8/c86f3251-9ce6-4a41-b69b-c62292bb629a?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/cb/cb269f46-32db-4023-890c-565d1823f2eb?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/a5/a59566a5-459a-489e-b6c0-ea4a58eac9ef?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/2c/2cdd54f4-b057-487d-8fbc-0a0340b9dae0?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/14/14dda725-f51c-43d9-bd74-3e1c8dc94260?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/16/16090366-5c72-464d-9a45-cdcca840368e?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/2d/2ded3022-8f7d-47a5-9d18-67eab43c122b?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/ee/ee7be1c1-3b8b-4759-b3a3-bae0975561b4?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-air-zoom-2000-zm-air-groesse-42-neuwertig/3434980727-158-4164"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-air-zoom-2000-zm-air-groesse-42-neuwertig/3434980727-158-4164",
+        "views": null,
+        "created_at": "2026-06-14T10:27:40.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "4164",
+          "name": "08412 Werdau",
+          "city": "Werdau",
+          "state": "Sachsen",
+          "zip": "08412",
+          "latitude": 50.728134,
+          "longitude": 12.348286,
+          "radius": 3.27
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42",
+                "label": "42"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "sonstige",
+                "label": "Andere Farben"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42",
+          "Farbe": "Andere Farben",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3434979876",
+        "title": "Neue Nike Shox Gr 42,5 grau",
+        "description": "Biete diese tollen Schuhe von Nike an. 2x kurz getragen, dann zu klein Outletpreis 105,- Euro. Versand Hermes 5,80",
+        "price": {
+          "amount": 80,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/45/45f99aad-8f49-4611-b320-fb76495ab484?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f2/f243244a-5d22-4f5d-9023-c940774f1809?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/5f/5fa70d51-1a91-4532-8dac-beab07846bff?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/80/80fdd59e-5a0c-41d8-83f8-b4dde7d86a6e?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/neue-nike-shox-gr-42-5-grau/3434979876-158-7231"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/neue-nike-shox-gr-42-5-grau/3434979876-158-7231",
+        "views": null,
+        "created_at": "2026-06-14T10:27:08.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "7231",
+          "name": "95234 Sparneck",
+          "city": "Sparneck",
+          "state": "Bayern",
+          "zip": "95234",
+          "latitude": 50.15085,
+          "longitude": 11.854297,
+          "radius": 2.93
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42.5",
+                "label": "42.5"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "grau",
+                "label": "Grau"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "new",
+                "label": "Neu"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42.5",
+          "Farbe": "Grau",
+          "Zustand": "Neu"
+        }
+      },
+      {
+        "ad_id": "3434977356",
+        "title": "Nike Sneaker Sportschuhe Schwarz",
+        "description": "Ich biete hier ein Paar schwarze Nike Sneaker an, die sich perfekt für Sport oder den Alltag eignen. Sie sind bequem und vielseitig einsetzbar. * Klassisches Nike-Design mit Swoosh-Logo * Atmungsaktives schwarzes Mesh-Obermaterial<br...",
+        "price": {
+          "amount": 20,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": true,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/0e/0ea58ed3-fd22-48b9-8ddb-92597d1b9cc0?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/df/df856e69-6651-4652-a7fd-078ab7d11058?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/88/88a068cb-6893-48e0-9f87-36d280406c6e?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-sneaker-sportschuhe-schwarz/3434977356-158-3168"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-sneaker-sportschuhe-schwarz/3434977356-158-3168",
+        "views": null,
+        "created_at": "2026-06-14T10:25:39.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "3168",
+          "name": "30167 Mitte",
+          "city": "Mitte",
+          "state": "Niedersachsen",
+          "zip": "30167",
+          "latitude": 52.386307,
+          "longitude": 9.715683,
+          "radius": 1.93
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42.5",
+                "label": "42.5"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "schwarz",
+                "label": "Schwarz"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42.5",
+          "Farbe": "Schwarz",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3434973080",
+        "title": "Nike Sportschuhe Sneaker Grau Gr. 42",
+        "description": "Ich biete hier ein Paar Nike Sportschuhe in hellem Grau an. Diese Sneaker sind ideal für dein Training oder einfach für einen sportlichen Look im Alltag. Sie sind bequem und bieten guten Halt. * Marke: Nike * Farbe: Helles Grau mit...",
+        "price": {
+          "amount": 20,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": true,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f8/f8d6a8e6-7329-4c07-ab27-47c1a74e4e3a?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/67/67299e7f-57be-4fb7-b9db-51c1b4f68f42?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/b2/b28d8fe6-2290-46f8-bca1-7f74282822fd?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-sportschuhe-sneaker-grau-gr-42/3434973080-158-3168"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-sportschuhe-sneaker-grau-gr-42/3434973080-158-3168",
+        "views": null,
+        "created_at": "2026-06-14T10:22:56.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "3168",
+          "name": "30167 Mitte",
+          "city": "Mitte",
+          "state": "Niedersachsen",
+          "zip": "30167",
+          "latitude": 52.386307,
+          "longitude": 9.715683,
+          "radius": 1.93
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42.5",
+                "label": "42.5"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "grau",
+                "label": "Grau"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42.5",
+          "Farbe": "Grau",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3434971864",
+        "title": "Nike, Adidas......Sneaker Display",
+        "description": "Zum Verkauf steht ein Sneaker Display für deine lieblings Sneaker. Damit kannst du sie richtig gut zur Geltung bringen. Das Display hat ein zwei Kratzer aber kaum zu sehen. Guckt euch die Bilder an und bei Fragen einfach schreiben. Keine Garantie ...",
+        "price": {
+          "amount": 40,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/7d/7d2f889f-4c3c-4302-8a16-62474e4f296a?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f0/f0fbfb00-4e88-4a76-a740-3851a9a744b8?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/c7/c710e491-df1c-4ff9-acbc-7c2ed77dd7c3?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-adidas-sneaker-display/3434971864-158-1943"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-adidas-sneaker-display/3434971864-158-1943",
+        "views": null,
+        "created_at": "2026-06-14T10:22:11.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "1943",
+          "name": "44805 Bochum-Nord",
+          "city": "Bochum-Nord",
+          "state": "Nordrhein-Westfalen",
+          "zip": "44805",
+          "latitude": 51.51626,
+          "longitude": 7.271475,
+          "radius": 3.18
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "sonstige",
+                "label": "Sonstige"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42.5",
+                "label": "42.5"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "sonstige",
+                "label": "Andere Farben"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "ok",
+                "label": "Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Sonstige",
+          "Größe": "42.5",
+          "Farbe": "Andere Farben",
+          "Zustand": "Gut"
+        }
+      },
+      {
+        "ad_id": "3434962636",
+        "title": "Damensneaker &#x2F; Sportschuhe &#x2F; NIKE &#x2F; ZOOMFLY 2 &#x2F; Gr.: 42 &#x2F; blau",
+        "description": "Marke : NIKE &#x2F; ZOOMFLY 2 Größe : 42 Material : Mesh Farbe : blau - Neuwertig, nur 1x getragen - perfekte Kombination aus Style und Komfort - markante Silhouette - atmungsaktives Meshmaterial -...",
+        "price": {
+          "amount": 25,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/e4/e40e6395-3d0c-4e44-b830-9d6024597742?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/28/28e28f35-6121-4e1f-b5f4-5647d403beb9?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/bf/bf886766-1b71-40f6-9c00-29185ce5705a?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/5b/5b03d6c0-56fa-4ccd-9dc3-b3c5d45792d3?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/damensneaker-sportschuhe-nike-zoomfly-2-gr-42-blau/3434962636-159-10511"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/damensneaker-sportschuhe-nike-zoomfly-2-gr-42-blau/3434962636-159-10511",
+        "views": null,
+        "created_at": "2026-06-14T10:16:26.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "10511",
+          "name": "15370 Fredersdorf-Vogelsdorf",
+          "city": "Fredersdorf-Vogelsdorf",
+          "state": "Brandenburg",
+          "zip": "15370",
+          "latitude": 52.508003,
+          "longitude": 13.750872,
+          "radius": 1.31
+        },
+        "category": {
+          "id": "159",
+          "name": "Damenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_damen.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_damen.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_damen.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42",
+                "label": "42"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_damen.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "blau",
+                "label": "Blau"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_damen.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42",
+          "Farbe": "Blau",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3434962530",
+        "title": "Nike Court Vision Low Next Nature – guter Zustand",
+        "description": "Nike Court Vision Low Next Nature – guter Zustand Verkaufe meine Nike Court Vision Low Next Nature. Die Schuhe wurden nur selten getragen (maximal 10 Mal) und befinden sich insgesamt in einem guten Zustand. Die Sohle ist leicht...",
+        "price": {
+          "amount": 35,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": true,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/94/940ee35e-bbce-482f-b967-d1d99e48dfcb?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/8e/8e391add-422d-4009-ba81-6dba1883a51c?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/34/348e5d03-6f07-4c23-9bc0-778b786eb6b0?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f5/f52aec8a-c9a7-4134-94f5-694ae1d95b30?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/c3/c335b287-eaec-46df-975a-339a8e507ec8?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-court-vision-low-next-nature-guter-zustand/3434962530-158-8336"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-court-vision-low-next-nature-guter-zustand/3434962530-158-8336",
+        "views": null,
+        "created_at": "2026-06-14T10:16:23.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "8336",
+          "name": "76709 Kronau",
+          "city": "Kronau",
+          "state": "Baden-Württemberg",
+          "zip": "76709",
+          "latitude": 49.222416,
+          "longitude": 8.609532,
+          "radius": 1.34
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42",
+                "label": "42"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "weiß",
+                "label": "Weiß"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "ok",
+                "label": "Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42",
+          "Farbe": "Weiß",
+          "Zustand": "Gut"
+        }
+      },
+      {
+        "ad_id": "3434955210",
+        "title": "Schuhe von Nike in der Größe 42 in weiß",
+        "description": "Ich verkaufe die Schuhe meines Kindes. Wir haben die Schuhe dieses Jahr erst gekauft, aber aktuell kann man ihm beim Wachsen zuschauen :) Die Schuhe gibt es neu bei Deichmann für 85 €. Die Schuhe wurden...",
+        "price": {
+          "amount": 30,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/7b/7b30ae5b-05d5-47e1-9c83-0196eafd1411?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/a7/a7a519c8-1f2e-42af-a54b-ae3b86c5cb9b?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/3f/3f8b087c-e1e5-419d-b4bb-44d50e46e543?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/fb/fb9ecd62-3b8c-4741-be07-111d09ffa944?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/8b/8ba71885-918b-4103-bc8a-f62f86e9ea75?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/schuhe-von-nike-in-der-groesse-42-in-weiss/3434955210-158-9425"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/schuhe-von-nike-in-der-groesse-42-in-weiss/3434955210-158-9425",
+        "views": null,
+        "created_at": "2026-06-14T10:11:44.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "9425",
+          "name": "20535 Hamburg Hamm",
+          "city": "Hamburg Hamm",
+          "state": "Hamburg",
+          "zip": "20535",
+          "latitude": 53.55764,
+          "longitude": 10.049561,
+          "radius": 0.75
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42",
+                "label": "42"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "weiß",
+                "label": "Weiß"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "alright",
+                "label": "In Ordnung"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42",
+          "Farbe": "Weiß",
+          "Zustand": "In Ordnung"
+        }
+      },
+      {
+        "ad_id": "3434953748",
+        "title": "Original Nike Running Damen Gr. 43 ( 42)",
+        "description": "Gekauft in Amerika. Schweter hat mit 42 auch getargen. Siehe Beschreibung . Modell heisst Nike Running",
+        "price": {
+          "amount": 27,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": true,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/98/982bb3d0-211b-4392-9e94-fec64196b27d?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/c5/c53b64d3-433f-41e9-83e1-5cafa0b1e840?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/e1/e1832e1b-9c54-49bf-8706-192fb03afe06?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/original-nike-running-damen-gr-43-42-/3434953748-159-4714"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/original-nike-running-damen-gr-43-42-/3434953748-159-4714",
+        "views": null,
+        "created_at": "2026-06-14T10:10:48.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "4714",
+          "name": "35394 Gießen",
+          "city": "Gießen",
+          "state": "Hessen",
+          "zip": "35394",
+          "latitude": 50.571453,
+          "longitude": 8.717467,
+          "radius": 3.09
+        },
+        "category": {
+          "id": "159",
+          "name": "Damenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_damen.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_damen.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_damen.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "43",
+                "label": "43"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_damen.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "lila",
+                "label": "Lila"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_damen.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "ok",
+                "label": "Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "43",
+          "Farbe": "Lila",
+          "Zustand": "Gut"
+        }
+      },
+      {
+        "ad_id": "3434951066",
+        "title": "Nike Air Max 270",
+        "description": "Hatte sie 2 mal an Zu klein für mich",
+        "price": {
+          "amount": 85,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": true,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/54/54fef53d-cffc-4ca6-8005-629448ad356b?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/2c/2c9743a6-3952-4dd7-abc5-9053b7ba5157?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/0f/0f2471aa-6f99-45be-9a70-b5a52af94953?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-air-max-270/3434951066-158-4579"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-air-max-270/3434951066-158-4579",
+        "views": null,
+        "created_at": "2026-06-14T10:09:09.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "4579",
+          "name": "61449 Steinbach",
+          "city": "Steinbach",
+          "state": "Hessen",
+          "zip": "61449",
+          "latitude": 50.169014,
+          "longitude": 8.569577,
+          "radius": 2.79
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42.5",
+                "label": "42.5"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "weiß",
+                "label": "Weiß"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42.5",
+          "Farbe": "Weiß",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3434950708",
+        "title": "Nike Shox TL &quot;Black Green Strike&quot;",
+        "description": "Verkaufen schicke Nike Shox TL Schuhe - kaum getagen, da zu schnell rausgewachsen. Größe: 42 EUR &#x2F; 8,5 US &#x2F; 7,5 UK „Ich schließe jegliche Sachmangelhaftung aus.“ „Die Haftung auf Schadenersatz wegen Verletzungen von...",
+        "price": {
+          "amount": 85,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": true,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/dd/ddeffce0-8fee-4c11-a369-abd967a0903c?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/12/12ad6268-00c3-482d-bcfe-78566366d5e4?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/5c/5c570939-3d85-49ab-b5a1-59c109f428a2?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/81/8112ca3b-f110-40bb-a759-1070411e9c23?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/d0/d0192a56-5e7f-4296-a193-7aa34ac353aa?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/01/01c148f6-65d2-469c-b364-24b2c583792d?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/3a/3a47360d-e94f-4394-a66b-cbcd8d4cafed?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/fc/fcb25020-74da-4fbe-9761-0756610e6be7?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/a9/a9091888-4e4a-44c6-8e6c-e007941f5569?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/4b/4bef6e97-a208-4934-84c1-b71ecd928ff7?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f4/f4c341c7-1291-4a5c-b1ad-4355df44ff2f?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/d8/d8980a2b-0b66-4b01-83cb-f4767bbafc6e?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/8f/8f6a70f2-376a-4481-b5e2-4a84e676b7f6?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/1c/1c5f4743-1a77-47a2-a044-c193e2101b52?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-shox-tl-black-green-strike-/3434950708-158-5983"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-shox-tl-black-green-strike-/3434950708-158-5983",
+        "views": null,
+        "created_at": "2026-06-14T10:08:55.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "5983",
+          "name": "85247 Schwabhausen",
+          "city": "Schwabhausen",
+          "state": "Bayern",
+          "zip": "85247",
+          "latitude": 48.303886,
+          "longitude": 11.346319,
+          "radius": 4.63
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42",
+                "label": "42"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "schwarz",
+                "label": "Schwarz"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42",
+          "Farbe": "Schwarz",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3434950514",
+        "title": "Nike Air Max 1 Ultra Moire Neu",
+        "description": "Ich biete hier ein Paar neuwertige Nike Air Max 1 Ultra Moire an. Die sind neu und ungetragen, original Verpackung. Bei Fragen melde dich gerne.",
+        "price": {
+          "amount": 145,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/89/89c6740e-65f3-4fb8-8775-c95421301cca?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/ac/ac867bfe-ff19-42bf-85eb-0819aaa84fc7?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/33/33e25479-cddf-4c0a-a580-35a604f910f7?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/d6/d6b6ea18-34a7-4808-be20-6388aceb0cef?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-air-max-1-ultra-moire-neu/3434950514-158-6432"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-air-max-1-ultra-moire-neu/3434950514-158-6432",
+        "views": null,
+        "created_at": "2026-06-14T10:08:48.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "6432",
+          "name": "80687 Laim",
+          "city": "Laim",
+          "state": "Bayern",
+          "zip": "80687",
+          "latitude": 48.137882,
+          "longitude": 11.519241,
+          "radius": 1.26
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42.5",
+                "label": "42.5"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "blau",
+                "label": "Blau"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "new_with_tag",
+                "label": "Neu mit Etikett"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42.5",
+          "Farbe": "Blau",
+          "Zustand": "Neu mit Etikett"
+        }
+      },
+      {
+        "ad_id": "3434950248",
+        "title": "Nike Pegasus 40 Herren Laufschuhe weiß Gr. 42,5",
+        "description": "Nike Pegasus 40 Special Edition – Weiß – guter Zustand Verkaufe meine Nike Pegasus 40 Special Edition in Weiß. Die Schuhe überzeugen durch ihr modernes Design, hohen Tragekomfort und die bewährte Nike React-Dämpfung. Perfekt zum Laufen,...",
+        "price": {
+          "amount": 45,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": true,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/ef/efe320e6-7304-48f7-9d11-5ea9d4a10454?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f6/f66f247c-5809-46fd-a258-25275278a6bd?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/86/8628a2bc-46b8-44a5-94cd-7017b237e34f?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/c3/c3199f69-837f-4a5e-a7e3-3cb078f37a93?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/82/82cdb592-de8e-4899-acc7-13808297ca95?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/2a/2ac0c8d4-2663-4a9d-997c-28cf172681e0?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/42/427383c5-6794-4985-9b94-403ad63c6a6f?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/21/21e4d376-08e5-4800-bd81-51891e883ece?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/8a/8aee3e39-7097-4bc6-affe-9f2a6284fec5?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-pegasus-40-herren-laufschuhe-weiss-gr-42-5/3434950248-158-8336"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-pegasus-40-herren-laufschuhe-weiss-gr-42-5/3434950248-158-8336",
+        "views": null,
+        "created_at": "2026-06-14T10:08:38.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "8336",
+          "name": "76709 Kronau",
+          "city": "Kronau",
+          "state": "Baden-Württemberg",
+          "zip": "76709",
+          "latitude": 49.222416,
+          "longitude": 8.609532,
+          "radius": 1.34
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42.5",
+                "label": "42.5"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "weiß",
+                "label": "Weiß"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "ok",
+                "label": "Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42.5",
+          "Farbe": "Weiß",
+          "Zustand": "Gut"
+        }
+      },
+      {
+        "ad_id": "3434950155",
+        "title": "Nike Schuhe Größe 42,5",
+        "description": "Nike Schuhe Größe 42,5...fallen etwas kleiner aus Keine Garantie Keine Rücknahme",
+        "price": {
+          "amount": 20,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/52/520063a3-f656-4b9f-94c7-8d4880b7b327?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/38/38887990-bc2d-4b03-8659-c3a01654243d?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/2f/2f01b5b2-110e-47af-8ac5-3f163d54d6a0?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/73/733cd67c-98bb-4cef-ad03-dcef83f28077?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-schuhe-groesse-42-5/3434950155-158-2590"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-schuhe-groesse-42-5/3434950155-158-2590",
+        "views": null,
+        "created_at": "2026-06-14T10:08:35.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "2590",
+          "name": "49661 Cloppenburg",
+          "city": "Cloppenburg",
+          "state": "Niedersachsen",
+          "zip": "49661",
+          "latitude": 52.85028,
+          "longitude": 8.022647,
+          "radius": 5.83
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42.5",
+                "label": "42.5"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "weiß",
+                "label": "Weiß"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "ok",
+                "label": "Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42.5",
+          "Farbe": "Weiß",
+          "Zustand": "Gut"
+        }
+      },
+      {
+        "ad_id": "3434947355",
+        "title": "Sneaker Nike Gr.42 grau",
+        "description": "Sneaker Nike Gr.42 (8,5). Farbe grau. Gepflegt Tierfrei und NR. Privatverkauf unter Ausschluss der gesetzlichen Gewährleistung. Keine Rücknahme. Keine Garantie.",
+        "price": {
+          "amount": 20,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/73/736eeb9e-b5ed-4306-9db1-b89d53fec2be?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/0b/0bb50606-ec96-49ff-9f24-5734a7c0f3e4?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/a5/a518596d-b592-4b17-9553-79cd2280ba60?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/c5/c5eca309-c299-4215-a638-08c04d972ec0?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/3c/3c698d09-2986-4719-9813-fd03875b40b8?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/0a/0afb7c9d-9947-4396-9103-a2cead518e6d?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/sneaker-nike-gr-42-grau/3434947355-158-5382"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/sneaker-nike-gr-42-grau/3434947355-158-5382",
+        "views": null,
+        "created_at": "2026-06-14T10:06:49.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "5382",
+          "name": "67059 Ludwigshafen",
+          "city": "Ludwigshafen",
+          "state": "Rheinland-Pfalz",
+          "zip": "67059",
+          "latitude": 49.47882,
+          "longitude": 8.425832,
+          "radius": 0.99
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42",
+                "label": "42"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "grau",
+                "label": "Grau"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "ok",
+                "label": "Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42",
+          "Farbe": "Grau",
+          "Zustand": "Gut"
+        }
+      },
+      {
+        "ad_id": "3434945150",
+        "title": "Nike Fußballschuhe",
+        "description": "Nike Fußballschuhe, fallen 1 Nummer kleiner aus deshalb auch die 42. Keine Gewährleistung oder Rücknahme, da Privatverkauf.",
+        "price": {
+          "amount": 8,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": true,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/f3/f37cd647-6449-4ee9-937e-2171310e4fde?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/fb/fb20bbb6-c398-4307-a420-75ebb8cfabf2?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/d8/d8bdd00b-d60a-44d2-928b-ef3250a5c3dd?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-fussballschuhe/3434945150-158-3410"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-fussballschuhe/3434945150-158-3410",
+        "views": null,
+        "created_at": "2026-06-14T10:05:29.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "3410",
+          "name": "12305 Tempelhof",
+          "city": "Tempelhof",
+          "state": "Berlin",
+          "zip": "12305",
+          "latitude": 52.40523,
+          "longitude": 13.399936,
+          "radius": 1.76
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42",
+                "label": "42"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "gelb",
+                "label": "Gelb"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "ok",
+                "label": "Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42",
+          "Farbe": "Gelb",
+          "Zustand": "Gut"
+        }
+      },
+      {
+        "ad_id": "2820235656",
+        "title": "Nike Air Max 97 Wool Sequoia Olive",
+        "description": "Kaum getragen Ref. W3-9 Versicherter Versand DHL: 6.19€ Zahlung: Paypal, Überweisung Laut §19 Abs.1 UStG keine Umsatzsteuer",
+        "price": {
+          "amount": 90,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/4d/4d099b7c-5ca5-404c-bb16-d46db674019f?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/77/77f20c01-bee0-4ee9-a3a9-022296d8f368?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/35/350c5842-c634-49af-a62d-a72dd33ba035?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/cc/cc1d9704-8c03-4990-9a53-b188eebdd217?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-air-max-97-wool-sequoia-olive/2820235656-158-2461"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-air-max-97-wool-sequoia-olive/2820235656-158-2461",
+        "views": null,
+        "created_at": "2026-06-14T10:02:04.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": "DC WEAR",
+          "type": "COMMERCIAL",
+          "account_type": "PRO",
+          "store_id": "161125",
+          "store_title": "DC WEAR",
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "2461",
+          "name": "38106 Braunschweig",
+          "city": "Braunschweig",
+          "state": "Niedersachsen",
+          "zip": "38106",
+          "latitude": 52.28023,
+          "longitude": 10.5390215,
+          "radius": 2.26
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42",
+                "label": "42"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "grün",
+                "label": "Grün"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42",
+          "Farbe": "Grün",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3434938937",
+        "title": "Nike Fußballschuhe NEU, Gr. 42,5",
+        "description": "Nike Fußballschuhe NEU, Gr. 42,5 ZM Superfly 10 Acad FG&#x2F;MG Ember Glow&#x2F;Aurora green",
+        "price": {
+          "amount": 40,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": true,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/42/4288605d-2a6d-4dfa-acc5-2fd642720f9c?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/80/8059ff14-39e5-44a4-a88a-129b875a5545?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/8a/8aad1d68-4b3b-42f5-8e4a-c0a1081532aa?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/0c/0c428a91-b3ba-406c-bd1a-21d2e566268b?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/4d/4dcdb4ba-80c6-4264-bd17-94579a823de3?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/3b/3b05b353-94e0-409d-9431-0d6f1b3b03c2?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/ac/acc3adbd-3cf1-4298-9a5d-74f525933515?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-fussballschuhe-neu-gr-42-5/3434938937-158-6377"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-fussballschuhe-neu-gr-42-5/3434938937-158-6377",
+        "views": null,
+        "created_at": "2026-06-14T10:01:30.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "6377",
+          "name": "90571 Schwaig",
+          "city": "Schwaig",
+          "state": "Bayern",
+          "zip": "90571",
+          "latitude": 49.477478,
+          "longitude": 11.205725,
+          "radius": 3.25
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42.5",
+                "label": "42.5"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "pink",
+                "label": "Pink"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "new",
+                "label": "Neu"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42.5",
+          "Farbe": "Pink",
+          "Zustand": "Neu"
+        }
+      },
+      {
+        "ad_id": "3434937959",
+        "title": "Nike Herren schuhe",
+        "description": "Nike herren schuhe 42.5",
+        "price": {
+          "amount": 35,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "PLEASE_CONTACT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/b6/b6de6769-f7c3-4943-ae8b-b48b19140043?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/78/78dc468b-c733-4062-a573-57e3563f1a36?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/45/45c32cb1-6b84-47d6-a48c-36a8c1721fad?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/da/dab85728-9e43-491b-a64d-1715914bad29?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/d6/d65ff312-b21d-467c-859a-65f223c78f7c?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/81/81bc1e90-5e50-4e4b-a1a6-c7d3162fe4d4?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-herren-schuhe/3434937959-158-1920"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-herren-schuhe/3434937959-158-1920",
+        "views": null,
+        "created_at": "2026-06-14T10:00:53.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "1920",
+          "name": "59192 Bergkamen",
+          "city": "Bergkamen",
+          "state": "Nordrhein-Westfalen",
+          "zip": "59192",
+          "latitude": 51.615944,
+          "longitude": 7.6167994,
+          "radius": 3.35
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42.5",
+                "label": "42.5"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "weiß",
+                "label": "Weiß"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42.5",
+          "Farbe": "Weiß",
+          "Zustand": "Sehr Gut"
+        }
+      },
+      {
+        "ad_id": "3434937000",
+        "title": "Nike Air 270",
+        "description": "Verkaufe die hier Abgebildeten Nike Air 270 in Gutem Zustand, siehe Bilder. Wurden nochmals frisch gewaschen.",
+        "price": {
+          "amount": 50,
+          "currency_code": "EUR",
+          "currency_label": "€",
+          "price_type": "SPECIFIED_AMOUNT",
+          "negotiable": false
+        },
+        "shipping_available": false,
+        "buy_now_available": false,
+        "images": [
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/43/438486e1-a332-432a-89c1-df53fd7bee54?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/56/56904627-3072-4da3-9fcb-019e5174d1e5?rule=$_57.AUTO",
+          "https://img.kleinanzeigen.de/api/v1/prod-ads/images/db/db081466-1b03-408f-815f-56e8e8d82e05?rule=$_57.AUTO"
+        ],
+        "links": [
+          {
+            "rel": "self-public-website",
+            "href": "https://www.kleinanzeigen.de/s-anzeige/nike-air-270/3434937000-158-13401"
+          }
+        ],
+        "ad_url": "https://www.kleinanzeigen.de/s-anzeige/nike-air-270/3434937000-158-13401",
+        "views": null,
+        "created_at": "2026-06-14T10:00:17.000Z",
+        "status": "ACTIVE",
+        "deleted": false,
+        "seller": {
+          "seller_id": null,
+          "name": null,
+          "type": "PRIVATE",
+          "account_type": "PRIVATE",
+          "store_id": null,
+          "store_title": null,
+          "company_id": null,
+          "since": null,
+          "badges": []
+        },
+        "location": {
+          "id": "13401",
+          "name": "64711 Erbach",
+          "city": "Erbach",
+          "state": "Hessen",
+          "zip": "64711",
+          "latitude": 49.656296,
+          "longitude": 8.990593,
+          "radius": 2.63
+        },
+        "category": {
+          "id": "158",
+          "name": "Herrenschuhe",
+          "parent_id": null
+        },
+        "attributes": [
+          {
+            "name": "schuhe_herren.art",
+            "label": "Art",
+            "values": [
+              {
+                "value": "sneaker_sportschuhe",
+                "label": "Sneaker & Sportschuhe"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.brand",
+            "label": "Marke",
+            "values": [
+              {
+                "value": "nike",
+                "label": "Nike"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.groesse",
+            "label": "Größe",
+            "values": [
+              {
+                "value": "42",
+                "label": "42"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.color",
+            "label": "Farbe",
+            "values": [
+              {
+                "value": "weiß",
+                "label": "Weiß"
+              }
+            ]
+          },
+          {
+            "name": "schuhe_herren.condition",
+            "label": "Zustand",
+            "values": [
+              {
+                "value": "like_new",
+                "label": "Sehr Gut"
+              }
+            ]
+          }
+        ],
+        "details": {
+          "Art": "Sneaker & Sportschuhe",
+          "Marke": "Nike",
+          "Größe": "42",
+          "Farbe": "Weiß",
+          "Zustand": "Sehr Gut"
+        }
+      }
+    ]
+  },
+  "request_id": "77b8b7b5-6c03-40c7-8ff6-8bfb9329a533"
+}

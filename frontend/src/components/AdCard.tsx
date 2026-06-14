@@ -385,8 +385,8 @@ export function AdCard({
     <div className="bg-white border border-[#e5e5e5] flex flex-col md:flex-row hover:shadow-[0_1px_3px_rgba(0,0,0,0.1)] transition-shadow">
 
       {/* Left side: Image & Metadata */}
-      <div className="flex flex-col sm:flex-row flex-1 p-3 gap-3 border-b md:border-b-0 border-[#e5e5e5]">
-        <div className="relative shrink-0 w-full sm:w-[130px] h-[100px] bg-[#f5f5f5] flex items-center justify-center overflow-hidden">
+      <div className="flex flex-col sm:flex-row flex-1 p-2 gap-3 border-b md:border-b-0 border-[#e5e5e5]">
+        <div className="relative shrink-0 w-full sm:w-[160px] h-[140px] bg-[#f5f5f5] flex items-center justify-center overflow-hidden rounded-sm">
           {(ad.image || ad.thumbnailUrl || ad.pictureUrl) ? (
             <img
               src={ad.image || ad.thumbnailUrl || ad.pictureUrl}
@@ -411,38 +411,36 @@ export function AdCard({
           )}
         </div>
 
-        <div className="flex flex-col justify-between flex-1">
-          <div>
-            <a
-              href={`https://www.kleinanzeigen.de/s-anzeige/${ad.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[16px] font-semibold text-[#333] hover:underline leading-tight mb-1 block"
-              dangerouslySetInnerHTML={{ __html: ad.title }}
-            />
-            <div className="text-[13px] text-[#666] mb-1">{ad.category}</div>
-            <div className="text-[13px] text-[#666] mb-2">{ad.date}</div>
-          </div>
+        <div className="flex flex-col flex-1 min-w-0">
+          <a
+            href={`https://www.kleinanzeigen.de/s-anzeige/${ad.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[15px] font-semibold text-[#333] hover:underline leading-snug mb-1 block line-clamp-2"
+            dangerouslySetInnerHTML={{ __html: ad.title }}
+          />
+          <div className="text-[12px] text-[#888] mb-0.5">{ad.category}</div>
+          <div className="text-[12px] text-[#888] mb-2">{ad.date}</div>
 
-          <div className="flex flex-wrap items-center gap-3 text-[13px] font-medium text-[#666]">
-            <div className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> {ad.views}</div>
-            <div className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" /> {ad.favorites}</div>
-            <div className="flex items-center gap-1"><MessageSquare className="w-3.5 h-3.5" /> {ad.messages}</div>
+          <div className="flex flex-wrap items-center gap-2.5 text-[12px] font-medium text-[#666]">
+            <div className="flex items-center gap-0.5"><Eye className="w-3 h-3" /> {ad.views}</div>
+            <div className="flex items-center gap-0.5"><Heart className="w-3 h-3" /> {ad.favorites}</div>
+            <div className="flex items-center gap-0.5"><MessageSquare className="w-3 h-3" /> {ad.messages}</div>
           </div>
         </div>
       </div>
 
       {/* Right side: Options & Actions (OPTIONEN Column) */}
-      <div className="w-full md:w-[270px] bg-[#fdfdfd] md:border-l border-[#e5e5e5] p-3 flex flex-col justify-between shrink-0">
+      <div className="w-full md:w-[260px] bg-[#fdfdfd] md:border-l border-[#e5e5e5] p-2.5 flex flex-col gap-2 shrink-0">
         
         {/* Top: Header, Price & Status Badge */}
-        <div className="mb-3">
-          <div className="flex justify-between items-center mb-1.5">
-            <span className="text-[12px] font-semibold text-[#888] uppercase tracking-wider">Optionen</span>
-            <span className="text-[16px] font-bold text-[#333]" dangerouslySetInnerHTML={{ __html: ad.price }} />
+        <div>
+          <div className="flex justify-between items-center gap-2 mb-1">
+            <span className="text-[11px] font-semibold text-[#999] uppercase tracking-wide">Optionen</span>
+            <span className="text-[14px] font-bold text-[#333]" dangerouslySetInnerHTML={{ __html: ad.price }} />
           </div>
 
-          <div className="flex items-center gap-1.5 mt-1">
+          <div className="flex items-center gap-1 flex-wrap">
             {ad.status === 'Aktiv' && (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-green-50 text-green-700 px-2 py-0.5 rounded-full border border-green-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Aktiv
@@ -483,9 +481,9 @@ export function AdCard({
         </div>
 
         {/* Middle: Auto-Repost Switcher with Popover and AI Timing recommendation */}
-        <div className="relative mb-4">
-          <div className="flex items-start justify-between">
-            <label className={`flex items-start gap-2 group ${repostLocked ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+        <div className="relative">
+          <div className="flex items-start justify-between gap-1">
+            <label className={`flex items-start gap-1.5 group ${repostLocked ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
               <input
                 type="checkbox"
                 className={`mt-0.5 h-3.5 w-3.5 text-ka-green border-[#ccc] rounded-sm focus:ring-ka-green ${repostLocked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
@@ -493,7 +491,7 @@ export function AdCard({
                 disabled={repostLocked}
                 onChange={handleCheckboxChange}
               />
-              <div className="text-[13px]">
+              <div className="text-[12px]">
                 <span className={`block font-semibold transition-colors ${repostLocked ? 'text-gray-400' : 'text-[#333] group-hover:text-ka-green'}`}>Auto-Repost</span>
                 {repostLocked ? (
                   <span className="text-[12px] block text-orange-600 font-medium">
@@ -761,7 +759,7 @@ export function AdCard({
         </div>
 
         {/* Bottom: Desktop Action Buttons Row */}
-        <div className="hidden md:flex items-center gap-1.5 mt-auto w-full">
+        <div className="hidden md:flex items-center gap-1 w-full">
           {/* KI-Optimierung */}
           <button
             onClick={() => onAIOptimize(ad.id)}

@@ -41,7 +41,7 @@ jobs:
         run: |
           sleep 5
           for i in 1 2 3 4 5; do
-            if curl -fsS "http://${{ secrets.VPS_HOST }}:3000/api/health"; then
+            if curl -fsS "https://api.anzeigenboost.de/api/health"; then
               echo "" && echo "✅ Backend healthy."; exit 0
             fi
             echo "Attempt $i failed, retrying in 5s…"; sleep 5

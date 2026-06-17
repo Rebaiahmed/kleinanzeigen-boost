@@ -1,4 +1,4 @@
-name: Deploy Frontend to Firebase Hosting
+name: Deploy Frontend to VPS
 
 on:
   push:
@@ -11,7 +11,7 @@ on:
 
 jobs:
   build-and-deploy:
-    name: Build & Deploy to Firebase
+    name: Build & Deploy to VPS
     runs-on: ubuntu-latest
 
     steps:
@@ -33,13 +33,35 @@ jobs:
         run: npm run build
         working-directory: frontend
         env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_API_URL: https://api.anzeigenboost.de/api
 
-      - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          channelId: live
-          projectId: kleinanzeigen-app
-          entryPoint: ./frontend
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            echo "▶ Deploying frontend…"
+            cd /root/kleinanzeigen-boost
+            git fetch origin main
+            git reset --hard origin/main
+            cd frontend
+            npm ci
+            npm run build
+            echo "▶ Copying built files to nginx…"
+            rm -rf /var/www/html/*
+            cp -r dist/* /var/www/html/
+            chmod -R 755 /var/www/html
+            echo "✅ Frontend deployed."
+
+      - name: Verify deployment
+        run: |
+          sleep 2
+          if curl -fsS "https://anzeigenboost.de/" | grep -q "AnzeigenBoost"; then
+            echo "✅ Frontend is live and responding correctly."
+          else
+            echo "❌ Frontend verification failed."
+            exit 1
+          fi

@@ -1,4 +1,4 @@
-import { BrowserContext, Page } from 'playwright';
+import { BrowserContext, Page, Response } from 'playwright';
 import { getPersistentContext } from './browser-manager';
 
 const MY_ADS_URL = process.env.MARKETPLACE_MY_ADS_URL || 'https://www.kleinanzeigen.de/m-meine-anzeigen.html';
@@ -9,6 +9,14 @@ export const randomDelay = async (min = 1000, max = 5000) => {
   const ms = Math.floor(Math.random() * (max - min + 1) + min);
   await new Promise(resolve => setTimeout(resolve, ms));
 };
+
+/** Helper to capture response details for diagnostic logging */
+function formatResponseDiagnostics(response: Response | null | undefined, pageUrl: string): string {
+  if (!response) return `(no response) url=${pageUrl}`;
+  const statusStr = `status=${response.status()}`;
+  const urlStr = `url=${response.url()}`;
+  return `${statusStr} ${urlStr}`;
+}
 
 export async function executeRepostFlow(userId: string, adId: string, adData: any, cookies?: any[]): Promise<{ success: boolean; step: string; error?: string }> {
   let page: Page | null = null;
@@ -28,7 +36,10 @@ export async function executeRepostFlow(userId: string, adId: string, adData: an
         ...c,
         sameSite: validSameSite.includes(c.sameSite) ? c.sameSite : 'Lax',
       }));
+      console.log(`[repost] Injecting ${sanitizedCookies.length} cookies: ${sanitizedCookies.map((c: any) => c.name).join(', ')}`);
       await context.addCookies(sanitizedCookies);
+    } else {
+      console.warn(`[repost] ⚠ NO COOKIES provided — will likely fail auth or see login redirect`);
     }
 
     page = context.pages().find(p => p.url() !== 'about:blank' || context.pages().length === 1) || await context.newPage();
@@ -39,30 +50,67 @@ export async function executeRepostFlow(userId: string, adId: string, adData: an
     // Session Trap Check (PO Note: Always hit /m-meine-anzeigen first)
     currentStep = 'session_check';
     const response = await page.goto(MY_ADS_URL, { waitUntil: 'domcontentloaded' });
-    
-    // Check if we got redirected to login or unauthorized
+
+    const responseInfo = formatResponseDiagnostics(response, page.url());
+    console.log(`[repost] session_check: ${responseInfo}`);
+
+    // Diagnostic: check for 403, login redirects, and block pages
+    if (response?.status() === 403) {
+      const bodyText = await page.textContent('body')?.catch(() => null);
+      console.error(`[repost] 403 Forbidden detected at ${MY_ADS_URL}`);
+      console.error(`[repost] Response body (first 500 chars): ${(bodyText || '').slice(0, 500)}`);
+      console.error(`[repost] Page URL after navigation: ${page.url()}`);
+      throw new Error('403_FORBIDDEN — Kleinanzeigen returned 403 Forbidden. Likely bot detection, missing CSRF token, or IP block.');
+    }
+
     if (page.url().includes('login') || response?.status() === 401) {
+      console.error(`[repost] SESSION_EXPIRED: redirected to login or got 401`);
+      console.error(`[repost] Final URL: ${page.url()}`);
       throw new Error('SESSION_EXPIRED');
     }
+
+    // Check for block/captcha interstitials
+    const bodyText = await page.textContent('body')?.catch(() => '');
+    if (bodyText?.includes('ungewöhnliche Aktivität') || bodyText?.includes('unusual activity')) {
+      console.error(`[repost] Bot detection page detected: ${bodyText.slice(0, 200)}`);
+      throw new Error('IP_BLOCKED — Kleinanzeigen showing bot detection page');
+    }
+
     await randomDelay(1500, 3000);
 
     // Step 1: Delete Ad
     currentStep = 'delete_ad';
-    // Navigate to specific ad management page (mocking URL for now)
-    await page.goto(`https://www.kleinanzeigen.de/m-anzeige-bearbeiten.html?adId=${adId}`);
+    const editUrl = `https://www.kleinanzeigen.de/m-anzeige-bearbeiten.html?adId=${adId}`;
+    const delResponse = await page.goto(editUrl, { waitUntil: 'domcontentloaded' });
+    const delResponseInfo = formatResponseDiagnostics(delResponse, page.url());
+    console.log(`[repost] delete_ad navigate: ${delResponseInfo}`);
+
+    if (delResponse?.status() === 403) {
+      const delBodyText = await page.textContent('body')?.catch(() => null);
+      console.error(`[repost] 403 at edit page: ${editUrl}`);
+      console.error(`[repost] Response body (first 500 chars): ${(delBodyText || '').slice(0, 500)}`);
+      throw new Error('403_FORBIDDEN at edit page');
+    }
+
     await randomDelay(2000, 4000);
 
     // Modular Selector: Find and click delete
     const deleteBtnSelector = 'button:has-text("Löschen")';
     if (await page.isVisible(deleteBtnSelector)) {
+      console.log(`[repost] Found delete button, clicking...`);
       await page.click(deleteBtnSelector);
       await randomDelay();
-      
+
       // Handle "Are you sure?" modal
       const confirmModalSelector = 'button:has-text("Ja, löschen")';
       if (await page.isVisible(confirmModalSelector)) {
+        console.log(`[repost] Found confirmation modal, confirming delete...`);
         await page.click(confirmModalSelector);
       }
+    } else {
+      console.warn(`[repost] Delete button not found on page. Current URL: ${page.url()}`);
+      const deletePageBody = await page.textContent('body')?.catch(() => 'N/A');
+      console.warn(`[repost] Page content (first 300 chars): ${(deletePageBody || '').slice(0, 300)}`);
     }
     await randomDelay(2000, 5000);
 
@@ -70,25 +118,44 @@ export async function executeRepostFlow(userId: string, adId: string, adData: an
     currentStep = 'verify_deletion';
     await page.goto(`https://www.kleinanzeigen.de/s-anzeige/${adId}`);
     await randomDelay();
-    
-    const bodyText = await page.innerText('body');
-    if (!bodyText.includes('Die Anzeige ist nicht mehr verfügbar')) {
+
+    const verifyBodyText = await page.innerText('body');
+    if (!verifyBodyText.includes('Die Anzeige ist nicht mehr verfügbar')) {
       throw new Error('Verification failed: Ad is still live on the marketplace.');
     }
-    
+
     // Step 3: Create Ad
     currentStep = 'create_ad';
-    await page.goto('https://www.kleinanzeigen.de/p-anzeige-aufgeben.html');
+    const createUrl = 'https://www.kleinanzeigen.de/p-anzeige-aufgeben.html';
+    const createResponse = await page.goto(createUrl, { waitUntil: 'domcontentloaded' });
+    const createResponseInfo = formatResponseDiagnostics(createResponse, page.url());
+    console.log(`[repost] create_ad navigate: ${createResponseInfo}`);
+
+    if (createResponse?.status() === 403) {
+      const createBodyText = await page.textContent('body')?.catch(() => null);
+      console.error(`[repost] 403 at create page: ${createUrl}`);
+      console.error(`[repost] Response body (first 500 chars): ${(createBodyText || '').slice(0, 500)}`);
+      throw new Error('403_FORBIDDEN at create page');
+    }
+
     await randomDelay(2000, 4000);
 
     // Map cached Ad Schema to form inputs (Modular selectors)
-    await page.fill('input[name="title"]', adData.title || 'Reposted Title');
-    await randomDelay();
-    await page.fill('textarea[name="description"]', adData.description || 'Reposted description');
-    await randomDelay();
-    await page.fill('input[name="price"]', adData.price || '10');
-    await randomDelay();
-    
+    console.log(`[repost] Filling form: title="${adData.title}" price="${adData.price}"`);
+    try {
+      await page.fill('input[name="title"]', adData.title || 'Reposted Title');
+      await randomDelay();
+      await page.fill('textarea[name="description"]', adData.description || 'Reposted description');
+      await randomDelay();
+      await page.fill('input[name="price"]', adData.price || '10');
+      await randomDelay();
+    } catch (fillError: any) {
+      console.error(`[repost] Error filling form fields: ${fillError.message}`);
+      const bodyText = await page.textContent('body')?.catch(() => 'N/A');
+      console.error(`[repost] Page content (first 300 chars): ${(bodyText || '').slice(0, 300)}`);
+      throw fillError;
+    }
+
     // Handle image uploads (mock)
     // if (adData.images && adData.images.length > 0) {
     //   await page.setInputFiles('input[type="file"]', adData.images);
@@ -96,7 +163,14 @@ export async function executeRepostFlow(userId: string, adId: string, adData: an
     // }
 
     // Click submit
-    await page.click('button:has-text("Anzeige aufgeben")');
+    console.log(`[repost] Submitting form...`);
+    const submitBtnText = 'Anzeige aufgeben';
+    try {
+      await page.click(`button:has-text("${submitBtnText}")`);
+    } catch (clickError: any) {
+      console.error(`[repost] Could not click submit button: ${clickError.message}`);
+      throw clickError;
+    }
     await randomDelay(3000, 6000);
     
     // Check for captchas or post-submit modals
@@ -121,16 +195,32 @@ export async function executeRepostFlow(userId: string, adId: string, adData: an
     return { success: true, step: currentStep };
 
   } catch (error: any) {
-    // Log the real failure point + message + page URL so we can see exactly where
-    // the repost flow breaks (session_check / delete_ad / verify_deletion / submit).
     const url = page ? page.url() : 'n/a';
-    console.error(`[repost] ✗ FAILED at step='${currentStep}' ad=${adId} url=${url} → ${error?.message}`);
-    if (error?.stack) console.error(error.stack);
+    const errorMsg = error?.message || 'Unknown error';
+
+    console.error(`[repost] ✗ FAILED at step='${currentStep}' ad=${adId} url=${url}`);
+    console.error(`[repost] Error message: ${errorMsg}`);
+
+    // Capture page body if available (helps identify 403, login page, captcha, etc.)
+    if (page) {
+      try {
+        const bodyText = await page.textContent('body');
+        if (bodyText) {
+          const preview = bodyText.slice(0, 600);
+          console.error(`[repost] Page body (first 600 chars): ${preview}`);
+        }
+      } catch (bodyError: any) {
+        console.error(`[repost] Could not capture page body: ${bodyError.message}`);
+      }
+    }
+
+    if (error?.stack) console.error(`[repost] Stack trace: ${error.stack}`);
+
     if (page) await page.close().catch(() => {});
     return {
       success: false,
       step: currentStep,
-      error: error.message || 'Unknown error during automation',
+      error: errorMsg,
     };
   }
 }

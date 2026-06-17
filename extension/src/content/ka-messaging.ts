@@ -13,8 +13,6 @@ interface ReplyTemplate {
   updatedAt?: number;
 }
 
-const log = (...args: any[]) => console.log('[AB-messaging]', ...args);
-
 let templateCache: ReplyTemplate[] = [];
 let isCachePopulated = false;
 let injectionAttempts = 0;
@@ -25,14 +23,12 @@ async function getToken(): Promise<string> {
   try {
     return await new Promise<string>((resolve) => {
       const timeout = setTimeout(() => {
-        log('Background message timeout, trying fallback');
         resolve('');
       }, 2000);
 
       chrome.runtime.sendMessage({ type: 'GET_SESSION_TOKEN' }, (response) => {
         clearTimeout(timeout);
         if (chrome.runtime.lastError) {
-          log('Background message error:', chrome.runtime.lastError.message);
           resolve('');
         } else {
           resolve(response?.token || '');
@@ -40,7 +36,6 @@ async function getToken(): Promise<string> {
       });
     });
   } catch (err) {
-    log('Failed to get token from background:', err);
     return '';
   }
 }
@@ -53,22 +48,28 @@ async function fetchTemplates(): Promise<ReplyTemplate[]> {
     const token = await getToken();
 
     if (!token) {
-      log('No session token available');
+      console.warn('[AB-messaging] No session token — cannot fetch templates');
       return [];
     }
 
     const apiUrl = localStorage.getItem('apiUrl') || 'http://localhost:3000/api';
+    console.log('[AB-messaging] Fetching templates from:', `${apiUrl}/reply-templates`);
+
     const res = await fetch(`${apiUrl}/reply-templates`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) {
+      console.error('[AB-messaging] Failed to fetch templates: HTTP', res.status);
+      throw new Error(`HTTP ${res.status}`);
+    }
+
     templateCache = await res.json();
     isCachePopulated = true;
-    log('Fetched templates:', templateCache.length);
+    console.log('[AB-messaging] Fetched', templateCache.length, 'templates');
     return templateCache;
   } catch (err: any) {
-    log('Failed to fetch templates:', err.message);
+    console.error('[AB-messaging] Failed to fetch templates:', err.message);
     return [];
   }
 }
@@ -194,7 +195,6 @@ function showTemplateModal(inputElement: HTMLElement) {
       });
 
       item.addEventListener('click', async () => {
-        log('Template selected:', template.title);
         insertTemplate(inputElement, template.content);
         closeModal();
 
@@ -207,10 +207,9 @@ function showTemplateModal(inputElement: HTMLElement) {
               method: 'POST',
               headers: { Authorization: `Bearer ${token}` },
             });
-            log('Template usage tracked');
           }
         } catch (e) {
-          log('Failed to track template usage:', e);
+          console.error('[AB-messaging] Failed to track template usage:', e);
         }
       });
 
@@ -223,7 +222,6 @@ function showTemplateModal(inputElement: HTMLElement) {
   backdrop.appendChild(modal);
   document.body.appendChild(backdrop);
 
-  closeModal(); // HACK: close on backdrop click
   backdrop.addEventListener('click', (e) => {
     if (e.target === backdrop) closeModal();
   });
@@ -233,24 +231,21 @@ function showTemplateModal(inputElement: HTMLElement) {
 function injectTemplateButton() {
   injectionAttempts++;
   if (injectionAttempts > 100) {
-    log('Too many injection attempts, stopping');
     return;
   }
 
   // Find any textarea on the page
   const textareas = document.querySelectorAll('textarea');
-  log(`Found ${textareas.length} textarea(s)`);
+  if (textareas.length > 0) {
+    console.log('[AB-messaging] Found', textareas.length, 'textarea(s) to inject button');
+  }
 
   textareas.forEach((textarea) => {
     // Skip if already has button
     if (textarea.parentElement?.querySelector('[data-ab-template-btn]')) {
+      console.log('[AB-messaging] Button already exists for this textarea, skipping');
       return;
     }
-
-    log('Injecting button for textarea:', {
-      placeholder: textarea.placeholder,
-      ariaLabel: textarea.getAttribute('aria-label'),
-    });
 
     // Create button — match Kleinanzeigen's secondary button style
     // (outlined, subtle, matches native chat controls)
@@ -289,18 +284,19 @@ function injectTemplateButton() {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      log('Button clicked');
+      console.log('[AB-messaging] Button clicked, showing template modal');
       showTemplateModal(textarea);
     });
 
     // Insert button after textarea
     textarea.parentElement?.insertBefore(btn, textarea.nextSibling);
+    console.log('[AB-messaging] Button injected after textarea');
   });
 }
 
 /** Monitor page for textareas and inject buttons. */
 export function initKaMessaging() {
-  log('Initializing messaging...');
+  console.log('[AB-messaging] Initializing template button injection');
 
   // Initial injection
   injectTemplateButton();
@@ -314,6 +310,4 @@ export function initKaMessaging() {
     childList: true,
     subtree: true,
   });
-
-  log('Observer started');
 }

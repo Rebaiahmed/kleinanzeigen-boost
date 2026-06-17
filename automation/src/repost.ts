@@ -10,6 +10,17 @@ export const randomDelay = async (min = 1000, max = 5000) => {
   await new Promise(resolve => setTimeout(resolve, ms));
 };
 
+// FIX: Add jitter to avoid predictable patterns that trigger IP blocks
+// Kleinanzeigen detects automation by: exact timing intervals, rapid clicks, no human pauses
+export const randomJitter = async (chance = 0.3) => {
+  if (Math.random() < chance) {
+    // Occasionally add longer pauses (like a human reading)
+    const jitterMs = Math.floor(Math.random() * 3000) + 2000; // 2-5 seconds extra
+    console.log(`[repost] ⏱ Adding jitter pause: ${jitterMs}ms`);
+    await new Promise(resolve => setTimeout(resolve, jitterMs));
+  }
+};
+
 /** Helper to capture response details for diagnostic logging */
 function formatResponseDiagnostics(response: Response | null | undefined, pageUrl: string): string {
   if (!response) return `(no response) url=${pageUrl}`;
@@ -42,10 +53,14 @@ export async function executeRepostFlow(userId: string, adId: string, adData: an
       console.warn(`[repost] ⚠ NO COOKIES provided — will likely fail auth or see login redirect`);
     }
 
-    page = context.pages().find(p => p.url() !== 'about:blank' || context.pages().length === 1) || await context.newPage();
-    if (page.url() !== 'about:blank') {
-      page = await context.newPage();
+    // FIX: Always create a fresh page to avoid tab memory leak
+    // Close any existing pages first
+    for (const existingPage of context.pages()) {
+      if (existingPage.url() !== 'about:blank') {
+        await existingPage.close().catch(() => {});
+      }
     }
+    page = await context.newPage();
 
     // Session Trap Check (PO Note: Always hit /m-meine-anzeigen first)
     currentStep = 'session_check';
@@ -77,6 +92,7 @@ export async function executeRepostFlow(userId: string, adId: string, adData: an
     }
 
     await randomDelay(1500, 3000);
+    await randomJitter(0.4); // 40% chance of extra pause to appear human
 
     // Step 1: Delete Ad
     currentStep = 'delete_ad';
@@ -93,11 +109,13 @@ export async function executeRepostFlow(userId: string, adId: string, adData: an
     }
 
     await randomDelay(2000, 4000);
+    await randomJitter(0.3);
 
     // Modular Selector: Find and click delete
     const deleteBtnSelector = 'button:has-text("Löschen")';
     if (await page.isVisible(deleteBtnSelector)) {
       console.log(`[repost] Found delete button, clicking...`);
+      await randomDelay(300, 800); // Small pause before clicking (human-like)
       await page.click(deleteBtnSelector);
       await randomDelay();
 
@@ -189,8 +207,9 @@ export async function executeRepostFlow(userId: string, adId: string, adData: an
       if (e.message === 'IP_BLOCKED') throw e;
       // textContent failure is non-fatal — ignore and continue.
     }
-    // Close the page, not the context, to keep browser alive
-    await page.close();
+    // FIX: Close the page immediately to free memory
+    await page.close().catch(() => {});
+    console.log(`[repost] ✓ Page closed successfully`);
 
     return { success: true, step: currentStep };
 
@@ -212,11 +231,18 @@ export async function executeRepostFlow(userId: string, adId: string, adData: an
       } catch (bodyError: any) {
         console.error(`[repost] Could not capture page body: ${bodyError.message}`);
       }
+
+      // FIX: Always close page on error to prevent memory leak
+      try {
+        await page.close();
+        console.log(`[repost] Page closed after error`);
+      } catch (closeError: any) {
+        console.warn(`[repost] Error closing page: ${closeError.message}`);
+      }
     }
 
     if (error?.stack) console.error(`[repost] Stack trace: ${error.stack}`);
 
-    if (page) await page.close().catch(() => {});
     return {
       success: false,
       step: currentStep,

@@ -181,7 +181,111 @@ async function createAd(target: Target, data: Captured, photoPaths: string[]): P
   return String(finalUrl);
 }
 
-// ─── Orchestrator (v1: create-only, NO delete) ───────────────────────────────
+// ─── Delete ────────────────────────────────────────────────────────────────────
+
+async function deleteAd(target: Target, adId: string): Promise<void> {
+  log('delete: opening My Ads page');
+  await navigate(target, 'https://www.kleinanzeigen.de/m-meine-anzeigen.html?tab=PROJECTS');
+
+  // Find the ad card and click delete button by Löschen text
+  log('delete: looking for ad', adId);
+  const deleteResult = await evaluate(target, `(() => {
+    try {
+      // Find button with "Löschen" text (more resilient than class names)
+      const buttons = [...document.querySelectorAll('button')];
+      const deleteBtn = buttons.find(b => (b.textContent || '').trim().includes('Löschen') && b.offsetParent !== null);
+      if (!deleteBtn) return 'DELETE_BUTTON_NOT_FOUND';
+      deleteBtn.click();
+      return 'CLICKED';
+    } catch (e) {
+      return 'ERROR: ' + e.message;
+    }
+  })()`);
+  log('delete: delete button click result =', deleteResult);
+  if (deleteResult !== 'CLICKED') throw new Error('Delete button not found or not clickable');
+
+  await delay(1500);
+
+  // Handle confirmation modal (Ja, löschen)
+  log('delete: waiting for confirmation modal');
+  const confirmResult = await evaluate(target, `(() => {
+    try {
+      const buttons = [...document.querySelectorAll('button')];
+      const confirmBtn = buttons.find(b => (b.textContent || '').trim().includes('Ja') && (b.textContent || '').includes('löschen') && b.offsetParent !== null);
+      if (!confirmBtn) return 'CONFIRM_NOT_FOUND';
+      confirmBtn.click();
+      return 'CONFIRMED';
+    } catch (e) {
+      return 'ERROR: ' + e.message;
+    }
+  })()`);
+  log('delete: confirmation click result =', confirmResult);
+  await delay(2000);
+}
+
+// ─── Orchestrator (full repost: delete + create) ─────────────────────────────
+
+export async function executeRepostFullFlow(tabId: number, adId: string): Promise<{ ok: boolean; step: string; finalUrl?: string; error?: string }> {
+  const target: Target = { tabId };
+  let step = 'attach';
+  try {
+    await new Promise<void>((resolve, reject) => {
+      chrome.debugger.attach(target, '1.3', () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+        resolve();
+      });
+    });
+    await cdp(target, 'Page.enable').catch(() => {});
+    await cdp(target, 'DOM.enable').catch(() => {});
+    log('▶ repost (full flow: delete + create) start ad=', adId);
+
+    step = 'capture';
+    const data = await captureAd(target, adId);
+    if (!data.title) throw new Error('captured empty title — wrong page or not logged in');
+
+    step = 'download_photos';
+    const paths: string[] = [];
+    for (let i = 0; i < data.photoUrls.length; i++) {
+      try { paths.push(await downloadPhoto(data.photoUrls[i], `repost-${adId}-${i}.jpg`)); }
+      catch (e: any) { log('photo', i, 'download failed:', e.message); }
+    }
+    log('downloaded', paths.length, '/', data.photoUrls.length, 'photos');
+    if (data.photoUrls.length && paths.length === 0) throw new Error('no photos downloaded — aborting (would create photoless ad)');
+
+    step = 'delete';
+    await deleteAd(target, adId);
+
+    step = 'create';
+    const finalUrl = await createAd(target, data, paths);
+
+    await new Promise<void>((r) => {
+      chrome.debugger.detach(target, () => {
+        if (chrome.runtime.lastError) {
+          log('debugger.detach error:', chrome.runtime.lastError.message);
+        }
+        r();
+      });
+    });
+    log('■ done. Repost complete — old ad deleted, new ad created.');
+    return { ok: true, step, finalUrl };
+  } catch (e: any) {
+    log('✗ failed at step', step, ':', e.message);
+    await new Promise<void>((r) => {
+      chrome.debugger.detach(target, () => {
+        if (chrome.runtime.lastError) {
+          log('debugger.detach error during cleanup:', chrome.runtime.lastError.message);
+        }
+        r();
+      });
+    }).catch(() => {});
+    return { ok: false, step, error: e.message };
+  }
+}
+
+// ─── Legacy: create-only (v1) ──────────────────────────────────────────────────
 
 export async function executeRepostCreateOnly(tabId: number, adId: string): Promise<{ ok: boolean; step: string; finalUrl?: string; error?: string }> {
   const target: Target = { tabId };

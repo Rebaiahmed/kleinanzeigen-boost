@@ -69,19 +69,29 @@ export async function executeRepostFlow(userId: string, adId: string, adData: an
     const responseInfo = formatResponseDiagnostics(response, page.url());
     console.log(`[repost] session_check: ${responseInfo}`);
 
-    // Diagnostic: check for 403, login redirects, and block pages
+    // Diagnostic: check for 403, 404, 429, login redirects, and block pages
+    if (response?.status() === 404) {
+      console.error(`[repost] 404 Not Found at ${MY_ADS_URL} — page structure changed`);
+      throw new Error('404_NOT_FOUND — Kleinanzeigen page not found.');
+    }
+
     if (response?.status() === 403) {
       const bodyText = await page.textContent('body')?.catch(() => null);
       console.error(`[repost] 403 Forbidden detected at ${MY_ADS_URL}`);
       console.error(`[repost] Response body (first 500 chars): ${(bodyText || '').slice(0, 500)}`);
       console.error(`[repost] Page URL after navigation: ${page.url()}`);
-      throw new Error('403_FORBIDDEN — Kleinanzeigen returned 403 Forbidden. Likely bot detection, missing CSRF token, or IP block.');
+      throw new Error('403_FORBIDDEN — Kleinanzeigen returned 403 Forbidden. Your IP may be blocked or session invalid.');
+    }
+
+    if (response?.status() === 429) {
+      console.error(`[repost] 429 Too Many Requests — IP is rate-limited`);
+      throw new Error('IP_RATE_LIMITED — Too many requests from this IP. Please wait before retrying.');
     }
 
     if (page.url().includes('login') || response?.status() === 401) {
       console.error(`[repost] SESSION_EXPIRED: redirected to login or got 401`);
       console.error(`[repost] Final URL: ${page.url()}`);
-      throw new Error('SESSION_EXPIRED');
+      throw new Error('SESSION_EXPIRED — Session expired. Please reconnect on the dashboard.');
     }
 
     // Check for block/captcha interstitials
@@ -94,41 +104,69 @@ export async function executeRepostFlow(userId: string, adId: string, adData: an
     await randomDelay(1500, 3000);
     await randomJitter(0.4); // 40% chance of extra pause to appear human
 
-    // Step 1: Delete Ad
+    // Step 1: Navigate to My Ads page and find the ad to delete
     currentStep = 'delete_ad';
-    const editUrl = `https://www.kleinanzeigen.de/m-anzeige-bearbeiten.html?adId=${adId}`;
-    const delResponse = await page.goto(editUrl, { waitUntil: 'domcontentloaded' });
-    const delResponseInfo = formatResponseDiagnostics(delResponse, page.url());
-    console.log(`[repost] delete_ad navigate: ${delResponseInfo}`);
-
-    if (delResponse?.status() === 403) {
-      const delBodyText = await page.textContent('body')?.catch(() => null);
-      console.error(`[repost] 403 at edit page: ${editUrl}`);
-      console.error(`[repost] Response body (first 500 chars): ${(delBodyText || '').slice(0, 500)}`);
-      throw new Error('403_FORBIDDEN at edit page');
-    }
-
+    const myAdsUrl = `https://www.kleinanzeigen.de/m-meine-anzeigen.html?tab=PROJECTS`;
+    const myAdsResponse = await page.goto(myAdsUrl, { waitUntil: 'domcontentloaded' });
+    console.log(`[repost] Navigated to My Ads: ${myAdsResponse?.status()}`);
     await randomDelay(2000, 4000);
     await randomJitter(0.3);
 
-    // Modular Selector: Find and click delete
-    const deleteBtnSelector = 'button:has-text("Löschen")';
-    if (await page.isVisible(deleteBtnSelector)) {
-      console.log(`[repost] Found delete button, clicking...`);
-      await randomDelay(300, 800); // Small pause before clicking (human-like)
-      await page.click(deleteBtnSelector);
-      await randomDelay();
+    // Step 1a: Find the ad by ID in the list (handle pagination if needed)
+    let adFound = false;
+    let pageNumber = 1;
+    const maxPages = 5; // Safety limit to prevent infinite loops
 
-      // Handle "Are you sure?" modal
-      const confirmModalSelector = 'button:has-text("Ja, löschen")';
-      if (await page.isVisible(confirmModalSelector)) {
-        console.log(`[repost] Found confirmation modal, confirming delete...`);
-        await page.click(confirmModalSelector);
+    while (!adFound && pageNumber <= maxPages) {
+      console.log(`[repost] Searching for ad ${adId} on page ${pageNumber}...`);
+
+      // Try to find the ad by data-id or data-adid attribute
+      const adCard = page.locator(`[data-id="${adId}"], [data-adid="${adId}"], [data-ad-id="${adId}"]`);
+      if (await adCard.isVisible()) {
+        console.log(`[repost] Found ad ${adId} on page ${pageNumber}`);
+        adFound = true;
+
+        // Find delete button within the ad card using SVG icon selector
+        const deleteButton = adCard.locator('button').filter({
+          has: page.locator('svg[aria-label*="löschen"], svg[aria-label*="delete"]')
+        }).first();
+
+        if (await deleteButton.isVisible()) {
+          console.log(`[repost] Clicking delete button for ad ${adId}...`);
+          await randomDelay(300, 800);
+          await deleteButton.click();
+          await randomDelay(1000, 2000);
+
+          // Confirm deletion in modal
+          const confirmBtn = page.locator('button:has-text("Ja, löschen"), button:has-text("Confirm"), button[aria-label*="confirm delete"]').first();
+          if (await confirmBtn.isVisible({ timeout: 5000 })) {
+            console.log(`[repost] Confirming delete...`);
+            await confirmBtn.click();
+            await randomDelay(2000, 4000);
+          }
+        } else {
+          console.warn(`[repost] Delete button not found in ad card`);
+          throw new Error('DELETE_BUTTON_NOT_FOUND — Could not locate delete button in ad card.');
+        }
+      } else {
+        console.log(`[repost] Ad not found on page ${pageNumber}, checking for next page...`);
+
+        // Try to navigate to next page
+        const nextPageBtn = page.locator('a[aria-label*="next"], button[aria-label*="next"], .pagination a:has-text("Weiter")').first();
+        if (await nextPageBtn.isVisible()) {
+          console.log(`[repost] Moving to page ${pageNumber + 1}...`);
+          await nextPageBtn.click();
+          await randomDelay(2000, 3000);
+          pageNumber++;
+        } else {
+          console.warn(`[repost] No next page button found, ad ${adId} not found in list`);
+          throw new Error('AD_NOT_FOUND — Could not find the ad to delete in My Ads list.');
+        }
       }
-    } else {
-      console.warn(`[repost] Delete button not found on page. Current URL: ${page.url()}`);
-      const deletePageBody = await page.textContent('body')?.catch(() => 'N/A');
-      console.warn(`[repost] Page content (first 300 chars): ${(deletePageBody || '').slice(0, 300)}`);
+    }
+
+    if (!adFound) {
+      throw new Error('AD_NOT_FOUND_AFTER_PAGINATION — Ad not found after searching up to page ' + maxPages);
     }
     await randomDelay(2000, 5000);
 

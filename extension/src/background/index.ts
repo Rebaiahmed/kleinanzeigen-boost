@@ -2,7 +2,7 @@
 // Sync is extension-initiated: frontend triggers TRIGGER_SYNC → background
 // fetches ads from Kleinanzeigen → POSTs to backend.
 import { ENDPOINTS } from '../config/endpoints';
-import { executeRepostCreateOnly } from './repost-engine';
+import { executeRepostCreateOnly, executeRepostFullFlow } from './repost-engine';
 
 const API_URL = ENDPOINTS.API_BASE;
 
@@ -353,6 +353,31 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
         const title = result.ok ? '✅ Repost-Test fertig' : '❌ Repost-Test fehlgeschlagen';
         const msg = result.ok
           ? `Schritt: ${result.step}. Prüfe deine Anzeigen auf ein neues Duplikat.\n${result.finalUrl || ''}`
+          : `Bei Schritt "${result.step}": ${result.error}`;
+        chrome.notifications.create({
+          type: 'basic',
+          iconUrl: 'icons/icon-128.png',
+          title,
+          message: msg.slice(0, 300),
+        });
+        sendResponse(result);
+      });
+    });
+    return true;
+  }
+
+  // Instant repost ("Jetzt") — full flow with delete + create, runs client-side
+  // in the user's own browser tab, visible, using their session and IP.
+  if (message.type === 'AB_REPOST_INSTANT') {
+    const adId = (String(message.adId || '').match(/\d{5,}/) || [''])[0];
+    if (!adId) { sendResponse({ ok: false, error: 'no valid numeric adId' }); return true; }
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const tab = tabs.find((t) => /kleinanzeigen\.de/.test(t.url || '')) || tabs[0];
+      if (!tab?.id) { sendResponse({ ok: false, error: 'no active KA tab — open kleinanzeigen.de first' }); return; }
+      executeRepostFullFlow(tab.id, adId).then((result) => {
+        const title = result.ok ? '✅ Anzeige neu eingestellt' : '❌ Neu einstellen fehlgeschlagen';
+        const msg = result.ok
+          ? `Deine Anzeige wurde erfolgreich neu eingestellt.\n${result.finalUrl || ''}`
           : `Bei Schritt "${result.step}": ${result.error}`;
         chrome.notifications.create({
           type: 'basic',

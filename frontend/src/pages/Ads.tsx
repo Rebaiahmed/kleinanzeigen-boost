@@ -225,6 +225,31 @@ export function Ads() {
             <RefreshCw className={`w-3.5 h-3.5 ${(isSyncing || isBackgroundSyncing) ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">{contextInvalidated ? 'Seite neu laden' : 'Synchronisieren'}</span>
           </button>
+
+          {/* DEBUG: Test instant repost messaging */}
+          <button
+            onClick={() => {
+              console.log('[DEBUG] Testing instant repost messaging...');
+              const testAdId = ads[0]?.id || '123456';
+              window.postMessage({ type: 'AB_REPOST_INSTANT', adId: testAdId }, '*');
+              const handler = (e: MessageEvent) => {
+                if (e.data?.type === 'AB_REPOST_INSTANT_RESPONSE') {
+                  console.log('[DEBUG] Response received:', e.data);
+                  window.removeEventListener('message', handler);
+                }
+              };
+              window.addEventListener('message', handler);
+              setTimeout(() => {
+                console.log('[DEBUG] No response after 3s');
+                window.removeEventListener('message', handler);
+              }, 3000);
+            }}
+            className="text-[11px] px-2 py-1.5 bg-purple-100 text-purple-700 border border-purple-200 rounded-sm hover:bg-purple-200"
+            title="Debug: test messaging chain"
+          >
+            🧪 Test
+          </button>
+
           <button
             onClick={() => navigate('/neue-anzeige-mit-ki-erstellen')}
             className="bg-[#A8C300] hover:bg-[#96ae00] text-white font-medium py-1.5 px-3 rounded-sm transition-colors text-[13px] flex items-center gap-1"

@@ -86,77 +86,10 @@ async function runTestFill() {
   log('■ fill done, CDP upload dispatched. Nothing submitted. WATCH the form + look for [AB-cdp] logs.');
 }
 
-/**
- * Inject a one-click "🔄 Repost-Test" button on each ad card on the Meine
- * Anzeigen page, so testing is a single click (no console). The button reads the
- * card's data-adid and asks the background engine to run (create-only, no delete).
- */
+/** Inject repost button — DISABLED for now (styling issues) */
 function injectRepostButtons() {
-  if (!/m-meine-anzeigen/.test(location.pathname)) return;
-  document.querySelectorAll<HTMLElement>('li[data-adid]').forEach((card) => {
-    if (card.querySelector('[data-ab-repost-btn]')) return;
-    const adId = card.getAttribute('data-adid') || '';
-    if (!adId) return;
-    const btn = document.createElement('button');
-    btn.setAttribute('data-ab-repost-btn', '1');
-    btn.innerHTML = '<span style="display:inline-flex;align-items:center;justify-content:center;gap:4px;"><span>🔄</span><span>Neu stellen</span></span>';
-    // Match Kleinanzeigen native button style from "Bearbeiten" button
-    // Structure: <a class="inline-flex items-center justify-center ... border-2 border-solid border-utility text-interactive bg-transparent ...">
-    Object.assign(btn.style, {
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '4px',
-      padding: '8px 16px',                 // px-medium = ~16px
-      background: 'transparent',           // Native: bg-transparent
-      color: '#1976d2',                    // text-interactive (KA blue, adjust if needed)
-      border: '2px solid #e0e0e0',         // border-2 border-utility (light gray)
-      borderRadius: '9999px',              // rounded-full (pill shape)
-      cursor: 'pointer',
-      fontSize: '14px',
-      fontWeight: '500',                   // text-bodyRegularStrong
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-      transition: 'all 0.15s ease-in-out',
-      whiteSpace: 'nowrap',
-      textDecoration: 'none',
-      boxSizing: 'border-box',
-      minHeight: '40px',                   // h-xlarge
-    } as CSSStyleDeclaration);
-
-    // Hover state: match native button behavior (lighter background + secondary color)
-    btn.onmouseover = () => {
-      btn.style.borderColor = '#1976d2';   // hover:border-secondary
-      btn.style.background = '#e3f2fd';    // hover:bg-secondaryContainer (light blue)
-      btn.style.color = '#0d47a1';         // hover:text-onSecondaryContainer (darker blue)
-    };
-    btn.onmouseout = () => {
-      btn.style.background = 'transparent';
-      btn.style.borderColor = '#e0e0e0';
-      btn.style.color = '#1976d2';
-    };
-    btn.onclick = (e) => {
-      e.preventDefault(); e.stopPropagation();
-      if (!confirm('Repost-TEST: erstellt ein DUPLIKAT dieser Anzeige (löscht nichts). Fortfahren?')) return;
-      btn.textContent = '⏳ Läuft… (Tab nicht schließen)';
-      btn.disabled = true;
-      try {
-        chrome.runtime.sendMessage({ type: 'AB_REPOST_CREATE_TEST', adId }, (resp) => {
-          // The tab usually navigates during the flow, so the real result comes
-          // via a desktop notification from the background. This callback may not fire.
-          // Manifest V3: must check lastError to avoid "Unchecked runtime.lastError" warnings
-          if (chrome.runtime.lastError) {
-            log('engine error:', chrome.runtime.lastError.message);
-            return;
-          }
-          log('engine result:', JSON.stringify(resp));
-        });
-      } catch (err: any) {
-        log('trigger threw:', err.message);
-        btn.disabled = false;
-      }
-    };
-    card.appendChild(btn);
-  });
+  // TODO: Re-enable when styling is properly matched to Kleinanzeigen native buttons
+  return;
 }
 
 export function initKaRepost() {

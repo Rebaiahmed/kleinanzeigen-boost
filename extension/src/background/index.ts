@@ -6,6 +6,30 @@ import { executeRepostCreateOnly, executeRepostFullFlow } from './repost-engine'
 
 const API_URL = ENDPOINTS.API_BASE;
 
+// ─── Uninstall feedback form ──────────────────────────────────────────────────
+const FEEDBACK_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLScNP_PSe3pRAKCwS8vIMd2GVB_trsRKwi3XTb8CRSmqUwprkA/viewform';
+
+function registerUninstallUrl() {
+  chrome.runtime.setUninstallURL(FEEDBACK_FORM_URL, () => {
+    if (chrome.runtime.lastError) {
+      console.warn('[BG] Failed to set uninstall URL:', chrome.runtime.lastError.message);
+    } else {
+      console.log('[BG] Uninstall feedback form registered');
+    }
+  });
+}
+
+// Register on extension startup (survives MV3 service worker restarts)
+registerUninstallUrl();
+
+// Also register on first install
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === 'install') {
+    console.log('[BG] Extension installed, registering uninstall URL');
+    registerUninstallUrl();
+  }
+});
+
 // ─── Periodic sync via alarms (wake-safe) ────────────────────────────────────
 
 async function doSync(token: string): Promise<{ success: boolean; ads?: any[]; error?: string }> {
@@ -23,6 +47,7 @@ async function doSync(token: string): Promise<{ success: boolean; ads?: any[]; e
   });
   const data = await importRes.json();
   if (!importRes.ok) throw new Error(data.message || `Import failed ${importRes.status}`);
+
   return { success: true, ads: data.ads || [] };
 }
 
@@ -371,21 +396,58 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
   if (message.type === 'AB_REPOST_INSTANT') {
     const adId = (String(message.adId || '').match(/\d{5,}/) || [''])[0];
     if (!adId) { sendResponse({ ok: false, error: 'no valid numeric adId' }); return true; }
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const tab = tabs.find((t) => /kleinanzeigen\.de/.test(t.url || '')) || tabs[0];
-      if (!tab?.id) { sendResponse({ ok: false, error: 'no active KA tab — open kleinanzeigen.de first' }); return; }
-      executeRepostFullFlow(tab.id, adId).then((result) => {
-        const title = result.ok ? '✅ Anzeige neu eingestellt' : '❌ Neu einstellen fehlgeschlagen';
-        const msg = result.ok
-          ? `Deine Anzeige wurde erfolgreich neu eingestellt.\n${result.finalUrl || ''}`
-          : `Bei Schritt "${result.step}": ${result.error}`;
-        chrome.notifications.create({
-          type: 'basic',
-          iconUrl: 'icons/icon-128.png',
-          title,
-          message: msg.slice(0, 300),
+
+    // Fetch ad data from backend
+    chrome.storage.session.get(['token'], async ({ token }: any) => {
+      if (!token) { sendResponse({ ok: false, error: 'no session token' }); return; }
+
+      let adData: any = null;
+      try {
+        // Fetch all ads and find the matching one
+        const adsRes = await fetch(`${API_URL}/ads`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
-        sendResponse(result);
+        if (adsRes.ok) {
+          const adsResponse = await adsRes.json();
+          const ads = adsResponse.ads || adsResponse.data || [];
+          adData = ads.find((a: any) => String(a.id) === adId);
+          if (adData) {
+            console.log('[BG] fetched ad data:', { id: adData.id, title: adData.title, images: adData.images?.length || 0 });
+          } else {
+            console.warn('[BG] ad not found in list:', adId);
+          }
+        } else {
+          console.warn('[BG] failed to fetch ads:', adsRes.status);
+        }
+      } catch (err: any) {
+        console.warn('[BG] failed to fetch ad data:', err.message);
+      }
+
+      // Open a NEW tab to Kleinanzeigen (not reuse dashboard tab)
+      chrome.tabs.create({ url: 'https://www.kleinanzeigen.de' }, (newTab) => {
+        if (!newTab?.id) {
+          sendResponse({ ok: false, error: 'failed to create new tab' });
+          return;
+        }
+        // Wait a moment for the tab to load, then run repost
+        setTimeout(() => {
+          executeRepostFullFlow(newTab.id!, adId, adData).then((result) => {
+            const title = result.ok ? '✅ Anzeige neu eingestellt' : '❌ Neu einstellen fehlgeschlagen';
+            const msg = result.ok
+              ? `Deine Anzeige wurde erfolgreich neu eingestellt.\n${result.finalUrl || ''}`
+              : `Bei Schritt "${result.step}": ${result.error}`;
+            chrome.notifications.create({
+              type: 'basic',
+              iconUrl: 'icons/icon-128.png',
+              title,
+              message: msg.slice(0, 300),
+            });
+            sendResponse(result);
+          }).catch((e) => {
+            console.error('[BG] executeRepostFullFlow error:', e.message);
+            sendResponse({ ok: false, error: e.message, step: 'unknown' });
+          });
+        }, 1000); // Wait 1 second for new tab to initialize
       });
     });
     return true;

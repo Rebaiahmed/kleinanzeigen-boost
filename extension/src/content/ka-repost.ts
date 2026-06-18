@@ -209,6 +209,27 @@ export function initKaRepost() {
         log('forward threw:', e.message);
       }
     }
+
+    // Instant repost ("Jetzt") — delete + create, runs client-side via CDP engine.
+    if (t === 'AB_REPOST_INSTANT' && event.data?.adId) {
+      log('forwarding AB_REPOST_INSTANT for ad', event.data.adId, '→ background engine (watch the service-worker console for [AB-engine] logs)');
+      try {
+        chrome.runtime.sendMessage({ type: 'AB_REPOST_INSTANT', adId: String(event.data.adId) }, (resp) => {
+          // Manifest V3: must check lastError to avoid "Unchecked runtime.lastError" warnings
+          if (chrome.runtime.lastError) {
+            log('engine error:', chrome.runtime.lastError.message);
+            window.postMessage({ type: 'AB_REPOST_INSTANT_RESPONSE', ok: false, error: chrome.runtime.lastError.message }, '*');
+            return;
+          }
+          // Relay the result back to the webpage so the frontend can show feedback
+          window.postMessage({ type: 'AB_REPOST_INSTANT_RESPONSE', ...resp }, '*');
+          log('engine result:', JSON.stringify(resp));
+        });
+      } catch (e: any) {
+        log('forward threw:', e.message);
+        window.postMessage({ type: 'AB_REPOST_INSTANT_RESPONSE', ok: false, error: e.message }, '*');
+      }
+    }
   });
   log('content ready. Real repost test (create-only): window.postMessage({type:"AB_REPOST_CREATE", adId:"<AD_ID>"},"*")');
 }

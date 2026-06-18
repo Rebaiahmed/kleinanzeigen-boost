@@ -191,26 +191,29 @@ export function useAdsActions(): AdsActionsReturn {
     ) => {
       // "Jetzt" instant repost — trigger extension client-side, not backend
       if (action === 'repost') {
-        showToast('Repost wird gestartet…', 'success');
+        showToast('⏳ Repost wird gestartet…', 'success');
         try {
           const response = await new Promise<any>((resolve, reject) => {
             const timeout = setTimeout(() => {
               reject(new Error('Extension antwortet nicht — bitte stelle sicher dass die AnzeigenBoost Extension aktiviert ist'));
-            }, 20000);
+            }, 30000);
 
-            chrome.runtime.sendMessage({ type: 'AB_REPOST_INSTANT', adId }, (result) => {
-              clearTimeout(timeout);
-              const err = chrome.runtime.lastError;
-              if (err) {
-                reject(new Error(err.message));
-              } else {
-                resolve(result);
+            // Listen for response from content script relay
+            const handler = (event: MessageEvent) => {
+              if (event.data?.type === 'AB_REPOST_INSTANT_RESPONSE') {
+                clearTimeout(timeout);
+                window.removeEventListener('message', handler);
+                resolve(event.data);
               }
-            });
+            };
+            window.addEventListener('message', handler);
+
+            // Send message via content script relay (window.postMessage → content script → background worker)
+            window.postMessage({ type: 'AB_REPOST_INSTANT', adId }, '*');
           });
 
           if (response.ok) {
-            showToast('✅ Anzeige neu eingestellt', 'success');
+            showToast('✅ Anzeige neu eingestellt!', 'success');
             onSuccess();
           } else {
             showToast(`❌ Repost fehlgeschlagen: ${response.error || 'Unbekannter Fehler'}`, 'error');

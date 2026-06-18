@@ -81,6 +81,19 @@ window.addEventListener('message', (event) => {
     });
     return;
   }
+
+  // Instant repost ("Jetzt") — relay to background engine
+  if (data.type === 'AB_REPOST_INSTANT' && data.adId) {
+    console.log('[AnzeigenBoost] Relaying AB_REPOST_INSTANT for ad:', data.adId);
+    sendToBackground({ type: 'AB_REPOST_INSTANT', adId: data.adId }, (response) => {
+      console.log('[AnzeigenBoost] Repost response:', response);
+      window.postMessage({
+        type: 'AB_REPOST_INSTANT_RESPONSE',
+        ...response
+      }, '*');
+    });
+    return;
+  }
 });
 
 function announceReady() {

@@ -14,6 +14,7 @@ import {
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { PhotoFeedbackModal } from './PhotoFeedbackModal';
 import { SuggestPriceButton } from './SuggestPriceButton';
+import { isGiveAwayAd } from '../lib/adPrice';
 
 export interface AdCardProps {
   ad: any;
@@ -27,6 +28,10 @@ export interface AdCardProps {
   onConnectEbay: () => void;
   isEbayConnected?: boolean;
   onUpdateFields?: (adId: string, fields: any) => Promise<boolean>;
+  // Repost queue state for this card
+  repostState?: 'idle' | 'running' | 'queued';
+  repostBusy?: boolean; // any repost active anywhere
+  repostQueuePosition?: number; // 1-based position in queue, 0 if not queued
 }
 
 // Inline eBay Logo (small text-based multi-color SVG matching brand colors)
@@ -176,6 +181,9 @@ export function AdCard({
   onUpdateFields,
   aiBlocked = false,
   aiWarning = false,
+  repostState = 'idle',
+  repostBusy = false,
+  repostQueuePosition = 0,
 }: AdCardProps) {
   const flags = useFeatureFlags();
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
@@ -477,6 +485,17 @@ export function AdCard({
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Gelöscht
               </span>
             )}
+            {/* Repost queue state */}
+            {repostState === 'running' && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-[#A8C300]/10 text-[#6f8f00] px-2 py-0.5 rounded-full border border-[#A8C300]/40">
+                <Loader2 className="w-3 h-3 animate-spin" /> Läuft…
+              </span>
+            )}
+            {repostState === 'queued' && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200">
+                ⏳ In Warteschlange{repostQueuePosition > 0 ? ` (#${repostQueuePosition})` : ''}
+              </span>
+            )}
           </div>
         </div>
 
@@ -695,10 +714,17 @@ export function AdCard({
                 <button
                   type="button"
                   onClick={handleSaveInterval}
-                  disabled={isSavingInterval}
+                  disabled={isSavingInterval || (selectedInterval === 0 && (repostState === 'running' || repostState === 'queued'))}
                   className="px-3 py-1.5 bg-[#A8C300] hover:bg-[#96ae00] disabled:bg-gray-300 text-white font-bold rounded-sm text-[11px] transition-colors"
                 >
-                  {isSavingInterval ? 'Speichern...' : selectedInterval === 0 ? 'Jetzt reposten' : 'Speichern'}
+                  {isSavingInterval
+                    ? 'Speichern...'
+                    : selectedInterval === 0
+                      ? (repostState === 'running' ? 'Läuft…'
+                        : repostState === 'queued' ? 'In Warteschlange'
+                        : repostBusy ? 'Zur Warteschlange'
+                        : 'Jetzt reposten')
+                      : 'Speichern'}
                 </button>
               </div>
 
@@ -817,8 +843,10 @@ export function AdCard({
             </div>
           )}
 
-          {/* Price Suggestion POC — gated behind feature flag */}
-          {flags.enablePriceSuggestion && (
+          {/* Price Suggestion POC — gated behind feature flag.
+              Hidden for give-away ("Zu verschenken") ads: a price suggestion is
+              meaningless for an item the user is giving away for free. */}
+          {flags.enablePriceSuggestion && !isGiveAwayAd(ad) && (
             <SuggestPriceButton ad={ad} />
           )}
 

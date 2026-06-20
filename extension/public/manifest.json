@@ -9,7 +9,6 @@
     "notifications",
     "cookies",
     "scripting",
-    "debugger",
     "downloads"
   ],
   "host_permissions": [

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
@@ -36,6 +36,9 @@ export interface AdsActionsReturn {
   toastMessage: string | null;
   toastType: ToastType;
   clearToast: () => void;
+  // Repost queue (single-runner, one at a time with a paced gap)
+  repostRunningId: string | null;
+  repostQueuedIds: string[];
 }
 
 export function useAdsActions(): AdsActionsReturn {
@@ -57,6 +60,82 @@ export function useAdsActions(): AdsActionsReturn {
     setToastMessage(null);
     setToastType(null);
   }, []);
+
+  // ─── Repost queue ──────────────────────────────────────────────────────────
+  // Only one repost runs at a time. Extra requests queue and run strictly one
+  // after another, with a randomized gap (jitter) between them — this keeps the
+  // pace human-like and avoids the bot-like burst that can get an account banned.
+  const [repostRunningId, setRepostRunningId] = useState<string | null>(null);
+  const [repostQueuedIds, setRepostQueuedIds] = useState<string[]>([]);
+  const queueRef = useRef<{ adId: string; onSuccess: () => void }[]>([]);
+  const runningRef = useRef<string | null>(null);
+  const processingRef = useRef(false);
+
+  /** Run a single repost via the extension and resolve when it finishes. */
+  const runOneRepost = useCallback((adId: string): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        window.removeEventListener('message', handler);
+        reject(new Error('Extension antwortet nicht — bitte stelle sicher dass die AnzeigenBoost Extension aktiviert ist'));
+      }, 180000); // a repost (navigate + fill + submit) can take a while
+      const handler = (event: MessageEvent) => {
+        if (event.data?.type === 'AB_REPOST_INSTANT_RESPONSE') {
+          clearTimeout(timeout);
+          window.removeEventListener('message', handler);
+          resolve(event.data);
+        }
+      };
+      window.addEventListener('message', handler);
+      window.postMessage({ type: 'AB_REPOST_INSTANT', adId }, '*');
+    });
+  }, []);
+
+  /** Drain the queue one item at a time, pausing (jitter) between reposts. */
+  const processQueue = useCallback(async () => {
+    if (processingRef.current) return;
+    processingRef.current = true;
+    try {
+      while (queueRef.current.length > 0) {
+        const item = queueRef.current.shift()!;
+        setRepostQueuedIds(queueRef.current.map((q) => q.adId));
+        runningRef.current = item.adId;
+        setRepostRunningId(item.adId);
+        showToast('⏳ Repost wird gestartet…', 'success');
+        try {
+          const res = await runOneRepost(item.adId);
+          if (res?.ok) {
+            showToast('✅ Anzeige neu eingestellt!', 'success');
+            item.onSuccess();
+          } else {
+            showToast(`❌ Repost fehlgeschlagen: ${res?.error || 'Unbekannter Fehler'}`, 'error');
+          }
+        } catch (err: any) {
+          // One failure must not stop the queue — log and continue.
+          showToast(`❌ ${err.message || 'Fehler beim Repost'}`, 'error');
+        } finally {
+          runningRef.current = null;
+          setRepostRunningId(null);
+        }
+        // Paced gap before the next queued repost (4–8s jitter).
+        if (queueRef.current.length > 0) {
+          const pause = 4000 + Math.floor(Math.random() * 4000);
+          await new Promise((r) => setTimeout(r, pause));
+        }
+      }
+    } finally {
+      processingRef.current = false;
+    }
+  }, [runOneRepost, showToast]);
+
+  /** Enqueue a repost for an ad (deduped); starts processing if idle. */
+  const enqueueRepost = useCallback((adId: string, onSuccess: () => void) => {
+    if (runningRef.current === adId || queueRef.current.some((q) => q.adId === adId)) {
+      return; // already running or queued
+    }
+    queueRef.current.push({ adId, onSuccess });
+    setRepostQueuedIds(queueRef.current.map((q) => q.adId));
+    void processQueue();
+  }, [processQueue]);
 
   const fetchAds = useCallback(async (): Promise<any[] | undefined> => {
     try {
@@ -189,38 +268,12 @@ export function useAdsActions(): AdsActionsReturn {
       successMsg: string,
       onSuccess: () => void,
     ) => {
-      // "Jetzt" instant repost — trigger extension client-side, not backend
+      // "Jetzt" instant repost — enqueue into the single-runner queue so it never
+      // runs in parallel with another repost (collides + looks bot-like).
       if (action === 'repost') {
-        showToast('⏳ Repost wird gestartet…', 'success');
-        try {
-          const response = await new Promise<any>((resolve, reject) => {
-            const timeout = setTimeout(() => {
-              reject(new Error('Extension antwortet nicht — bitte stelle sicher dass die AnzeigenBoost Extension aktiviert ist'));
-            }, 30000);
-
-            // Listen for response from content script relay
-            const handler = (event: MessageEvent) => {
-              if (event.data?.type === 'AB_REPOST_INSTANT_RESPONSE') {
-                clearTimeout(timeout);
-                window.removeEventListener('message', handler);
-                resolve(event.data);
-              }
-            };
-            window.addEventListener('message', handler);
-
-            // Send message via content script relay (window.postMessage → content script → background worker)
-            window.postMessage({ type: 'AB_REPOST_INSTANT', adId }, '*');
-          });
-
-          if (response.ok) {
-            showToast('✅ Anzeige neu eingestellt!', 'success');
-            onSuccess();
-          } else {
-            showToast(`❌ Repost fehlgeschlagen: ${response.error || 'Unbekannter Fehler'}`, 'error');
-          }
-        } catch (err: any) {
-          showToast(`❌ ${err.message || 'Fehler beim Repost'}`, 'error');
-        }
+        const alreadyActive = runningRef.current !== null || queueRef.current.length > 0;
+        enqueueRepost(adId, onSuccess);
+        if (alreadyActive) showToast('➕ Repost zur Warteschlange hinzugefügt', 'success');
         return;
       }
 
@@ -242,7 +295,7 @@ export function useAdsActions(): AdsActionsReturn {
         showToast('Fehler bei der Aktion', 'error');
       }
     },
-    [showToast],
+    [showToast, enqueueRepost],
   );
 
   const handleAIOptimize = useCallback(
@@ -463,5 +516,7 @@ export function useAdsActions(): AdsActionsReturn {
     toastMessage,
     toastType,
     clearToast,
+    repostRunningId,
+    repostQueuedIds,
   };
 }

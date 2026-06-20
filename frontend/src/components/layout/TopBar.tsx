@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, LogOut, Settings } from 'lucide-react';
+import { User, LogOut, Settings, HelpCircle, ChevronDown } from 'lucide-react';
 
 function getUserFromToken(): { email: string; initials: string; fullEmail: string } | null {
   try {
@@ -75,66 +75,82 @@ export function TopBar() {
           {/* Left: Logo */}
           <div className="flex">
             <Link to="/meine-anzeigen" className="flex-shrink-0 flex items-center text-[22px] tracking-tight">
-              <span className="font-bold text-[#86b817]">kleinanzeigen</span>
-              <span className="font-normal text-[#666] ml-1">Boost</span>
+              <span className="font-bold text-[#1F2937]">Anzeigen</span>
+              <span className="font-bold text-[#A8C300]">Boost</span>
             </Link>
           </div>
           
-          {/* Right: Profile & Logout */}
-          <div className="flex items-center gap-3 border-l border-[#d4d4d4] pl-4 relative" ref={dropdownRef}>
-            {user && (
-              <span className="text-[13px] font-medium text-gray-600 flex items-center gap-1">
-                👤 {user.email}
-              </span>
-            )}
-            <span className="text-[#d4d4d4] hidden sm:inline">|</span>
+          {/* Right: account menu */}
+          <div className="flex items-center border-l border-[#d4d4d4] pl-4 relative" ref={dropdownRef}>
             <button
-              onClick={handleLogout}
-              className="text-[13px] text-red-600 hover:text-red-700 transition-colors hidden sm:inline"
+              type="button"
+              onClick={() => setIsDropdownOpen((o) => !o)}
+              aria-haspopup="menu"
+              aria-expanded={isDropdownOpen}
+              aria-label="Konto- und Einstellungsmenü"
+              className="flex items-center gap-1.5 rounded-full pl-1 pr-2 py-1 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#A8C300] transition-colors"
             >
-              Logout
+              {user ? (
+                <span className="h-8 w-8 rounded-full bg-[#A8C300] flex items-center justify-center text-white text-[11px] font-bold">
+                  {user.initials}
+                </span>
+              ) : (
+                <span className="h-8 w-8 rounded-full bg-[#f5f5f5] border border-[#d4d4d4] flex items-center justify-center text-[#666]">
+                  <User className="h-4 w-4" />
+                </span>
+              )}
+              {user && (
+                <span className="text-[13px] font-medium text-gray-700 hidden sm:inline max-w-[140px] truncate">
+                  {user.email}
+                </span>
+              )}
+              <ChevronDown
+                className={`w-4 h-4 text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+                aria-hidden="true"
+              />
             </button>
-            <span className="text-[#d4d4d4] hidden sm:inline">|</span>
-            {user ? (
-              <>
-                <button
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="h-8 w-8 rounded-full bg-[#A8C300] flex items-center justify-center text-white text-[11px] font-bold focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#A8C300] transition-shadow"
-                >
-                  {user!.initials}
-                </button>
-              </>
-            ) : (
-              <button 
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="h-8 w-8 rounded-full bg-[#f5f5f5] border border-[#d4d4d4] flex items-center justify-center text-[#666] focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#ccc] transition-shadow"
-              >
-                <User className="h-4 w-4" />
-              </button>
-            )}
 
             {isDropdownOpen && (
-              <div className="absolute top-10 right-0 mt-2 w-56 bg-white border border-[#e5e5e5] rounded-sm shadow-lg py-1 z-50">
+              <div
+                role="menu"
+                aria-label="Konto"
+                className="absolute top-12 right-0 mt-1 w-56 bg-white border border-[#e5e5e5] rounded-md shadow-lg py-1 z-50"
+              >
                 {user && (
                   <div className="px-4 py-2 border-b border-[#f0f0f0] mb-1">
-                    <p className="text-[12px] text-gray-500 truncate" title={user.fullEmail}>
+                    <p className="text-[11px] text-gray-400">Angemeldet als</p>
+                    <p className="text-[12px] text-gray-600 truncate" title={user.fullEmail}>
                       {user.fullEmail}
                     </p>
                   </div>
                 )}
-                
+
                 <Link
                   to="/einstellungen"
+                  role="menuitem"
                   onClick={() => setIsDropdownOpen(false)}
                   className="w-full flex items-center gap-2 px-4 py-2 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors focus:bg-gray-50 focus:outline-none"
                 >
                   <Settings className="w-4 h-4 text-gray-400" />
                   <span>Einstellungen</span>
                 </Link>
-                
+
+                {/* TODO: replace with real support email address */}
+                <a
+                  href="mailto:placeholder@example.com?subject=AnzeigenBoost%20Support"
+                  role="menuitem"
+                  onClick={() => setIsDropdownOpen(false)}
+                  className="w-full flex items-center gap-2 px-4 py-2 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors focus:bg-gray-50 focus:outline-none"
+                >
+                  <HelpCircle className="w-4 h-4 text-gray-400" />
+                  <span>Hilfe / Support</span>
+                </a>
+
                 <div className="h-px bg-[#f0f0f0] my-1" />
-                
+
                 <button
+                  type="button"
+                  role="menuitem"
                   onClick={() => {
                     setIsDropdownOpen(false);
                     handleLogout();

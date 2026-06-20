@@ -24,4 +24,13 @@ export const SCHEDULER_CONFIG = {
    * worsening the block. Reposts resume automatically after the window.
    */
   ipBlockCooldownHours: Number(process.env.IP_BLOCK_COOLDOWN_HOURS) || 6,
+
+  /**
+   * Server-side fallback grace window (minutes). The CLIENT (extension) is the
+   * primary repost path — it runs from the user's real browser/IP the moment a
+   * repost is due. The SERVER only steps in for ads still due AFTER this grace
+   * window, i.e. the browser was closed and never handled them. This gives the
+   * client first crack and prevents client+server double-posting.
+   */
+  serverFallbackGraceMinutes: Number(process.env.SERVER_FALLBACK_GRACE_MINUTES) || 15,
 };

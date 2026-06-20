@@ -11,6 +11,109 @@ const API_URL = ENDPOINTS.API_BASE;
 // repost (e.g. from a second dashboard tab) from ever starting.
 let repostBusy = false;
 
+// Client-side scheduler: the extension is the PRIMARY repost path — it runs due
+// reposts from the user's real browser/IP (no datacenter IP ban). The server is
+// only a fallback after a grace window (see scheduler.constants).
+const CLIENT_SCHEDULER_ENABLED = true;
+let clientSchedulerRunning = false;
+
+/**
+ * Run ONE repost in a fresh background tab (shared by the manual "Jetzt" trigger
+ * and the client scheduler). Honours the single-runner busy guard, shows the
+ * branded overlay, and resolves with the flow result.
+ */
+function performRepost(adId: string, adData: any): Promise<{ ok: boolean; step?: string; finalUrl?: string; error?: string; busy?: boolean }> {
+  return new Promise((resolve) => {
+    if (repostBusy) { resolve({ ok: false, busy: true, error: 'Es läuft bereits ein Repost' }); return; }
+    repostBusy = true;
+    registerOverlayScript().finally(() => {
+      chrome.tabs.create({ url: 'https://www.kleinanzeigen.de/#ab-repost-start' }, (newTab) => {
+        if (!newTab?.id) {
+          unregisterOverlayScript();
+          repostBusy = false;
+          resolve({ ok: false, error: 'failed to create new tab' });
+          return;
+        }
+        setTimeout(() => {
+          executeRepostFullFlow(newTab.id!, adId, adData).then((result) => {
+            const title = result.ok ? '✅ Anzeige neu eingestellt' : '❌ Neu einstellen fehlgeschlagen';
+            const msg = result.ok
+              ? `Deine Anzeige wurde erfolgreich neu eingestellt.\n${result.finalUrl || ''}`
+              : `Bei Schritt "${result.step}": ${result.error}`;
+            chrome.notifications.create({ type: 'basic', iconUrl: 'icons/icon-128.png', title, message: msg.slice(0, 300) });
+            resolve(result);
+          }).catch((e) => {
+            console.error('[BG] executeRepostFullFlow error:', e.message);
+            resolve({ ok: false, error: e.message, step: 'unknown' });
+          }).finally(() => {
+            unregisterOverlayScript();
+            repostBusy = false;
+          });
+        }, 1000);
+      });
+    });
+  });
+}
+
+/**
+ * Find due reposts and run them one at a time (with a jittered pause between),
+ * from the user's real browser. Claims each ad so the server fallback skips it.
+ * Runs on a 1-min alarm AND on browser startup (catch-up for schedules that came
+ * due while Chrome was closed).
+ */
+async function runDueClientReposts(verbose = false): Promise<void> {
+  if (!CLIENT_SCHEDULER_ENABLED || clientSchedulerRunning) return;
+  const { token } = await chrome.storage.session.get(['token']);
+  if (!token) { if (verbose) console.warn('[BG][sched] no token — not connected'); return; }
+
+  let ads: any[] = [];
+  try {
+    const res = await fetch(`${API_URL}/ads`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) { if (verbose) console.warn('[BG][sched] /ads HTTP', res.status); return; }
+    const data = await res.json();
+    ads = data.ads || data.data || data || [];
+  } catch (e: any) { if (verbose) console.warn('[BG][sched] fetch failed:', e.message); return; }
+
+  const now = Date.now();
+  const due = ads.filter((a) =>
+    a.autoRepost === true &&
+    a.nextRepostAt && new Date(a.nextRepostAt).getTime() <= now &&
+    (!a.listingState || a.listingState === 'active'));
+  if (due.length === 0) { if (verbose) console.log('[BG][sched] no due reposts'); return; }
+
+  console.log(`[BG][sched] ${due.length} due repost(s) — running client-side, one at a time`);
+  clientSchedulerRunning = true;
+  const authHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+  try {
+    for (let i = 0; i < due.length; i++) {
+      const ad = due[i];
+
+      // NOTE: coordination with the server fallback is via the grace window
+      // (server only runs ads still due after SERVER_FALLBACK_GRACE_MINUTES).
+      // On success we clear nextRepostAt immediately — well within that window —
+      // so the server never sees it. An explicit transactional claim/lease is a
+      // TODO (needs new fields whitelisted in UpdateAdDto).
+      const result = await performRepost(String(ad.id), ad);
+
+      try {
+        if (result.ok) {
+          // One-time repost done → clear the schedule so neither side re-runs it.
+          // Only DTO-whitelisted fields (autoRepost, nextRepostAt) — others 400.
+          await fetch(`${API_URL}/ads/${ad.id}`, { method: 'PATCH', headers: authHeaders, body: JSON.stringify({ autoRepost: false, nextRepostAt: null }) });
+        }
+        // On failure: leave nextRepostAt so the next tick / server fallback retries.
+      } catch { /* non-fatal */ }
+
+      // Jittered pause before the next queued repost (human-like, lowers risk).
+      if (i < due.length - 1) {
+        await new Promise((r) => setTimeout(r, 4000 + Math.floor(Math.random() * 4000)));
+      }
+    }
+  } finally {
+    clientSchedulerRunning = false;
+  }
+}
+
 // ─── Uninstall feedback form ──────────────────────────────────────────────────
 const FEEDBACK_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLScNP_PSe3pRAKCwS8vIMd2GVB_trsRKwi3XTb8CRSmqUwprkA/viewform';
 
@@ -66,10 +169,15 @@ async function doSync(token: string): Promise<{ success: boolean; ads?: any[]; e
 
 chrome.alarms.create('periodic-sync', { periodInMinutes: 30 });
 
-// NOTE: extension-side simulated scheduler is DISABLED — the simulation now runs
-// in the BACKEND cron (REPOST_SIMULATE=true) and the dashboard shows the notifs.
-// The alarm below is intentionally not created (kept the code for reference).
-// chrome.alarms.create('repost-sim-check', { periodInMinutes: 1 });
+// Client-side repost scheduler — runs due reposts from the user's real browser.
+// Fires every minute while Chrome is open; onStartup catches up schedules that
+// came due while Chrome was closed.
+if (CLIENT_SCHEDULER_ENABLED) {
+  chrome.alarms.create('client-repost-scheduler', { periodInMinutes: 1 });
+  chrome.runtime.onStartup.addListener(() => {
+    runDueClientReposts(true).catch((e) => console.warn('[BG][sched] startup run failed:', e.message));
+  });
+}
 
 /** Pop an alert() on an open Kleinanzeigen tab (no OS-notification dependency). */
 function alertOnKaTab(text: string) {
@@ -144,6 +252,8 @@ chrome.alarms.onAlarm.addListener((alarm) => {
     });
   } else if (alarm.name === 'repost-sim-check') {
     runSimulatedScheduler().catch((e) => console.warn('[BG][sim] failed:', e.message));
+  } else if (alarm.name === 'client-repost-scheduler') {
+    runDueClientReposts().catch((e) => console.warn('[BG][sched] failed:', e.message));
   }
 });
 
@@ -361,70 +471,25 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
     const adId = (String(message.adId || '').match(/\d{5,}/) || [''])[0];
     if (!adId) { sendResponse({ ok: false, error: 'no valid numeric adId' }); return true; }
 
-    // Reject a parallel start — one repost at a time.
-    if (repostBusy) { sendResponse({ ok: false, busy: true, error: 'Es läuft bereits ein Repost' }); return true; }
-    repostBusy = true;
-
-    // Fetch ad data from backend
+    // Fetch ad data from backend, then run via the shared single-runner path.
     chrome.storage.session.get(['token'], async ({ token }: any) => {
-      if (!token) { repostBusy = false; sendResponse({ ok: false, error: 'no session token' }); return; }
-
+      if (!token) { sendResponse({ ok: false, error: 'no session token' }); return; }
       let adData: any = null;
       try {
-        // Fetch all ads and find the matching one
-        const adsRes = await fetch(`${API_URL}/ads`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const adsRes = await fetch(`${API_URL}/ads`, { headers: { Authorization: `Bearer ${token}` } });
         if (adsRes.ok) {
           const adsResponse = await adsRes.json();
           const ads = adsResponse.ads || adsResponse.data || [];
           adData = ads.find((a: any) => String(a.id) === adId);
-          if (!adData) {
-            console.warn('[BG] ad not found in list:', adId);
-          }
+          if (!adData) console.warn('[BG] ad not found in list:', adId);
         } else {
           console.warn('[BG] failed to fetch ads:', adsRes.status);
         }
       } catch (err: any) {
         console.warn('[BG] failed to fetch ad data:', err.message);
       }
-
-      // Register the document_start overlay BEFORE opening the tab so the very
-      // first page (homepage) already shows the branded "working…" screen with
-      // zero blank flash. The '#ab-repost-start' hash seeds the initial status.
-      await registerOverlayScript();
-
-      // Open a NEW tab to Kleinanzeigen (not reuse dashboard tab)
-      chrome.tabs.create({ url: 'https://www.kleinanzeigen.de/#ab-repost-start' }, (newTab) => {
-        if (!newTab?.id) {
-          unregisterOverlayScript();
-          repostBusy = false;
-          sendResponse({ ok: false, error: 'failed to create new tab' });
-          return;
-        }
-        // Wait a moment for the tab to load, then run repost
-        setTimeout(() => {
-          executeRepostFullFlow(newTab.id!, adId, adData).then((result) => {
-            const title = result.ok ? '✅ Anzeige neu eingestellt' : '❌ Neu einstellen fehlgeschlagen';
-            const msg = result.ok
-              ? `Deine Anzeige wurde erfolgreich neu eingestellt.\n${result.finalUrl || ''}`
-              : `Bei Schritt "${result.step}": ${result.error}`;
-            chrome.notifications.create({
-              type: 'basic',
-              iconUrl: 'icons/icon-128.png',
-              title,
-              message: msg.slice(0, 300),
-            });
-            sendResponse(result);
-          }).catch((e) => {
-            console.error('[BG] executeRepostFullFlow error:', e.message);
-            sendResponse({ ok: false, error: e.message, step: 'unknown' });
-          }).finally(() => {
-            unregisterOverlayScript();
-            repostBusy = false;
-          });
-        }, 1000); // Wait 1 second for new tab to initialize
-      });
+      const result = await performRepost(adId, adData);
+      sendResponse(result);
     });
     return true;
   }

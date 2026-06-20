@@ -210,13 +210,19 @@ export class SchedulerService {
       }
       // ─────────────────────────────────────────────────────────────────────────
 
+      // SERVER = fallback. Only pick ads still due AFTER the grace window — the
+      // client (extension) gets first crack while the browser is open. Ads the
+      // client already reposted have nextRepostAt cleared, so they won't appear;
+      // ads only reachable here are ones the browser never handled (closed).
+      const serverCutoff = new Date(Date.now() - SCHEDULER_CONFIG.serverFallbackGraceMinutes * 60 * 1000).toISOString();
+
       // One collectionGroup query returns ONLY due ads across all users — avoids
       // the previous N-queries-per-user scan. Requires a composite index on the
       // 'ads' group (autoRepost, status, nextRepostAt) — see firestore.indexes.json.
       const dueAdsSnap = await db.collectionGroup('ads')
         .where('autoRepost', '==', true)
         .where('status', '==', AdStatus.ACTIVE)
-        .where('nextRepostAt', '<=', now)
+        .where('nextRepostAt', '<=', serverCutoff)
         .get();
 
       if (dueAdsSnap.empty) {
@@ -353,24 +359,13 @@ export class SchedulerService {
 
       const startTime = Date.now();
 
-      // 3. Send notification instead of calling automation worker
-      //    TODO: Re-enable automation service once it's fixed
-      //    For now, just notify the user and mark as complete.
+      // 3. Run the server-side repost via the automation worker.
+      //    RE-ENABLED FOR DIAGNOSIS — actually drives the headless browser so the
+      //    worker's [repost-diag] logging captures the 403 cause. callAutomationWorker
+      //    throws on failure, which the catch block below classifies + logs.
       try {
-        // TEMPORARY: Automation service is broken, so skip it and notify instead.
-        // result = await this.automationService.callAutomationWorker('repost', { userId, adId, adData, cookies });
-        const result = { success: true };
-
-        // Send notification to dashboard (real-time + persisted)
-        await this.notificationsService.emit(userId, {
-          type: 'repost_pending_notification',
-          adId,
-          adTitle: adData.title || 'Anzeige',
-          message: `Deine Anzeige „${(adData.title || 'Deine Anzeige').replace(/<[^>]+>/g, '')}" ist zum Neuposten bereit. Öffne dein Dashboard zum Neposten.`,
-        });
-        this.logger.log(`${logCtx(userId, adId, runId)} Repost time reached — notification sent (automation service disabled)`);
-
-        // Continue with success path below
+        const result = await this.automationService.callAutomationWorker('repost', { userId, adId, adData, cookies });
+        this.logger.log(`${logCtx(userId, adId, runId)} Automation worker result: ${JSON.stringify(result)}`);
 
         // 4. On success, update state and create log
         // ONE-TIME reposts: after success, disable autoRepost so it doesn't repeat.

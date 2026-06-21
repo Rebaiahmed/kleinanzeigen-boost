@@ -135,9 +135,8 @@ export function TopBar() {
                   <span>Einstellungen</span>
                 </Link>
 
-                {/* TODO: replace with real support email address */}
                 <a
-                  href="mailto:placeholder@example.com?subject=AnzeigenBoost%20Support"
+                  href="mailto:support@anzeigenboost.de?subject=AnzeigenBoost%20Support"
                   role="menuitem"
                   onClick={() => setIsDropdownOpen(false)}
                   className="w-full flex items-center gap-2 px-4 py-2 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors focus:bg-gray-50 focus:outline-none"

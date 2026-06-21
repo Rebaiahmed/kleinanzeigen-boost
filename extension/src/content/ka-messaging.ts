@@ -2,6 +2,7 @@
  * Reply template injection for Kleinanzeigen messaging.
  * Simpler, more visible approach.
  */
+import { ENDPOINTS } from '../config/endpoints';
 
 interface ReplyTemplate {
   id?: string;
@@ -52,7 +53,7 @@ async function fetchTemplates(): Promise<ReplyTemplate[]> {
       return [];
     }
 
-    const apiUrl = localStorage.getItem('apiUrl') || 'http://localhost:3000/api';
+    const apiUrl = localStorage.getItem('apiUrl') || ENDPOINTS.API_BASE;
     console.log('[AB-messaging] Fetching templates from:', `${apiUrl}/reply-templates`);
 
     const res = await fetch(`${apiUrl}/reply-templates`, {
@@ -202,7 +203,7 @@ function showTemplateModal(inputElement: HTMLElement) {
         try {
           const token = await getToken();
           if (token) {
-            const apiUrl = localStorage.getItem('apiUrl') || 'http://localhost:3000/api';
+            const apiUrl = localStorage.getItem('apiUrl') || ENDPOINTS.API_BASE;
             await fetch(`${apiUrl}/reply-templates/${template.id}/copy`, {
               method: 'POST',
               headers: { Authorization: `Bearer ${token}` },

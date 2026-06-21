@@ -12,22 +12,14 @@
     "downloads"
   ],
   "host_permissions": [
-    "http://127.0.0.1:3000/*",
-    "http://localhost:3000/*",
-    "ws://127.0.0.1:3000/*",
-    "ws://localhost:3000/*",
     "https://api.anzeigenboost.de/*",
     "wss://api.anzeigenboost.de/*",
     "https://*.kleinanzeigen.de/*",
-    "http://localhost:5173/*",
-    "https://anzeigenboost.de/*",
-    "https://app.anzeigenboost.de/*"
+    "https://anzeigenboost.de/*"
   ],
   "externally_connectable": {
     "matches": [
-      "http://localhost:5173/*",
-      "https://anzeigenboost.de/*",
-      "https://app.anzeigenboost.de/*"
+      "https://anzeigenboost.de/*"
     ]
   },
   "icons": {
@@ -61,9 +53,7 @@
     },
     {
       "matches": [
-        "http://localhost:5173/*",
-        "https://anzeigenboost.de/*",
-        "https://app.anzeigenboost.de/*"
+        "https://anzeigenboost.de/*"
       ],
       "js": [
         "dashboard.js"

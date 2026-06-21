@@ -87,21 +87,38 @@ async function runDueClientReposts(verbose = false): Promise<void> {
   try {
     for (let i = 0; i < due.length; i++) {
       const ad = due[i];
+      const interval = Number(ad.repostIntervalMinutes) || 1440;
 
-      // Coordination with the server fallback is via the grace window (server only
-      // runs ads still due after SERVER_FALLBACK_GRACE_MINUTES). On success we
-      // RESCHEDULE to now+interval — well within that window — so the recurring
-      // schedule continues and the server never double-posts the same due window.
+      // CLAIM BEFORE REPOSTING — advance nextRepostAt up front so this ad is no
+      // longer "due". MV3 can recycle the service worker mid-repost (create-first
+      // flow takes 60-90s), which resets the in-memory repostBusy/clientScheduler
+      // guards; without this claim, the next 1-min tick would see the ad still due
+      // and repost it AGAIN → duplicate listings. This mirrors the server's atomic
+      // PENDING_REPOST lock. If the claim PATCH fails, skip rather than risk a
+      // double post.
+      const claimedNext = new Date(Date.now() + interval * 60000).toISOString();
+      try {
+        const claimRes = await fetch(`${API_URL}/ads/${ad.id}`, {
+          method: 'PATCH', headers: authHeaders, body: JSON.stringify({ nextRepostAt: claimedNext }),
+        });
+        if (!claimRes.ok) { console.warn(`[BG][sched] claim failed for ${ad.id} (HTTP ${claimRes.status}) — skipping to avoid double post`); continue; }
+      } catch (e: any) {
+        console.warn(`[BG][sched] claim error for ${ad.id} — skipping:`, e.message);
+        continue;
+      }
+
       const result = await performRepost(String(ad.id), ad);
 
-      try {
-        if (result.ok) {
-          const interval = Number(ad.repostIntervalMinutes) || 1440;
-          const next = new Date(Date.now() + interval * 60000).toISOString();
-          await fetch(`${API_URL}/ads/${ad.id}`, { method: 'PATCH', headers: authHeaders, body: JSON.stringify({ nextRepostAt: next }) });
-        }
-        // On failure: leave nextRepostAt so the next tick / server fallback retries.
-      } catch { /* non-fatal */ }
+      // On failure, pull nextRepostAt back to a short retry window (not the full
+      // interval) so it retries soon — but not on the immediate next tick, which
+      // would re-trigger before the page settles. The claimed future value already
+      // stands on success, so no second PATCH is needed there.
+      if (!result.ok) {
+        const retryAt = new Date(Date.now() + 10 * 60000).toISOString();
+        try {
+          await fetch(`${API_URL}/ads/${ad.id}`, { method: 'PATCH', headers: authHeaders, body: JSON.stringify({ nextRepostAt: retryAt }) });
+        } catch { /* non-fatal — claimed value keeps it from looping */ }
+      }
 
       // Jittered pause before the next queued repost (human-like, lowers risk).
       if (i < due.length - 1) {

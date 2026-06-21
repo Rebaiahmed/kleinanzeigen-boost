@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "AnzeigenBoost – Kleinanzeigen nach oben schieben & KI-Anzeigen",
+  "name": "AnzeigenBoost – Anzeigen mit einem Klick neu einstellen & KI-Anzeigen",
   "version": "1.0.0",
-  "description": "Schiebe deine Kleinanzeigen automatisch nach oben & erstelle Anzeigen per Foto mit KI. Mehr Aufrufe, weniger Aufwand.",
+  "description": "Stelle deine Anzeigen mit einem Klick neu ein und erstelle Anzeigen per Foto mit KI. Mehr Sichtbarkeit, weniger Aufwand.",
   "permissions": [
     "storage",
     "alarms",

@@ -17,7 +17,13 @@ export class AuthService {
     // Derive 32-byte key from internal secret
     const secret = process.env.INTERNAL_SECRET || 'dev_secret_key';
     this.encryptionKey = crypto.createHash('sha256').update(secret).digest();
+    // Short, non-sensitive fingerprint of the key (a hash of the key, not the key)
+    // — used to detect when cookies were encrypted with a DIFFERENT key/backend.
+    this.keyId = crypto.createHash('sha256').update(this.encryptionKey).digest('hex').slice(0, 8);
+    this.logger.log(`[handshake] auth encryption keyId=${this.keyId} (INTERNAL_SECRET ${process.env.INTERNAL_SECRET ? 'set' : 'DEFAULT dev key'})`);
   }
+
+  private readonly keyId: string;
 
   /**
    * Derives a stable, case-normalised userId from an email address.
@@ -110,12 +116,14 @@ export class AuthService {
 
     await this.firebaseService.firestore.collection('handshakes').doc(token).set({
       encryptedCookies,
+      keyId: this.keyId, // which key encrypted these cookies (for mismatch detection)
       createdAt: new Date().toISOString(),
       expiresAt: Date.now() + 1800000,
       stableUserId: stableUserId || crypto.randomUUID(),
       username: username || null,
       used: false,
     });
+    this.logger.log(`[handshake] created token (keyId=${this.keyId})`);
 
     return token;
   }
@@ -176,6 +184,18 @@ export class AuthService {
     // Post-transaction work — wrapped so the failing step is visible in logs
     // (decrypt key mismatch, malformed cookies, Firestore write, etc.) instead
     // of a generic "interner Serverfehler".
+    // Detect the most common cause of a decrypt failure: the cookies were
+    // encrypted by a backend with a DIFFERENT key (e.g. extension hit a different
+    // API, or INTERNAL_SECRET changed) than the one decrypting now.
+    const storedKeyId = data!.keyId || '(none)';
+    if (data!.keyId && data!.keyId !== this.keyId) {
+      this.logger.error(`[handshake] KEY MISMATCH — cookies encrypted with keyId=${storedKeyId} but this backend uses keyId=${this.keyId}. The handshake was created by a different backend/secret.`);
+      throw new HttpException(
+        { message: 'Verbindung fehlgeschlagen (Schlüssel passt nicht — bitte Erweiterung neu laden und erneut verbinden).' },
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
     let step = 'decrypt';
     try {
       const decryptedJson = this.decryptData(data!.encryptedCookies);

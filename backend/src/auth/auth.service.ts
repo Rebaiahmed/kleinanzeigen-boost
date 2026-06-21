@@ -132,6 +132,7 @@ export class AuthService {
     const db = this.firebaseService.firestore;
     const linkUserId = this.userIdFromAuthHeader(authHeader);
     const docRef = db.collection('handshakes').doc(token);
+    this.logger.log(`[handshake] exchange-token received (token=${token?.slice(0, 8)}…, linkUser=${linkUserId ? 'yes' : 'no'})`);
 
     // Atomically claim the token inside a Firestore transaction.
     // This prevents a race condition where two concurrent requests both
@@ -172,8 +173,11 @@ export class AuthService {
     } catch (err: any) {
       // Re-throw HttpExceptions from inside the transaction directly
       if (err instanceof HttpException) throw err;
+      // Otherwise it's an unexpected (Firestore/transaction) error — log it so the
+      // real cause is visible instead of a silent generic 500.
+      this.logger.error(`[handshake] transaction failed: ${err?.message}`, err?.stack);
       throw new HttpException(
-        { message: 'Handshake konnte nicht verarbeitet werden' },
+        { message: `Handshake konnte nicht verarbeitet werden (${err?.message || 'tx'})` },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

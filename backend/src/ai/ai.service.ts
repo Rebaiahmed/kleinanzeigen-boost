@@ -61,16 +61,16 @@ export class AiService {
     // rate limits, so under load we fall through to paid — that reduces cost, not
     // eliminates it. `vision` marks models that accept image input; text-only models
     // are filtered out when the request contains images (see hasImages below).
+    // Paid-first. The free ($0) models (gemini-2.0-flash free tier, *:free on
+    // OpenRouter) are perpetually rate-limited (429), so trying them first only
+    // added 1–2s of wasted latency before falling through to a paid model. We lead
+    // with the cheap, reliable paid model so a normal request is a single call.
+    // (Gemini-native entries are dropped automatically when AI_DISABLE_GEMINI=true
+    // or no GEMINI_API_KEY — see providerChain below.)
     const fullModelChain = [
-      // ── Free ($0) ──
-      { type: 'google', name: 'gemini-2.0-flash', vision: true },                       // Gemini free tier, handles vision
-      { type: 'openrouter', name: 'google/gemma-4-31b-it:free', vision: false },         // free, text-only
-      { type: 'openrouter', name: 'meta-llama/llama-3.3-70b-instruct:free', vision: false }, // free, text-only
-      // ── Paid fallback (cheapest capable first) ──
       { type: 'openrouter', name: 'google/gemini-2.5-flash-lite', vision: true },  // ~$0.10/$0.40, reliable German + vision
+      { type: 'openrouter', name: 'openai/gpt-4o-mini', vision: true },            // vision fallback
       { type: 'openrouter', name: 'qwen/qwen3-235b-a22b-2507', vision: false },    // ~$0.09/$0.10, strong cheap text
-      { type: 'google', name: 'gemini-2.5-flash', vision: true },                  // higher-quality vision
-      { type: 'openrouter', name: 'openai/gpt-4o-mini', vision: true },
       { type: 'openrouter', name: 'x-ai/grok-3-mini', vision: false },
       { type: 'openrouter', name: 'deepseek/deepseek-chat', vision: false },
     ];

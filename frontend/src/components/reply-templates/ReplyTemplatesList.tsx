@@ -3,7 +3,11 @@ import { ReplyTemplate, ReplyTemplatesApi } from '../../api/reply-templates';
 import { Copy, Plus, Trash2, Edit2, CheckCircle2, Loader2, X, Wand2 } from 'lucide-react';
 import { AiTemplateModal } from './AiTemplateModal';
 
-const AI_TEMPLATES_ENABLED = (import.meta as any).env.VITE_FEATURE_AI_TEMPLATES === 'true';
+// AI template generation is on by default; set VITE_FEATURE_AI_TEMPLATES=false to
+// hide it. (Previously required ===  'true', which silently disabled the button in
+// any build where the env var didn't reach Vite — e.g. the VPS build, which only
+// injects VITE_API_URL. Default-on avoids that footgun.)
+const AI_TEMPLATES_ENABLED = (import.meta as any).env.VITE_FEATURE_AI_TEMPLATES !== 'false';
 
 const STARTER_TEMPLATES = [
   { icon: '📦', title: 'Verfügbarkeit', content: 'Ja, der Artikel ist noch verfügbar! Bei Interesse gerne melden.' },

@@ -182,7 +182,10 @@ export class ReplyTemplatesService {
       const response = await axios.post(
         'https://openrouter.ai/api/v1/chat/completions',
         {
-          model: 'google/gemma-4-31b-it:free',
+          // Was google/gemma-4-31b-it:free, which is constantly rate-limited (429)
+          // on OpenRouter's free tier → template generation silently failed. Use the
+          // cheap, reliable paid model (fractions of a cent per call).
+          model: 'google/gemini-2.5-flash-lite',
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.7,
           max_tokens: 1000,

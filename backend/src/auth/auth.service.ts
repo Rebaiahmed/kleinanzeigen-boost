@@ -173,43 +173,60 @@ export class AuthService {
     // Delete the document now that the transaction succeeded
     await docRef.delete().catch(() => {});
 
-    const decryptedJson = this.decryptData(data!.encryptedCookies);
-    const cookies = JSON.parse(decryptedJson);
+    // Post-transaction work — wrapped so the failing step is visible in logs
+    // (decrypt key mismatch, malformed cookies, Firestore write, etc.) instead
+    // of a generic "interner Serverfehler".
+    let step = 'decrypt';
+    try {
+      const decryptedJson = this.decryptData(data!.encryptedCookies);
+      step = 'json_parse';
+      const cookies = JSON.parse(decryptedJson);
 
-    const userId = data!.stableUserId;
-    const username = data!.username || null;
-    const jwtToken = this.jwtService.sign({
-      sub: userId,
-      type: 'marketplace_session',
-      ...(username && { username }),
-    });
+      const userId = data!.stableUserId;
+      const username = data!.username || null;
+      step = 'jwt_sign';
+      const jwtToken = this.jwtService.sign({
+        sub: userId,
+        type: 'marketplace_session',
+        ...(username && { username }),
+      });
 
-    // Store permanent session — cookies encrypted at rest
-    const encryptedCookieBlob = this.encryptData(JSON.stringify(cookies));
-    await db.collection('sessions').doc(userId).set({
-      status: 'active',
-      lastLogin: new Date().toISOString(),
-      marketplaceCookies: encryptedCookieBlob,
-    }, { merge: true });
-
-    // Fresh cookies → clear any prior 'expired' flag so the scheduler resumes this user.
-    await this.clearExpiredStatus(userId);
-
-    // IMPORTANT: if the user is already logged in to the dashboard (e.g. via
-    // email/Auth0) when they connect, their ads + reposts run under THAT id —
-    // not the marketplace stableUserId. Store the cookies under that id too, so
-    // repost/scrape/scheduler (which look up sessions/{ownerId}) find them.
-    if (linkUserId && linkUserId !== userId) {
-      await db.collection('sessions').doc(linkUserId).set({
+      // Store permanent session — cookies encrypted at rest
+      step = 'session_write';
+      const encryptedCookieBlob = this.encryptData(JSON.stringify(cookies));
+      await db.collection('sessions').doc(userId).set({
         status: 'active',
         lastLogin: new Date().toISOString(),
         marketplaceCookies: encryptedCookieBlob,
       }, { merge: true });
-      await this.clearExpiredStatus(linkUserId);
-      this.logger.log(`[handshake] also linked marketplace cookies to authenticated user ${linkUserId}`);
-    }
 
-    return { accessToken: jwtToken, userId };
+      // Fresh cookies → clear any prior 'expired' flag so the scheduler resumes this user.
+      step = 'clear_expired';
+      await this.clearExpiredStatus(userId);
+
+      // IMPORTANT: if the user is already logged in to the dashboard (e.g. via
+      // email/Auth0) when they connect, their ads + reposts run under THAT id —
+      // not the marketplace stableUserId. Store the cookies under that id too, so
+      // repost/scrape/scheduler (which look up sessions/{ownerId}) find them.
+      if (linkUserId && linkUserId !== userId) {
+        step = 'link_write';
+        await db.collection('sessions').doc(linkUserId).set({
+          status: 'active',
+          lastLogin: new Date().toISOString(),
+          marketplaceCookies: encryptedCookieBlob,
+        }, { merge: true });
+        await this.clearExpiredStatus(linkUserId);
+        this.logger.log(`[handshake] also linked marketplace cookies to authenticated user ${linkUserId}`);
+      }
+
+      return { accessToken: jwtToken, userId };
+    } catch (err: any) {
+      this.logger.error(`[handshake] exchange failed at step='${step}': ${err?.message}`, err?.stack);
+      throw new HttpException(
+        { message: `Verbindung fehlgeschlagen (${step}). Bitte erneut verbinden.` },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   /** Extract a userId from an optional "Bearer <jwt>" header, or null if absent/invalid. */

@@ -75,11 +75,21 @@ export class AiService {
       { type: 'openrouter', name: 'deepseek/deepseek-chat', vision: false },
     ];
 
+    // Drop Gemini (Google-native) models from the chain when there's no Gemini key
+    // or when explicitly running OpenRouter-only (AI_DISABLE_GEMINI=true). This
+    // avoids wasted attempts + noisy 429/exhausted logs when Gemini's free quota
+    // is unusable and OpenRouter is the intended provider.
+    const geminiDisabled =
+      !process.env.GEMINI_API_KEY?.trim() || process.env.AI_DISABLE_GEMINI === 'true';
+    const providerChain = geminiDisabled
+      ? fullModelChain.filter((m) => m.type !== 'google')
+      : fullModelChain;
+
     // Detect image input: image parts are objects with inlineData/image_url, not strings.
     const hasImages = contents.some(
       (c) => c && typeof c === 'object' && (c.inlineData || c.image_url || c.type === 'image_url'),
     );
-    const modelChain = hasImages ? fullModelChain.filter((m) => m.vision) : fullModelChain;
+    const modelChain = hasImages ? providerChain.filter((m) => m.vision) : providerChain;
     if (hasImages) {
       this.logger.log(`[AI Service] Image input detected — using vision models only: ${modelChain.map(m => m.name).join(', ')}`);
     }

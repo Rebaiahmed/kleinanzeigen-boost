@@ -13,6 +13,7 @@ import {
 import { useAdsActions } from '../hooks/useAdsActions';
 import { useAiUsage } from '../hooks/useAiUsage';
 import { PriceSuggestion } from '../components/ads/PriceSuggestion';
+import { compressImage } from '../utils/compressImage';
 
 const CATEGORIES = [
   "Auto, Rad & Boot",
@@ -216,16 +217,24 @@ export function CreateWithAi() {
     }
   };
 
-  const addFiles = (newFiles: File[]) => {
+  const addFiles = async (newFiles: File[]) => {
     const validTypes = ["image/jpeg", "image/png", "image/webp"];
     const filtered = newFiles.filter(f => validTypes.includes(f.type));
-    
+
     if (photos.length + filtered.length > 8) {
       setErrorMessage("Du kannst maximal 8 Fotos hochladen.");
       return;
     }
 
-    const uploaded: UploadedPhoto[] = filtered.map(file => ({
+    // Compress/downscale in the browser before they ever leave the device — keeps
+    // uploads small (faster, no 413s) with no meaningful quality loss for ad photos.
+    const compressed = await Promise.all(
+      filtered.map(async (file) => {
+        try { return await compressImage(file); } catch { return file; }
+      }),
+    );
+
+    const uploaded: UploadedPhoto[] = compressed.map(file => ({
       file,
       preview: URL.createObjectURL(file)
     }));

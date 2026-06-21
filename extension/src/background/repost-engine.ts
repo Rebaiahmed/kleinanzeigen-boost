@@ -628,6 +628,64 @@ async function submitForm(tabId: number): Promise<boolean> {
   }
 }
 
+/**
+ * Delete the OLD ad AFTER a confirmed publish (best-effort, non-fatal). Goes to
+ * "Meine Anzeigen", finds the original ad by id, clicks its delete control
+ * (handling a possible ⋯-menu), and confirms. If anything isn't found it logs and
+ * returns false — the repost still counts as a success; only a duplicate remains.
+ */
+async function deleteOldAd(tabId: number, adId: string, dbg = false): Promise<boolean> {
+  try {
+    await navigate(tabId, 'https://www.kleinanzeigen.de/m-meine-anzeigen.html');
+    await wait(2000);
+
+    const result = await runMain<string>(tabId, async (id: string, dbgOn: boolean, hlMs: number) => {
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const txt = (el: Element | null) => ((el?.textContent || '') + (el?.getAttribute?.('aria-label') || '') + (el?.getAttribute?.('title') || '')).toLowerCase();
+
+      // Locate the ad card (by data-* id, or a card containing a link to the ad).
+      let card: HTMLElement | null = document.querySelector(`[data-adid="${id}"], [data-id="${id}"], [data-ad-id="${id}"]`) as HTMLElement | null;
+      if (!card) {
+        const link = document.querySelector(`a[href*="/s-anzeige/${id}"], a[href*="${id}"]`);
+        card = (link?.closest('article, li, .cardbox, [class*="card" i]') as HTMLElement) || null;
+      }
+      if (!card) return 'card_not_found';
+
+      // Find a delete control in the card; if hidden behind a ⋯-menu, open it first.
+      const findDelete = (root: ParentNode) => Array.from(root.querySelectorAll('button, a, [role="menuitem"]'))
+        .find((b) => /löschen|delete/.test(txt(b))) as HTMLElement | undefined;
+      let delBtn = findDelete(card);
+      if (!delBtn) {
+        const menu = Array.from(card.querySelectorAll('button, a'))
+          .find((b) => /menü|menu|mehr|more|optionen|weitere/.test(txt(b)) || (b.textContent || '').trim() === '⋯') as HTMLElement | undefined;
+        if (menu) { menu.click(); await sleep(600); delBtn = findDelete(document); }
+      }
+      if (!delBtn) return 'delete_btn_not_found';
+
+      if (dbgOn) { try { delBtn.scrollIntoView({ block: 'center' }); } catch { /* noop */ } delBtn.style.outline = '3px solid #ef4444'; await sleep(hlMs); }
+      delBtn.click();
+      await sleep(1200);
+
+      // Confirm in the dialog (prefer a dialog-scoped "… löschen" button).
+      const dlg = document.querySelector('[role="dialog"], dialog[open]') || document;
+      const confirm = Array.from(dlg.querySelectorAll('button'))
+        .find((b) => /löschen|bestätigen/.test((b.textContent || '').toLowerCase().trim())) as HTMLElement | undefined;
+      if (!confirm) return 'no_confirm';
+      confirm.click();
+      await sleep(1500);
+      return 'deleted';
+    }, [adId, dbg, DEBUG_HIGHLIGHT_MS]);
+
+    const ok = result === 'deleted';
+    log(`delete old ad ${adId}: ${result}`);
+    if (dbg) await debugLine(tabId, ok ? '✓ Alte Anzeige gelöscht' : `⚠ Alte Anzeige nicht entfernt (${result})`);
+    return ok;
+  } catch (e: any) {
+    log('✗ delete old ad error:', e.message);
+    return false;
+  }
+}
+
 // ─── Dynamic category attributes (WRITE side) ─────────────────────────────────
 // Replays the captured original-ad attributes (Art/Farbe/Material/Zustand/…)
 // into the category-specific fields, which only exist AFTER the category is set.
@@ -1003,6 +1061,13 @@ export async function executeRepostFullFlow(
 
     const finalUrl = await runMain<string>(tabId, () => window.location.href, []);
     success = true;
+
+    // 8) Delete the OLD ad AFTER a confirmed publish (best-effort, non-fatal) so
+    //    the repost replaces the listing instead of leaving a duplicate.
+    step = 'delete_old_ad';
+    await setStatus(tabId, 'Alte Anzeige wird entfernt…');
+    await deleteOldAd(tabId, adId, dbg);
+
     return { ok: true, step: 'submitted', finalUrl };
   } catch (e: any) {
     log('✗ failed at step:', step, '|', e.message);

@@ -135,8 +135,13 @@ export function TopBar() {
                   <span>Einstellungen</span>
                 </Link>
 
+                {/* Opens the support/feedback form in a new tab. A mailto: link
+                    silently does nothing when no desktop mail client is set as
+                    default, so we link to a real page instead. */}
                 <a
-                  href="mailto:support@anzeigenboost.de?subject=AnzeigenBoost%20Support"
+                  href="https://docs.google.com/forms/d/e/1FAIpQLSfWFO_imx_NLkCTGjphKV1gwogiHbZTxmjUEzVHma79n1gE_w/viewform"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   role="menuitem"
                   onClick={() => setIsDropdownOpen(false)}
                   className="w-full flex items-center gap-2 px-4 py-2 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors focus:bg-gray-50 focus:outline-none"

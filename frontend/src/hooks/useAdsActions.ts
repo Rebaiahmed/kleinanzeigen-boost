@@ -105,7 +105,6 @@ export function useAdsActions(): AdsActionsReturn {
           const res = await runOneRepost(item.adId);
           if (res?.ok) {
             showToast('✅ Anzeige neu eingestellt!', 'success');
-            item.onSuccess();
           } else {
             showToast(`❌ Repost fehlgeschlagen: ${res?.error || 'Unbekannter Fehler'}`, 'error');
           }
@@ -115,6 +114,10 @@ export function useAdsActions(): AdsActionsReturn {
         } finally {
           runningRef.current = null;
           setRepostRunningId(null);
+          // The manual "Jetzt" repost is an immediate one-off — it does NOT touch
+          // the ad's recurring schedule (autoRepost/nextRepostAt are managed by the
+          // schedule picker). Just refresh so the card returns to idle.
+          item.onSuccess();
         }
         // Paced gap before the next queued repost (4–8s jitter).
         if (queueRef.current.length > 0) {

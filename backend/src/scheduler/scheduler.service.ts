@@ -367,15 +367,18 @@ export class SchedulerService {
         const result = await this.automationService.callAutomationWorker('repost', { userId, adId, adData, cookies });
         this.logger.log(`${logCtx(userId, adId, runId)} Automation worker result: ${JSON.stringify(result)}`);
 
-        // 4. On success, update state and create log
-        // ONE-TIME reposts: after success, disable autoRepost so it doesn't repeat.
-        // User must manually reschedule if they want another repost.
+        // 4. On success, update state and create log.
+        // RECURRING: reschedule the next occurrence (now + interval) so the ad keeps
+        // reposting on its schedule. (The client runs it first when the browser is
+        // open; the server only reaches here as the closed-browser fallback.)
         if (result.success) {
+          const intervalMin = Number(adData.repostIntervalMinutes) || SCHEDULER_CONFIG.defaultRepostIntervalMinutes;
+          const next = new Date(Date.now() + intervalMin * 60 * 1000).toISOString();
           await db.collection('users').doc(userId).collection('ads').doc(adId).update({
             status: AdStatus.ACTIVE,
             lastPostedAt: new Date().toISOString(),
-            autoRepost: false,  // ONE-TIME only — disable to prevent re-scheduling
-            nextRepostAt: null,
+            autoRepost: true,             // keep the recurring schedule active
+            nextRepostAt: next,           // schedule the next occurrence
             pendingRepostSince: null,
             repostFailureCount: 0,        // reset on success
             repostDisabledReason: null,
@@ -392,7 +395,7 @@ export class SchedulerService {
           });
 
           if (stats) stats.succeeded++;
-          this.logger.log(`${logCtx(userId, adId, runId)} ✓ Repost ok — one-time complete (autoRepost disabled)`);
+          this.logger.log(`${logCtx(userId, adId, runId)} ✓ Repost ok — rescheduled next for ${next}`);
         }
       } catch (error: any) {
         const errorCode = classifyRepostError(error.message);

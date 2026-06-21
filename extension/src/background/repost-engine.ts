@@ -31,6 +31,17 @@ type StatusPhase = 'working' | 'done' | 'error';
 function log(...a: any[]) { console.log('[AB-repost]', ...a); }
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Strip JSON/serialization artifacts (wrapping quotes, trailing `",` or `,`)
+ *  that can leak into stored title/description values, leaving plain text. */
+function cleanText(s: string | undefined | null): string {
+  return (s || '')
+    .trim()
+    .replace(/^["']+/, '')          // leading quotes
+    .replace(/["']\s*,?\s*$/, '')   // trailing quote (+ optional comma)
+    .replace(/,\s*$/, '')           // bare trailing comma
+    .trim();
+}
+
 // ─── MAIN-world execution primitives ──────────────────────────────────────────
 
 /** Run a self-contained function in the page's MAIN world; return its result.
@@ -311,7 +322,12 @@ async function fillField(tabId: number, selector: string, value: string, dbg = f
       const el = document.querySelector(sel) as HTMLInputElement | HTMLTextAreaElement | null;
       if (!el) return false;
       const fire = () => {
-        el.value = val;
+        // Use the NATIVE value setter so React's controlled-input state actually
+        // updates (assigning el.value directly is ignored by React's tracker).
+        const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+        const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+        try { el.focus(); } catch { /* noop */ }
+        if (setter) setter.call(el, val); else el.value = val;
         el.dispatchEvent(new Event('input', { bubbles: true }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
         el.dispatchEvent(new FocusEvent('blur', { bubbles: true }));
@@ -385,27 +401,36 @@ async function setPriceType(tabId: number, priceType: 'FIXED' | 'NEGOTIABLE' | '
 
 async function setShipping(tabId: number, shippingType: 'ja' | 'nein', dbg = false): Promise<boolean> {
   const targetId = shippingType === 'ja' ? 'ad-shipping-enabled-yes' : 'ad-shipping-enabled-no';
+  const wantText = shippingType === 'ja' ? 'Versand möglich' : 'Nur Abholung';
   try {
-    const ok = await runMain<boolean>(tabId, async (id: string, otherId: string, dbgOn: boolean, hlMs: number) => {
-      const input = document.querySelector('#' + id) as HTMLInputElement | null;
-      if (!input) return false;
-      if (dbgOn) {
-        const lbl = (input.closest('label') || input.parentElement || input) as HTMLElement;
-        try { lbl.scrollIntoView({ block: 'center' }); } catch { /* noop */ }
-        lbl.style.outline = '3px solid #ef4444';
-        await new Promise((r) => setTimeout(r, hlMs));
-        input.click();
-        await new Promise((r) => setTimeout(r, 150));
-        lbl.style.outline = '';
-      } else {
-        input.click();
+    const result = await runMain<string>(tabId, async (id: string, text: string, dbgOn: boolean, hlMs: number) => {
+      // 1) Try the known radio id. 2) Fall back to a radio whose label text
+      //    matches "Versand möglich" / "Nur Abholung" (the shipping block is
+      //    category-dependent, and ids have changed across redesigns).
+      let input = document.querySelector('#' + id) as HTMLInputElement | null;
+      let clickTarget: HTMLElement | null = input;
+      if (!input) {
+        const labels = Array.from(document.querySelectorAll('label')) as HTMLLabelElement[];
+        const lbl = labels.find((l) => (l.textContent || '').trim().toLowerCase().includes(text.toLowerCase()));
+        if (lbl) {
+          const forId = lbl.getAttribute('for');
+          input = (forId ? document.getElementById(forId) : lbl.querySelector('input[type="radio"]')) as HTMLInputElement | null;
+          clickTarget = lbl;
+        }
       }
-      const other = document.querySelector('#' + otherId) as HTMLInputElement | null;
-      return !!input.checked && !(other?.checked);
-    }, [targetId, shippingType === 'ja' ? 'ad-shipping-enabled-no' : 'ad-shipping-enabled-yes', dbg, DEBUG_HIGHLIGHT_MS]);
-    if (dbg) await debugLine(tabId, ok ? `✓ Versand: ${shippingType === 'ja' ? 'möglich' : 'nur Abholung'}` : '✗ Versand nicht gesetzt');
-    if (!ok) log('✗ shipping selection failed');
-    return !!ok;
+      if (!input) return 'no_field';
+      const lbl = (clickTarget || input.closest('label') || input.parentElement || input) as HTMLElement;
+      if (dbgOn) { try { lbl.scrollIntoView({ block: 'center' }); } catch { /* noop */ } lbl.style.outline = '3px solid #ef4444'; await new Promise((r) => setTimeout(r, hlMs)); }
+      lbl.click();
+      if (!input.checked) input.click(); // ensure the radio actually toggled
+      if (dbgOn) { await new Promise((r) => setTimeout(r, 150)); lbl.style.outline = ''; }
+      return input.checked ? 'ok' : 'not_checked';
+    }, [targetId, wantText, dbg, DEBUG_HIGHLIGHT_MS]);
+
+    const ok = result === 'ok';
+    if (dbg) await debugLine(tabId, ok ? `✓ Versand: ${shippingType === 'ja' ? 'möglich' : 'nur Abholung'}` : `✗ Versand nicht gesetzt (${result})`);
+    if (!ok) log('✗ shipping selection failed:', result);
+    return ok;
   } catch (e: any) {
     log('✗ shipping error:', e.message);
     if (dbg) await debugLine(tabId, '✗ Versand Fehler');
@@ -413,14 +438,25 @@ async function setShipping(tabId: number, shippingType: 'ja' | 'nein', dbg = fal
   }
 }
 
-/** Generic category select: open picker → click parent (cat_ID) → first leaf → Weiter. */
-async function setCategory(tabId: number, categoryId?: string, dbg = false): Promise<boolean> {
-  if (!categoryId) return true;
+/**
+ * Select the category by its numeric PATH ("parent/leaf", e.g. "80/88"): open
+ * the picker → click parent cat_<parent> → click the EXACT leaf cat_<leaf>
+ * (not "first leaf") → Weiter. Falls back to first leaf if only a parent id is
+ * known. Verifies a category actually got selected.
+ */
+async function setCategory(tabId: number, path?: string, dbg = false): Promise<boolean> {
+  if (!path) return true;
+  const [parentId, leafId] = path.split('/');
   try {
-    // Open the category-selection page (full navigation).
+    // Open the category picker. Prefer the explicit "Kategorie ändern/wählen"
+    // control; log candidates in debug so we can see what was clicked.
     const opened = await runMain<boolean>(tabId, async (dbgOn: boolean, hlMs: number) => {
-      const trigger = Array.from(document.querySelectorAll('a, button, div[role="button"]'))
-        .find((el) => (el.textContent || '').trim().includes('Kategorie')) as HTMLElement | undefined;
+      const els = Array.from(document.querySelectorAll('a, button, div[role="button"]')) as HTMLElement[];
+      const score = (t: string) => /kategorie (ändern|wählen|auswählen)|wähle deine kategorie/i.test(t) ? 2 : /kategorie/i.test(t) ? 1 : 0;
+      const trigger = els
+        .map((el) => ({ el, s: score((el.textContent || '').trim()) }))
+        .filter((x) => x.s > 0)
+        .sort((a, b) => b.s - a.s)[0]?.el;
       if (!trigger) return false;
       if (dbgOn) { try { trigger.scrollIntoView({ block: 'center' }); } catch { /* noop */ } trigger.style.outline = '3px solid #ef4444'; await new Promise((r) => setTimeout(r, hlMs)); }
       trigger.click();
@@ -429,30 +465,35 @@ async function setCategory(tabId: number, categoryId?: string, dbg = false): Pro
     if (!opened) { log('✗ Kategorie trigger not found'); if (dbg) await debugLine(tabId, '✗ Kategorie-Auswahl nicht gefunden'); return false; }
     await wait(1500);
 
-    // Click the parent category by id (in-page hash update, no full nav).
+    // Click the parent category by id.
     const parentClicked = await runMain<boolean>(tabId, async (id: string, dbgOn: boolean, hlMs: number) => {
       const link = document.querySelector('a#cat_' + id) as HTMLElement | null;
-      if (!link) return false;
+      if (!link) { (window as any).__abCats = Array.from(document.querySelectorAll('a[id^="cat_"]')).map((a) => a.id).join(','); return false; }
       if (dbgOn) { try { link.scrollIntoView({ block: 'center' }); } catch { /* noop */ } link.style.outline = '3px solid #ef4444'; await new Promise((r) => setTimeout(r, hlMs)); }
       link.click();
       if (dbgOn) link.style.outline = '';
       return true;
-    }, [categoryId, dbg, DEBUG_HIGHLIGHT_MS]);
-    if (!parentClicked) { log('✗ parent category not found'); if (dbg) await debugLine(tabId, `✗ Oberkategorie cat_${categoryId} nicht gefunden`); return false; }
+    }, [parentId, dbg, DEBUG_HIGHLIGHT_MS]);
+    if (!parentClicked) {
+      const avail = await runMain<string>(tabId, () => (window as any).__abCats || '', []);
+      log(`✗ parent cat_${parentId} not found. available:`, avail);
+      if (dbg) await debugLine(tabId, `✗ Oberkategorie cat_${parentId} nicht gefunden`);
+      return false;
+    }
     await wait(1000);
 
-    // Click the first leaf (final selectable category).
-    const leafClicked = await runMain<string | false>(tabId, async (dbgOn: boolean, hlMs: number) => {
-      const leaf = document.querySelector('li.category-selection-list-item.is-leaf a') as HTMLElement | null;
+    // Click the EXACT leaf by id (cat_<leaf>); fall back to the first leaf.
+    const leafClicked = await runMain<string | false>(tabId, async (lid: string, dbgOn: boolean, hlMs: number) => {
+      const leaf = (lid ? document.querySelector('a#cat_' + lid) : null)
+        || document.querySelector('li.category-selection-list-item.is-leaf a') as HTMLElement | null;
       if (!leaf) return false;
-      const txt = (leaf.textContent || '').trim();
-      if (dbgOn) { try { leaf.scrollIntoView({ block: 'center' }); } catch { /* noop */ } leaf.style.outline = '3px solid #ef4444'; await new Promise((r) => setTimeout(r, hlMs)); }
-      leaf.click();
-      if (dbgOn) leaf.style.outline = '';
+      const txt = ((leaf as HTMLElement).textContent || '').trim();
+      if (dbgOn) { try { (leaf as HTMLElement).scrollIntoView({ block: 'center' }); } catch { /* noop */ } (leaf as HTMLElement).style.outline = '3px solid #ef4444'; await new Promise((r) => setTimeout(r, hlMs)); }
+      (leaf as HTMLElement).click();
+      if (dbgOn) (leaf as HTMLElement).style.outline = '';
       return txt || 'ok';
-    }, [dbg, DEBUG_HIGHLIGHT_MS]);
+    }, [leafId || '', dbg, DEBUG_HIGHLIGHT_MS]);
     if (!leafClicked) { log('✗ no leaf category found'); if (dbg) await debugLine(tabId, '✗ Unterkategorie nicht gefunden'); return false; }
-    if (dbg) await debugLine(tabId, `✓ Kategorie: ${typeof leafClicked === 'string' ? leafClicked : categoryId}`);
     await wait(1000);
 
     // Confirm with "Weiter" (navigates back to the form).
@@ -463,11 +504,21 @@ async function setCategory(tabId: number, categoryId?: string, dbg = false): Pro
       btn.click();
       return true;
     }, []);
-    if (!nextClicked) { log('✗ Weiter button not found'); return false; }
+    if (!nextClicked) { log('✗ Weiter button not found'); if (dbg) await debugLine(tabId, '✗ „Weiter" nicht gefunden'); return false; }
 
-    const back = await waitForElement(tabId, 'input#ad-title', 15000);
-    if (!back) { log('✗ form not found after category'); return false; }
-    return true;
+    if (!(await waitForElement(tabId, 'input#ad-title', 15000))) { log('✗ form not found after category'); return false; }
+
+    // Verify a category is actually selected (form no longer shows the prompt).
+    const verify = await runMain<{ label: string; prompt: boolean }>(tabId, () => {
+      const pathEl = document.querySelector('#ad-category-path');
+      const label = pathEl ? (pathEl.textContent || '').trim() : '';
+      const prompt = /Wähle deine Kategorie/i.test(document.body.textContent || '');
+      return { label, prompt };
+    }, []) || { label: '', prompt: true };
+    const okSel = !!verify.label || !verify.prompt;
+    log(`category result: leaf="${leafClicked}" pathLabel="${verify.label}" stillPrompting=${verify.prompt}`);
+    if (dbg) await debugLine(tabId, okSel ? `✓ Kategorie: ${verify.label || leafClicked}` : '✗ Kategorie scheint NICHT gesetzt (Prompt sichtbar)');
+    return okSel;
   } catch (e: any) {
     log('✗ category error:', e.message);
     if (dbg) await debugLine(tabId, '✗ Kategorie Fehler');
@@ -526,25 +577,50 @@ async function uploadPhotos(tabId: number, photoBlobs: Blob[], dbg = false): Pro
 
 async function submitForm(tabId: number): Promise<boolean> {
   try {
-    const clicked = await runMain<boolean>(tabId, () => {
-      const btn = Array.from(document.querySelectorAll('button'))
-        .find((b) => (b.textContent || '').toLowerCase().includes('aufgeben')) as HTMLElement | undefined;
-      if (!btn) return false;
+    const click = await runMain<{ clicked: boolean; text?: string; disabled?: boolean }>(tabId, () => {
+      const btns = Array.from(document.querySelectorAll('button'));
+      let btn = btns.find((b) => (b.textContent || '').toLowerCase().includes('aufgeben')) as HTMLButtonElement | undefined;
+      if (!btn) btn = (document.querySelector('button[type="submit"]') as HTMLButtonElement) || undefined;
+      if (!btn) return { clicked: false };
+      try { btn.scrollIntoView({ block: 'center' }); } catch { /* noop */ }
+      const disabled = btn.disabled;
       btn.click();
-      return true;
+      return { clicked: true, text: (btn.textContent || '').trim(), disabled };
     }, []);
-    if (!clicked) { log('✗ submit button not found'); return false; }
+    if (!click?.clicked) { log('✗ submit button not found'); return false; }
+    log(`submit: clicked "${click.text}" (disabled=${click.disabled})`);
 
-    // Real success = redirect to the confirmation page. Failure = error page or
-    // staying on the form (validation rejected the submit).
-    for (let i = 0; i < 20; i++) {
+    // Real success = redirect to the confirmation page
+    // (p-anzeige-aufgeben-bestaetigung.html?adId=…, verified vs the live site).
+    // Failure = an error page, or staying on the form (validation rejected it).
+    for (let i = 0; i < 24; i++) {
       await delay(500);
       let url = '';
-      try { url = (await runMain<string>(tabId, () => window.location.href, [])) || ''; } catch { /* nav */ }
-      if (url.includes('bestaetigung')) return true;
-      if (url.includes('fehler') || url.includes('error')) { log('✗ error page —', url); return false; }
+      try { url = (await runMain<string>(tabId, () => window.location.href, [])) || ''; } catch { /* mid-nav */ }
+      if (url.includes('bestaetigung')) { log('✓ submit confirmed — confirmation page:', url); return true; }
+      if (url.includes('fehler') || url.includes('-error') || url.includes('error.html')) { log('✗ submit → error page:', url); return false; }
     }
-    log('✗ no confirmation after submit');
+
+    // Still on the form → capture WHY (which validation error / empty field) so a
+    // rejected submit is never mistaken for success.
+    const diag = await runMain<any>(tabId, () => {
+      const errs: string[] = [];
+      document.querySelectorAll('[class*="error" i], [role="alert"], .Indicator--negative, [data-testid*="error"], .formgroup--error, .error-message')
+        .forEach((e) => { const t = (e.textContent || '').replace(/\s+/g, ' ').trim(); if (t && t.length > 1 && t.length < 200) errs.push(t); });
+      const val = (s: string) => (document.querySelector(s) as HTMLInputElement | null)?.value ?? '(missing)';
+      return {
+        url: window.location.href,
+        errors: Array.from(new Set(errs)).slice(0, 25),
+        fields: {
+          title: val('input#ad-title'),
+          price: val('input#ad-price-amount'),
+          category: val('input[name="categoryId"]'),
+          priceType: val('input[name="priceType"]'),
+          stillPrompting: /Wähle deine Kategorie/i.test(document.body.textContent || ''),
+        },
+      };
+    }, []);
+    log('✗ submit NOT confirmed — stayed on form. diag:', JSON.stringify(diag));
     return false;
   } catch (e: any) {
     log('✗ submit error:', e.message);
@@ -834,13 +910,21 @@ export async function executeRepostFullFlow(
     if (!(await waitForElement(tabId, 'input#ad-title', 15000))) throw new Error('form not found after navigation');
     if (dbg) await setDebugOverlay(tabId); // re-assert widget after navigation
 
-    // 1) Category FIRST (determines which fields render → no later reset)
+    // 1) Category FIRST (determines which fields render → no later reset).
+    //    Prefer the exact scraped path (parent/leaf); fall back to the L1 id.
+    //    Non-fatal: if it fails we still fill the rest so debug shows everything.
     step = 'set_category';
-    if (adData?.l1Category) {
+    const categoryTarget = adData?.categoryPath || adData?.l1Category;
+    log('category target:', categoryTarget, '| l1Category:', adData?.l1Category, '| categoryPath:', adData?.categoryPath);
+    if (categoryTarget) {
       await setStatus(tabId, 'Kategorie wird gewählt…');
-      if (!(await setCategory(tabId, adData.l1Category, dbg))) throw new Error('category selection failed');
+      const catOk = await setCategory(tabId, categoryTarget, dbg);
+      if (!catOk) log('⚠ category selection failed — attributes may be skipped');
       await wait(1500);
       if (dbg) await setDebugOverlay(tabId); // category step navigates → re-assert
+    } else {
+      log('⚠ no category target (l1Category & categoryPath both empty)');
+      if (dbg) await debugLine(tabId, '✗ Keine Kategorie-Daten (l1Category & categoryPath leer)');
     }
 
     // 2) Dynamic category attributes (Art/Farbe/Material/Zustand/…) — only exist
@@ -874,10 +958,11 @@ export async function executeRepostFullFlow(
     await setPriceType(tabId, selectedPriceType, dbg);
     await wait(500);
 
-    // 4) Description + price
+    // 4) Description + price (description sanitized of any JSON/quote artifacts)
     step = 'fill_fields';
     await setStatus(tabId, 'Formular wird ausgefüllt…');
-    if (adData?.description) await fillField(tabId, 'textarea#ad-description', adData.description, dbg, 'Beschreibung');
+    const cleanDescription = cleanText(adData?.description);
+    if (cleanDescription) await fillField(tabId, 'textarea#ad-description', cleanDescription, dbg, 'Beschreibung');
     if (adData?.price) await fillField(tabId, 'input#ad-price-amount', String(adData.price), dbg, 'Preis');
     await wait(500);
 
@@ -888,7 +973,19 @@ export async function executeRepostFullFlow(
 
     // 6) Title — deferred to right before submit (prevents React re-render clearing it)
     step = 'set_title';
-    if (adData?.title) await fillField(tabId, 'input#ad-title', adData.title, dbg, 'Titel');
+    const cleanTitle = cleanText(adData?.title);
+    log('title value:', cleanTitle ? `"${cleanTitle.slice(0, 60)}"` : '(empty)');
+    if (cleanTitle) {
+      const titleOk = await fillField(tabId, 'input#ad-title', cleanTitle, dbg, 'Titel');
+      if (!titleOk) {
+        // Fallback selectors in case the title field id changed.
+        for (const sel of ['input[name="title"]', 'input[name="postad-title"]', '#postad-title']) {
+          if (await fillField(tabId, sel, cleanTitle, dbg, 'Titel (fallback)')) break;
+        }
+      }
+    } else if (dbg) {
+      await debugLine(tabId, '✗ Titel leer (adData.title fehlt)');
+    }
     await wait(500);
 
     // 7) Submit — SKIPPED in debug mode so we don't post a real ad on every test

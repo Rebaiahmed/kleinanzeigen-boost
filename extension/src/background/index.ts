@@ -88,18 +88,17 @@ async function runDueClientReposts(verbose = false): Promise<void> {
     for (let i = 0; i < due.length; i++) {
       const ad = due[i];
 
-      // NOTE: coordination with the server fallback is via the grace window
-      // (server only runs ads still due after SERVER_FALLBACK_GRACE_MINUTES).
-      // On success we clear nextRepostAt immediately — well within that window —
-      // so the server never sees it. An explicit transactional claim/lease is a
-      // TODO (needs new fields whitelisted in UpdateAdDto).
+      // Coordination with the server fallback is via the grace window (server only
+      // runs ads still due after SERVER_FALLBACK_GRACE_MINUTES). On success we
+      // RESCHEDULE to now+interval — well within that window — so the recurring
+      // schedule continues and the server never double-posts the same due window.
       const result = await performRepost(String(ad.id), ad);
 
       try {
         if (result.ok) {
-          // One-time repost done → clear the schedule so neither side re-runs it.
-          // Only DTO-whitelisted fields (autoRepost, nextRepostAt) — others 400.
-          await fetch(`${API_URL}/ads/${ad.id}`, { method: 'PATCH', headers: authHeaders, body: JSON.stringify({ autoRepost: false, nextRepostAt: null }) });
+          const interval = Number(ad.repostIntervalMinutes) || 1440;
+          const next = new Date(Date.now() + interval * 60000).toISOString();
+          await fetch(`${API_URL}/ads/${ad.id}`, { method: 'PATCH', headers: authHeaders, body: JSON.stringify({ nextRepostAt: next }) });
         }
         // On failure: leave nextRepostAt so the next tick / server fallback retries.
       } catch { /* non-fatal */ }

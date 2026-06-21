@@ -12,6 +12,51 @@ const bootingLocks = new Set<string>();
 const IDLE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
 /**
+ * Optional residential proxy — OFF by default. Configure via env:
+ *   PROXY_URL=http://user:pass@host:port   (or socks5://…)
+ * or the split form: PROXY_SERVER=http://host:port  PROXY_USERNAME=…  PROXY_PASSWORD=…
+ * Returns undefined when unset → Playwright runs with the host's direct IP (unchanged).
+ */
+function getProxyConfig(): { server: string; username?: string; password?: string } | undefined {
+  const raw = process.env.PROXY_URL || process.env.PROXY_SERVER;
+  if (!raw) return undefined;
+  try {
+    if (/^\w+:\/\//.test(raw)) {
+      const u = new URL(raw);
+      const cfg: { server: string; username?: string; password?: string } = { server: `${u.protocol}//${u.host}` };
+      if (u.username) cfg.username = decodeURIComponent(u.username);
+      if (u.password) cfg.password = decodeURIComponent(u.password);
+      else if (process.env.PROXY_PASSWORD) cfg.password = process.env.PROXY_PASSWORD;
+      if (!cfg.username && process.env.PROXY_USERNAME) cfg.username = process.env.PROXY_USERNAME;
+      return cfg;
+    }
+    return { server: raw, username: process.env.PROXY_USERNAME || undefined, password: process.env.PROXY_PASSWORD || undefined };
+  } catch {
+    return { server: raw };
+  }
+}
+
+// Third-party ad/analytics/marketing hosts — pure bandwidth waste. Blocked when
+// resource-blocking is on (saves proxy cost without affecting the repost flow).
+const BLOCKED_HOST_RE = /doubleclick|googlesyndication|google-analytics|googletagmanager|googleadservices|criteo|adsrvr\.org|adnxs|rtbhouse|creativecdn|bat\.bing|facebook\.com\/tr|connect\.facebook|hotjar|brandmetrics|taboola|outbrain|amazon-adsystem|scorecardresearch|content-cdn\.com/i;
+
+/** Abort fonts/media + known trackers to cut bandwidth (keeps images, CSS, and
+ *  Kleinanzeigen's own scripts so the React form + photo flow still work). */
+async function applyResourceBlocking(context: BrowserContext): Promise<void> {
+  await context.route('**/*', (route) => {
+    try {
+      const req = route.request();
+      const type = req.resourceType();
+      if (type === 'font' || type === 'media') return route.abort();
+      if (BLOCKED_HOST_RE.test(req.url())) return route.abort();
+      return route.continue();
+    } catch {
+      return route.continue();
+    }
+  });
+}
+
+/**
  * Cleanup job: runs every minute to close contexts idle for >10 minutes.
  */
 setInterval(async () => {
@@ -63,6 +108,7 @@ export async function getPersistentContext(userId: string): Promise<BrowserConte
     // DEBUG_BROWSER=true → visible (headed) browser. DEBUG_SLOWMO (ms) slows each
     // Playwright action so you can watch the flow; defaults to 600ms in debug.
     const slowMo = isDebug ? Number(process.env.DEBUG_SLOWMO || 600) : 0;
+    const proxy = getProxyConfig();
     const context = await chromium.launchPersistentContext(userDataDir, {
       headless: !isDebug,
       slowMo,
@@ -70,11 +116,17 @@ export async function getPersistentContext(userId: string): Promise<BrowserConte
       // bundled Chromium isn't available). Falls back to bundled chromium locally.
       executablePath: process.env.CHROMIUM_PATH || undefined,
       viewport: { width: 1280, height: 720 },
+      proxy, // undefined when unset → direct connection (unchanged default)
       args: ['--disable-blink-features=AutomationControlled']
     });
 
+    // Bandwidth-saving resource blocking: on by default when a proxy is used (to
+    // cut its per-GB cost); force on/off anytime via BLOCK_RESOURCES=true|false.
+    const blockResources = process.env.BLOCK_RESOURCES === 'true' || (!!proxy && process.env.BLOCK_RESOURCES !== 'false');
+    if (blockResources) await applyResourceBlocking(context);
+
     activeContexts.set(userId, { context, lastAccessed: Date.now() });
-    console.log(`[BrowserManager] Persistent context launched (headless=${!isDebug}, slowMo=${slowMo}ms) for user: ${userId}`);
+    console.log(`[BrowserManager] Persistent context launched (headless=${!isDebug}, slowMo=${slowMo}ms, proxy=${proxy ? proxy.server : 'none'}, blockResources=${blockResources}) for user: ${userId}`);
     return context;
   } catch (error) {
     console.error(`[BrowserManager] Failed to launch context for ${userId}:`, error);

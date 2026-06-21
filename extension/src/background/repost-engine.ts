@@ -918,7 +918,7 @@ export async function executeRepostFullFlow(
   tabId: number,
   adId: string,
   adData?: AdData,
-  _deleteOldAdTiming: 'BEFORE_PUBLISH' | 'AFTER_PUBLISH' | 'NEVER' = 'AFTER_PUBLISH',
+  deleteOldAdTiming: 'AFTER_PUBLISH' | 'NEVER' = 'AFTER_PUBLISH',
   debug = false,
 ): Promise<{ ok: boolean; step: string; finalUrl?: string; error?: string }> {
   let step = 'start';
@@ -1064,9 +1064,11 @@ export async function executeRepostFullFlow(
 
     // 8) Delete the OLD ad AFTER a confirmed publish (best-effort, non-fatal) so
     //    the repost replaces the listing instead of leaving a duplicate.
-    step = 'delete_old_ad';
-    await setStatus(tabId, 'Alte Anzeige wird entfernt…');
-    await deleteOldAd(tabId, adId, dbg);
+    if (deleteOldAdTiming !== 'NEVER') {
+      step = 'delete_old_ad';
+      await setStatus(tabId, 'Alte Anzeige wird entfernt…');
+      await deleteOldAd(tabId, adId, dbg);
+    }
 
     return { ok: true, step: 'submitted', finalUrl };
   } catch (e: any) {

@@ -114,7 +114,7 @@ async function runDueClientReposts(verbose = false): Promise<void> {
 }
 
 // ─── Uninstall feedback form ──────────────────────────────────────────────────
-const FEEDBACK_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLScNP_PSe3pRAKCwS8vIMd2GVB_trsRKwi3XTb8CRSmqUwprkA/viewform';
+const FEEDBACK_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSfWFO_imx_NLkCTGjphKV1gwogiHbZTxmjUEzVHma79n1gE_w/viewform';
 
 function registerUninstallUrl() {
   chrome.runtime.setUninstallURL(FEEDBACK_FORM_URL, () => {
@@ -408,59 +408,6 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
   // Retry handshake from dashboard
   if (message.type === 'ANZEIGENBOOST_RETRY_HANDSHAKE') {
     initiateHandshake().then(sendResponse);
-    return true;
-  }
-
-  // Inject the photo-attach test into the page's MAIN world (bypasses KA's CSP,
-  // which blocks content-script <script> injection). Validates the upload trick.
-  if (message.type === 'AB_INJECT_PHOTO_TEST') {
-    const tabId = _sender.tab?.id;
-    if (!tabId) { sendResponse({ ok: false, error: 'no tab' }); return true; }
-    chrome.scripting.executeScript({
-      target: { tabId },
-      world: 'MAIN',
-      func: () => {
-        // Diagnostic: list every file input on the page so we know our target.
-        const allInputs = Array.from(document.querySelectorAll('input[type="file"]')) as HTMLInputElement[];
-        console.log('[AB-main] file inputs on page:', allInputs.length);
-        allInputs.forEach((el, i) => console.log(`[AB-main]   input#${i}: accept="${el.accept}" multiple=${el.multiple} disabled=${el.disabled} hidden=${el.offsetParent === null} class="${el.className}"`));
-
-        const input = (allInputs.find((el) => /image/.test(el.accept)) || allInputs[0]) as HTMLInputElement | undefined;
-        if (!input) { console.log('[AB-main] ✗ no file input found'); return; }
-        const canvas = document.createElement('canvas');
-        canvas.width = 600; canvas.height = 400;
-        const ctx = canvas.getContext('2d')!;
-        ctx.fillStyle = '#A8C300'; ctx.fillRect(0, 0, 600, 400);
-        ctx.fillStyle = '#1f2937'; ctx.font = 'bold 36px sans-serif';
-        ctx.fillText('AnzeigenBoost Test', 80, 210);
-        canvas.toBlob((blob) => {
-          if (!blob) { console.log('[AB-main] ✗ toBlob failed'); return; }
-          const file = new File([blob], 'ab-test-' + Date.now() + '.jpg', { type: 'image/jpeg' });
-          try {
-            const dt = new DataTransfer();
-            dt.items.add(file);
-            console.log('[AB-main] DataTransfer before assign → files.length =', dt.files.length, '(expect 1)');
-            input.files = dt.files;
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            console.log('[AB-main] input.files after assign → length =', input.files.length);
-          } catch (e) { console.log('[AB-main] input.files threw:', (e as Error).message); }
-          try {
-            const zone = (input.closest('div') || input.parentElement) as HTMLElement;
-            const dt2 = new DataTransfer();
-            dt2.items.add(file);
-            zone.dispatchEvent(new DragEvent('dragenter', { bubbles: true, dataTransfer: dt2 }));
-            zone.dispatchEvent(new DragEvent('dragover', { bubbles: true, dataTransfer: dt2 }));
-            zone.dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer: dt2 }));
-            console.log('[AB-main] dispatched synthetic drop; drop dataTransfer.files =', dt2.files.length);
-          } catch (e) { console.log('[AB-main] drop threw:', (e as Error).message); }
-          console.log('[AB-main] ■ done — WATCH the form for a photo preview');
-        }, 'image/jpeg', 0.9);
-      },
-    }).then(() => sendResponse({ ok: true })).catch((e) => {
-      console.warn('[BG] executeScript failed:', e.message);
-      sendResponse({ ok: false, error: e.message });
-    });
     return true;
   }
 

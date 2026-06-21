@@ -99,7 +99,7 @@ export function Landing() {
                 Deine Anzeigen bleiben oben. Automatisch.
               </h1>
               <p className="text-lg text-slate-600 mb-7 leading-relaxed">
-                AnzeigenBoost schiebt deine Inserate automatisch nach oben und erstellt Anzeigen per Foto. Mehr Aufrufe, weniger Klickarbeit.
+                AnzeigenBoost schiebt deine Inserate nach oben, erstellt Anzeigen per Foto und optimiert sie mit KI. Mehr Aufrufe, weniger Klickarbeit.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Link to="/login" className="inline-flex items-center justify-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] text-white font-bold py-3 px-7 rounded-full text-[15px] shadow-sm transition-all hover:-translate-y-0.5">
@@ -120,22 +120,52 @@ export function Landing() {
               <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col">
                 <div className="h-32 flex items-center justify-center mb-5"><PhotoToListingSchematic /></div>
                 <h3 className="text-[17px] font-bold text-slate-900 flex items-center gap-2"><Camera className="w-4 h-4 text-[#A8C300]" /> Foto → fertige Anzeige</h3>
-                <p className="text-[14px] text-slate-600 mt-1.5">Titel, Beschreibung & Preis in Sekunden.</p>
+                <p className="text-[14px] text-slate-600 mt-1.5">Titel, Beschreibung & Preis in Sekunden – aus deinen Fotos.</p>
               </div>
               <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col">
                 <div className="h-32 flex items-center justify-center mb-5">
                   <div className="text-center">
                     <Clock className="w-14 h-14 text-[#A8C300] mx-auto mb-2" />
-                    <div className="inline-flex items-center gap-1 text-[11px] font-bold text-[#7a9000] bg-[#A8C300]/10 rounded-full px-2.5 py-1"><ArrowUp className="w-3 h-3" /> auch nachts</div>
+                    <div className="inline-flex items-center gap-1 text-[11px] font-bold text-[#7a9000] bg-[#A8C300]/10 rounded-full px-2.5 py-1"><ArrowUp className="w-3 h-3" /> Jetzt oder per Zeitplan</div>
                   </div>
                 </div>
-                <h3 className="text-[17px] font-bold text-slate-900 flex items-center gap-2"><Clock className="w-4 h-4 text-[#A8C300]" /> Automatisch nach oben</h3>
-                <p className="text-[14px] text-slate-600 mt-1.5">Reposting im Hintergrund – ohne dich.</p>
+                <h3 className="text-[17px] font-bold text-slate-900 flex items-center gap-2"><Clock className="w-4 h-4 text-[#A8C300]" /> Wieder ganz nach oben</h3>
+                <p className="text-[14px] text-slate-600 mt-1.5">Per Klick oder automatisch nach Zeitplan neu einstellen.</p>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col">
+                <div className="h-32 flex items-center justify-center mb-5">
+                  <div className="text-center">
+                    <Sparkles className="w-14 h-14 text-[#A8C300] mx-auto mb-2" />
+                    <div className="inline-flex items-center gap-1 text-[11px] font-bold text-[#7a9000] bg-[#A8C300]/10 rounded-full px-2.5 py-1"><Sparkles className="w-3 h-3" /> Mehr Aufrufe</div>
+                  </div>
+                </div>
+                <h3 className="text-[17px] font-bold text-slate-900 flex items-center gap-2"><Sparkles className="w-4 h-4 text-[#A8C300]" /> KI-Optimierung</h3>
+                <p className="text-[14px] text-slate-600 mt-1.5">Bestehende Titel & Beschreibungen mit KI verbessern.</p>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col">
+                <div className="h-32 flex items-center justify-center mb-5">
+                  <div className="text-center">
+                    <Camera className="w-14 h-14 text-[#A8C300] mx-auto mb-2" />
+                    <div className="inline-flex items-center gap-1 text-[11px] font-bold text-[#7a9000] bg-[#A8C300]/10 rounded-full px-2.5 py-1"><Check className="w-3 h-3" /> Foto-Tipps</div>
+                  </div>
+                </div>
+                <h3 className="text-[17px] font-bold text-slate-900 flex items-center gap-2"><Camera className="w-4 h-4 text-[#A8C300]" /> Foto-Check</h3>
+                <p className="text-[14px] text-slate-600 mt-1.5">KI bewertet deine Fotos und sagt, was besser geht.</p>
               </div>
               <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col">
                 <div className="h-32 flex items-center justify-center mb-5"><TemplatesSchematic /></div>
                 <h3 className="text-[17px] font-bold text-slate-900 flex items-center gap-2"><MessageSquare className="w-4 h-4 text-[#A8C300]" /> Antwort-Vorlagen</h3>
                 <p className="text-[14px] text-slate-600 mt-1.5">Häufige Fragen mit einem Klick beantworten.</p>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col">
+                <div className="h-32 flex items-center justify-center mb-5">
+                  <div className="text-center">
+                    <ShieldCheck className="w-14 h-14 text-[#A8C300] mx-auto mb-2" />
+                    <div className="inline-flex items-center gap-1 text-[11px] font-bold text-[#7a9000] bg-[#A8C300]/10 rounded-full px-2.5 py-1"><Check className="w-3 h-3" /> Ohne Passwort</div>
+                  </div>
+                </div>
+                <h3 className="text-[17px] font-bold text-slate-900 flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-[#A8C300]" /> Sicher verbinden</h3>
+                <p className="text-[14px] text-slate-600 mt-1.5">Dein Kleinanzeigen-Passwort bleibt bei dir – wir sehen es nie.</p>
               </div>
             </div>
           </div>

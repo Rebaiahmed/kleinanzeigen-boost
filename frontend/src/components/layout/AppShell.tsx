@@ -7,7 +7,7 @@ import { AlertCircle, MessageSquare } from 'lucide-react';
 
 const FEEDBACK_FORM_URL =
   (import.meta as any).env.VITE_FEEDBACK_FORM_URL ||
-  'https://docs.google.com/forms/d/e/1FAIpQLScNP_PSe3pRAKCwS8vIMd2GVB_trsRKwi3XTb8CRSmqUwprkA/viewform';
+  'https://docs.google.com/forms/d/e/1FAIpQLSfWFO_imx_NLkCTGjphKV1gwogiHbZTxmjUEzVHma79n1gE_w/viewform';
 
 // The extension is a Chrome/Chromium MV3 extension — it can't be installed in
 // Firefox or Safari. Chromium browsers (Chrome, Edge, Brave, Opera) report

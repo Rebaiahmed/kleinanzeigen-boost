@@ -2,9 +2,116 @@
 // Sync is extension-initiated: frontend triggers TRIGGER_SYNC → background
 // fetches ads from Kleinanzeigen → POSTs to backend.
 import { ENDPOINTS } from '../config/endpoints';
-import { executeRepostCreateOnly, executeRepostFullFlow } from './repost-engine';
+import { executeRepostFullFlow, registerOverlayScript, unregisterOverlayScript } from './repost-engine';
 
 const API_URL = ENDPOINTS.API_BASE;
+
+// Cross-tab safety net: only ONE instant repost may run at a time. The frontend
+// queue normally serializes clicks, but this guard prevents a second parallel
+// repost (e.g. from a second dashboard tab) from ever starting.
+let repostBusy = false;
+
+// Client-side scheduler: the extension is the PRIMARY repost path — it runs due
+// reposts from the user's real browser/IP (no datacenter IP ban). The server is
+// only a fallback after a grace window (see scheduler.constants).
+const CLIENT_SCHEDULER_ENABLED = true;
+let clientSchedulerRunning = false;
+
+/**
+ * Run ONE repost in a fresh background tab (shared by the manual "Jetzt" trigger
+ * and the client scheduler). Honours the single-runner busy guard, shows the
+ * branded overlay, and resolves with the flow result.
+ */
+function performRepost(adId: string, adData: any): Promise<{ ok: boolean; step?: string; finalUrl?: string; error?: string; busy?: boolean }> {
+  return new Promise((resolve) => {
+    if (repostBusy) { resolve({ ok: false, busy: true, error: 'Es läuft bereits ein Repost' }); return; }
+    repostBusy = true;
+    registerOverlayScript().finally(() => {
+      chrome.tabs.create({ url: 'https://www.kleinanzeigen.de/#ab-repost-start' }, (newTab) => {
+        if (!newTab?.id) {
+          unregisterOverlayScript();
+          repostBusy = false;
+          resolve({ ok: false, error: 'failed to create new tab' });
+          return;
+        }
+        setTimeout(() => {
+          executeRepostFullFlow(newTab.id!, adId, adData).then((result) => {
+            const title = result.ok ? '✅ Anzeige neu eingestellt' : '❌ Neu einstellen fehlgeschlagen';
+            const msg = result.ok
+              ? `Deine Anzeige wurde erfolgreich neu eingestellt.\n${result.finalUrl || ''}`
+              : `Bei Schritt "${result.step}": ${result.error}`;
+            chrome.notifications.create({ type: 'basic', iconUrl: 'icons/icon-128.png', title, message: msg.slice(0, 300) });
+            resolve(result);
+          }).catch((e) => {
+            console.error('[BG] executeRepostFullFlow error:', e.message);
+            resolve({ ok: false, error: e.message, step: 'unknown' });
+          }).finally(() => {
+            unregisterOverlayScript();
+            repostBusy = false;
+          });
+        }, 1000);
+      });
+    });
+  });
+}
+
+/**
+ * Find due reposts and run them one at a time (with a jittered pause between),
+ * from the user's real browser. Claims each ad so the server fallback skips it.
+ * Runs on a 1-min alarm AND on browser startup (catch-up for schedules that came
+ * due while Chrome was closed).
+ */
+async function runDueClientReposts(verbose = false): Promise<void> {
+  if (!CLIENT_SCHEDULER_ENABLED || clientSchedulerRunning) return;
+  const { token } = await chrome.storage.session.get(['token']);
+  if (!token) { if (verbose) console.warn('[BG][sched] no token — not connected'); return; }
+
+  let ads: any[] = [];
+  try {
+    const res = await fetch(`${API_URL}/ads`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) { if (verbose) console.warn('[BG][sched] /ads HTTP', res.status); return; }
+    const data = await res.json();
+    ads = data.ads || data.data || data || [];
+  } catch (e: any) { if (verbose) console.warn('[BG][sched] fetch failed:', e.message); return; }
+
+  const now = Date.now();
+  const due = ads.filter((a) =>
+    a.autoRepost === true &&
+    a.nextRepostAt && new Date(a.nextRepostAt).getTime() <= now &&
+    (!a.listingState || a.listingState === 'active'));
+  if (due.length === 0) { if (verbose) console.log('[BG][sched] no due reposts'); return; }
+
+  console.log(`[BG][sched] ${due.length} due repost(s) — running client-side, one at a time`);
+  clientSchedulerRunning = true;
+  const authHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+  try {
+    for (let i = 0; i < due.length; i++) {
+      const ad = due[i];
+
+      // Coordination with the server fallback is via the grace window (server only
+      // runs ads still due after SERVER_FALLBACK_GRACE_MINUTES). On success we
+      // RESCHEDULE to now+interval — well within that window — so the recurring
+      // schedule continues and the server never double-posts the same due window.
+      const result = await performRepost(String(ad.id), ad);
+
+      try {
+        if (result.ok) {
+          const interval = Number(ad.repostIntervalMinutes) || 1440;
+          const next = new Date(Date.now() + interval * 60000).toISOString();
+          await fetch(`${API_URL}/ads/${ad.id}`, { method: 'PATCH', headers: authHeaders, body: JSON.stringify({ nextRepostAt: next }) });
+        }
+        // On failure: leave nextRepostAt so the next tick / server fallback retries.
+      } catch { /* non-fatal */ }
+
+      // Jittered pause before the next queued repost (human-like, lowers risk).
+      if (i < due.length - 1) {
+        await new Promise((r) => setTimeout(r, 4000 + Math.floor(Math.random() * 4000)));
+      }
+    }
+  } finally {
+    clientSchedulerRunning = false;
+  }
+}
 
 // ─── Uninstall feedback form ──────────────────────────────────────────────────
 const FEEDBACK_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLScNP_PSe3pRAKCwS8vIMd2GVB_trsRKwi3XTb8CRSmqUwprkA/viewform';
@@ -13,8 +120,6 @@ function registerUninstallUrl() {
   chrome.runtime.setUninstallURL(FEEDBACK_FORM_URL, () => {
     if (chrome.runtime.lastError) {
       console.warn('[BG] Failed to set uninstall URL:', chrome.runtime.lastError.message);
-    } else {
-      console.log('[BG] Uninstall feedback form registered');
     }
   });
 }
@@ -25,7 +130,6 @@ registerUninstallUrl();
 // Also register on first install
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
-    console.log('[BG] Extension installed, registering uninstall URL');
     registerUninstallUrl();
   }
 });
@@ -39,11 +143,22 @@ async function doSync(token: string): Promise<{ success: boolean; ads?: any[]; e
   const ads = Array.isArray(raw.ads) ? raw.ads
     : Array.isArray(raw.listings) ? raw.listings
     : Array.isArray(raw) ? raw : [];
-  if (ads.length > 0) console.log('[BG] Ad sample keys:', Object.keys(ads[0]));
+
+  // NOTE: Kleinanzeigen list endpoint does NOT return description or photo URLs
+  // - articles[] = add-on services (AD_BUMP_UP, etc), NOT the description
+  // - imageCount = count of images, but not the URLs themselves
+  // Description and photos would need to be fetched from individual ad pages
+
+  const enrichedAds = ads.map((ad: any) => {
+    // Remove articles field (not needed - it's just add-on services)
+    const { articles, ...adWithoutArticles } = ad;
+    return adWithoutArticles;
+  });
+
   const importRes = await fetch(`${API_URL}/ads/import`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ ads }),
+    body: JSON.stringify({ ads: enrichedAds }),
   });
   const data = await importRes.json();
   if (!importRes.ok) throw new Error(data.message || `Import failed ${importRes.status}`);
@@ -53,10 +168,15 @@ async function doSync(token: string): Promise<{ success: boolean; ads?: any[]; e
 
 chrome.alarms.create('periodic-sync', { periodInMinutes: 30 });
 
-// NOTE: extension-side simulated scheduler is DISABLED — the simulation now runs
-// in the BACKEND cron (REPOST_SIMULATE=true) and the dashboard shows the notifs.
-// The alarm below is intentionally not created (kept the code for reference).
-// chrome.alarms.create('repost-sim-check', { periodInMinutes: 1 });
+// Client-side repost scheduler — runs due reposts from the user's real browser.
+// Fires every minute while Chrome is open; onStartup catches up schedules that
+// came due while Chrome was closed.
+if (CLIENT_SCHEDULER_ENABLED) {
+  chrome.alarms.create('client-repost-scheduler', { periodInMinutes: 1 });
+  chrome.runtime.onStartup.addListener(() => {
+    runDueClientReposts(true).catch((e) => console.warn('[BG][sched] startup run failed:', e.message));
+  });
+}
 
 /** Pop an alert() on an open Kleinanzeigen tab (no OS-notification dependency). */
 function alertOnKaTab(text: string) {
@@ -91,17 +211,11 @@ async function runSimulatedScheduler(verbose = false) {
   } catch (e: any) { if (verbose) console.warn('[BG][sim] fetch failed:', e.message); return; }
 
   const now = Date.now();
-  if (verbose) {
-    console.log(`[BG][sim] fetched ${ads.length} ad(s). Auto-repost ads:`);
-    ads.filter((a) => a.autoRepost).forEach((a) =>
-      console.log(`[BG][sim]   ad ${a.id}: nextRepostAt=${a.nextRepostAt} (due=${a.nextRepostAt ? new Date(a.nextRepostAt).getTime() <= now : false}) listingState=${a.listingState}`));
-  }
   const due = ads.filter((a) =>
     a.autoRepost === true &&
     a.nextRepostAt && new Date(a.nextRepostAt).getTime() <= now &&
     (!a.listingState || a.listingState === 'active'),
   );
-  if (verbose) console.log(`[BG][sim] due now: ${due.length}`);
   if (due.length === 0) return;
 
   for (const ad of due) {
@@ -125,7 +239,6 @@ async function runSimulatedScheduler(verbose = false) {
         body: JSON.stringify({ nextRepostAt: next }),
       });
     } catch { /* non-fatal in test mode */ }
-    console.log(`[BG][sim] notified + rescheduled ad ${ad.id} → next ${next}`);
   }
 }
 
@@ -133,11 +246,13 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'periodic-sync') {
     chrome.storage.session.get(['token'], async ({ token }: any) => {
       if (!token) return;
-      try { await doSync(token); console.log('[BG] Periodic sync done'); }
+      try { await doSync(token); }
       catch (e: any) { console.warn('[BG] Periodic sync failed:', e.message); }
     });
   } else if (alarm.name === 'repost-sim-check') {
     runSimulatedScheduler().catch((e) => console.warn('[BG][sim] failed:', e.message));
+  } else if (alarm.name === 'client-repost-scheduler') {
+    runDueClientReposts().catch((e) => console.warn('[BG][sched] failed:', e.message));
   }
 });
 
@@ -215,7 +330,6 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
         return;
       }
       if (token) {
-        console.log('[BG] Sending token from session storage');
         sendResponse({ token });
       } else {
         // Fallback: try to get from local storage (for development)
@@ -225,7 +339,6 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
             sendResponse({ token: null });
             return;
           }
-          console.log('[BG] Sending token from local storage:', localToken ? 'found' : 'not found');
           sendResponse({ token: localToken || null });
         });
       }
@@ -281,7 +394,6 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
         }
       }
 
-      console.log('[BG] KA login check → isLoggedIn:', isLoggedIn, '| username:', username);
       sendResponse({ isLoggedIn, username });
     });
     return true;
@@ -352,103 +464,31 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
     return true;
   }
 
-  // CDP UPLOAD TEST — attach a photo to KA's file input via chrome.debugger
-  // (DOM.setFileInputFiles), the same mechanism Playwright/kleinanzeigen-bot use.
-  // This bypasses the file-input security wall that blocks input.files. Runs in
-  // the user's own browser (home IP, real session). Non-destructive: does not submit.
-  if (message.type === 'AB_CDP_UPLOAD_TEST') {
-    const tabId = _sender.tab?.id;
-    if (!tabId) { sendResponse({ ok: false, error: 'no tab' }); return true; }
-    runCdpUploadTest(tabId).then(sendResponse);
-    return true;
-  }
-
-  // v1 client-side repost (CREATE-ONLY, no delete) — runs the CDP engine on the
-  // active KA tab. Needs an active kleinanzeigen.de tab to attach the debugger to.
-  if (message.type === 'AB_REPOST_CREATE_TEST') {
-    // Accept either the numeric id or the URL slug (e.g. "3406908146-81-1928").
-    const adId = (String(message.adId || '').match(/\d{5,}/) || [''])[0];
-    if (!adId) { sendResponse({ ok: false, error: 'no valid numeric adId' }); return true; }
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const tab = tabs.find((t) => /kleinanzeigen\.de/.test(t.url || '')) || tabs[0];
-      if (!tab?.id) { sendResponse({ ok: false, error: 'no active KA tab — open kleinanzeigen.de first' }); return; }
-      executeRepostCreateOnly(tab.id, adId).then((result) => {
-        // Surface the outcome as a desktop notification (the tab navigates during
-        // the flow, so the page callback often can't deliver it).
-        const title = result.ok ? '✅ Repost-Test fertig' : '❌ Repost-Test fehlgeschlagen';
-        const msg = result.ok
-          ? `Schritt: ${result.step}. Prüfe deine Anzeigen auf ein neues Duplikat.\n${result.finalUrl || ''}`
-          : `Bei Schritt "${result.step}": ${result.error}`;
-        chrome.notifications.create({
-          type: 'basic',
-          iconUrl: 'icons/icon-128.png',
-          title,
-          message: msg.slice(0, 300),
-        });
-        sendResponse(result);
-      });
-    });
-    return true;
-  }
-
   // Instant repost ("Jetzt") — full flow with delete + create, runs client-side
   // in the user's own browser tab, visible, using their session and IP.
   if (message.type === 'AB_REPOST_INSTANT') {
     const adId = (String(message.adId || '').match(/\d{5,}/) || [''])[0];
     if (!adId) { sendResponse({ ok: false, error: 'no valid numeric adId' }); return true; }
 
-    // Fetch ad data from backend
+    // Fetch ad data from backend, then run via the shared single-runner path.
     chrome.storage.session.get(['token'], async ({ token }: any) => {
       if (!token) { sendResponse({ ok: false, error: 'no session token' }); return; }
-
       let adData: any = null;
       try {
-        // Fetch all ads and find the matching one
-        const adsRes = await fetch(`${API_URL}/ads`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const adsRes = await fetch(`${API_URL}/ads`, { headers: { Authorization: `Bearer ${token}` } });
         if (adsRes.ok) {
           const adsResponse = await adsRes.json();
           const ads = adsResponse.ads || adsResponse.data || [];
           adData = ads.find((a: any) => String(a.id) === adId);
-          if (adData) {
-            console.log('[BG] fetched ad data:', { id: adData.id, title: adData.title, images: adData.images?.length || 0 });
-          } else {
-            console.warn('[BG] ad not found in list:', adId);
-          }
+          if (!adData) console.warn('[BG] ad not found in list:', adId);
         } else {
           console.warn('[BG] failed to fetch ads:', adsRes.status);
         }
       } catch (err: any) {
         console.warn('[BG] failed to fetch ad data:', err.message);
       }
-
-      // Open a NEW tab to Kleinanzeigen (not reuse dashboard tab)
-      chrome.tabs.create({ url: 'https://www.kleinanzeigen.de' }, (newTab) => {
-        if (!newTab?.id) {
-          sendResponse({ ok: false, error: 'failed to create new tab' });
-          return;
-        }
-        // Wait a moment for the tab to load, then run repost
-        setTimeout(() => {
-          executeRepostFullFlow(newTab.id!, adId, adData).then((result) => {
-            const title = result.ok ? '✅ Anzeige neu eingestellt' : '❌ Neu einstellen fehlgeschlagen';
-            const msg = result.ok
-              ? `Deine Anzeige wurde erfolgreich neu eingestellt.\n${result.finalUrl || ''}`
-              : `Bei Schritt "${result.step}": ${result.error}`;
-            chrome.notifications.create({
-              type: 'basic',
-              iconUrl: 'icons/icon-128.png',
-              title,
-              message: msg.slice(0, 300),
-            });
-            sendResponse(result);
-          }).catch((e) => {
-            console.error('[BG] executeRepostFullFlow error:', e.message);
-            sendResponse({ ok: false, error: e.message, step: 'unknown' });
-          });
-        }, 1000); // Wait 1 second for new tab to initialize
-      });
+      const result = await performRepost(adId, adData);
+      sendResponse(result);
     });
     return true;
   }
@@ -462,9 +502,6 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
       iconUrl: 'icons/icon-128.png',
       title: '🔔 AnzeigenBoost Test',
       message: 'Wenn du das siehst, funktionieren Benachrichtigungen. Prüfe jetzt die Konsole für [BG][sim].',
-    }, (id) => {
-      const err = chrome.runtime.lastError;
-      console.log('[BG][sim] test notification created id=', id, 'err=', err?.message);
     });
     runSimulatedScheduler(true).then(() => sendResponse({ ok: true })).catch((e) => sendResponse({ ok: false, error: e.message }));
     return true;
@@ -483,108 +520,3 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
     return true;
   }
 });
-
-// ─── CDP file-upload proof-of-concept ─────────────────────────────────────────
-
-/** Promisified chrome.debugger.sendCommand. */
-function cdp(target: chrome.debugger.Debuggee, method: string, params?: any): Promise<any> {
-  return new Promise((resolve, reject) => {
-    chrome.debugger.sendCommand(target, method, params || {}, (res) => {
-      const err = chrome.runtime.lastError;
-      if (err) reject(new Error(err.message)); else resolve(res);
-    });
-  });
-}
-
-/** Download a tiny test image and return its absolute on-disk path. */
-function downloadTestImage(): Promise<string> {
-  // 8x8 green PNG (valid image KA will accept for the POC).
-  const dataUrl =
-    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAFklEQVR42mNkYPhfz0BkYBxVSFQFAP9cBQHsx0p6AAAAAElFTkSuQmCC';
-  return new Promise((resolve, reject) => {
-    chrome.downloads.download({ url: dataUrl, filename: 'anzeigenboost/ab-test.png', conflictAction: 'overwrite' }, (id) => {
-      if (chrome.runtime.lastError || id == null) { reject(new Error(chrome.runtime.lastError?.message || 'download failed')); return; }
-      const onChanged = (delta: chrome.downloads.DownloadDelta) => {
-        if (delta.id !== id || !delta.state) return;
-        if (delta.state.current === 'complete') {
-          chrome.downloads.onChanged.removeListener(onChanged);
-          chrome.downloads.search({ id }, (items) => {
-            const f = items?.[0]?.filename;
-            if (f) resolve(f); else reject(new Error('no file path after download'));
-          });
-        } else if (delta.state.current === 'interrupted') {
-          chrome.downloads.onChanged.removeListener(onChanged);
-          reject(new Error('download interrupted'));
-        }
-      };
-      chrome.downloads.onChanged.addListener(onChanged);
-    });
-  });
-}
-
-async function runCdpUploadTest(tabId: number): Promise<{ ok: boolean; filesLength?: number; error?: string; filePath?: string; fileBytes?: number }> {
-  const target = { tabId };
-  let fileBytes = -1;
-  try {
-    const filePath = await downloadTestImage();
-    await new Promise<void>((r) => chrome.downloads.search({}, (items) => {
-      const it = items.find((i) => i.filename === filePath);
-      fileBytes = it?.fileSize ?? it?.totalBytes ?? -1;
-      r();
-    }));
-    console.log('[AB-cdp] test image downloaded to:', filePath, 'bytes=', fileBytes);
-
-    await new Promise<void>((resolve, reject) => {
-      chrome.debugger.attach(target, '1.3', () => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-          return;
-        }
-        resolve();
-      });
-    });
-    console.log('[AB-cdp] debugger attached');
-
-    await cdp(target, 'DOM.enable');
-    const { root } = await cdp(target, 'DOM.getDocument', { depth: -1 });
-    const { nodeId } = await cdp(target, 'DOM.querySelector', { nodeId: root.nodeId, selector: 'input[type="file"][accept*="image"]' });
-    if (!nodeId) throw new Error('file input not found via CDP');
-
-    await cdp(target, 'DOM.setFileInputFiles', { files: [filePath], nodeId });
-    console.log('[AB-cdp] DOM.setFileInputFiles sent for path:', filePath);
-
-    // Verify how many files the input now holds (via the page).
-    const { object } = await cdp(target, 'DOM.resolveNode', { nodeId });
-    let filesLength = -1;
-    if (object?.objectId) {
-      const r = await cdp(target, 'Runtime.callFunctionOn', {
-        objectId: object.objectId,
-        functionDeclaration: 'function(){ this.dispatchEvent(new Event("change",{bubbles:true})); this.dispatchEvent(new Event("input",{bubbles:true})); return this.files ? this.files.length : -1; }',
-        returnByValue: true,
-      });
-      filesLength = r?.result?.value;
-    }
-    console.log('[AB-cdp] ✓ input.files.length after CDP upload =', filesLength, '→ WATCH the form for a preview');
-
-    await new Promise<void>((resolve) => {
-      chrome.debugger.detach(target, () => {
-        if (chrome.runtime.lastError) {
-          console.warn('[AB-cdp] debugger.detach error:', chrome.runtime.lastError.message);
-        }
-        resolve();
-      });
-    });
-    return { ok: true, filesLength, filePath, fileBytes };
-  } catch (e: any) {
-    console.warn('[AB-cdp] ✗ failed:', e.message);
-    await new Promise<void>((resolve) => {
-      chrome.debugger.detach(target, () => {
-        if (chrome.runtime.lastError) {
-          console.warn('[AB-cdp] debugger.detach error during cleanup:', chrome.runtime.lastError.message);
-        }
-        resolve();
-      });
-    }).catch(() => {});
-    return { ok: false, error: e.message, fileBytes };
-  }
-}

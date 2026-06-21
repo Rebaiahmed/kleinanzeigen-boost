@@ -102,7 +102,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <footer className="bg-[#f5f5f5] py-8 mt-auto">
         <div className="max-w-[900px] mx-auto px-4 text-center text-[13px] text-[#666]">
-          KleinanzeigenBoost — Deine Anzeigen immer ganz oben <span className="mx-2">|</span> Made with <span className="text-red-500">♥</span> in Germany
+          AnzeigenBoost — Deine Anzeigen immer ganz oben <span className="mx-2">|</span> Made with <span className="text-red-500">♥</span> in Germany
         </div>
       </footer>
 

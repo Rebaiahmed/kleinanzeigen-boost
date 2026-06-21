@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Sparkles, RefreshCw, Check, Loader2, AlertCircle } from 'lucide-react';
 import { PriceSuggestion } from './PriceSuggestion';
+import { isGiveAwayAd } from '../../lib/adPrice';
 
 interface KiPanelProps {
   optimizePanelAdId: string | null;
@@ -292,8 +293,9 @@ export function KiPanel({
                 </p>
               </div>
 
-              {/* Price Suggestion — inline in the KI panel */}
-              {panelAd && (
+              {/* Price Suggestion — inline in the KI panel.
+                  Hidden for give-away ("Zu verschenken") ads — nothing to price. */}
+              {panelAd && !isGiveAwayAd(panelAd) && (
                 <div className="border-t border-gray-100 pt-4">
                   <p className="text-[12px] font-bold text-gray-600 uppercase tracking-wider mb-2">
                     💶 Preisvorschlag

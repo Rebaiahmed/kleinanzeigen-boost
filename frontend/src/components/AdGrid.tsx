@@ -13,6 +13,8 @@ interface AdGridProps {
   onUpdateFields: (adId: string, fields: any) => Promise<boolean>;
   aiBlocked?: boolean;
   aiWarning?: boolean;
+  repostRunningId?: string | null;
+  repostQueuedIds?: string[];
 }
 
 export function AdGrid({
@@ -27,25 +29,38 @@ export function AdGrid({
   onUpdateFields,
   aiBlocked = false,
   aiWarning = false,
+  repostRunningId = null,
+  repostQueuedIds = [],
 }: AdGridProps) {
+  const repostBusy = repostRunningId !== null || repostQueuedIds.length > 0;
   return (
     <div className="space-y-3">
-      {ads.map((ad) => (
-        <AdCard
-          key={ad.id}
-          ad={ad}
-          onAction={onAction}
-          onAIOptimize={onAIOptimize}
-          onPriceCheck={onPriceCheck}
-          onSchedule={onSchedule}
-          onEbayCrossPost={onEbayCrossPost}
-          onConnectEbay={onConnectEbay}
-          isEbayConnected={isEbayConnected}
-          onUpdateFields={onUpdateFields}
-          aiBlocked={aiBlocked}
-          aiWarning={aiWarning}
-        />
-      ))}
+      {ads.map((ad) => {
+        const repostState: 'idle' | 'running' | 'queued' =
+          repostRunningId === ad.id ? 'running'
+            : repostQueuedIds.includes(ad.id) ? 'queued'
+            : 'idle';
+        const queuePosition = repostQueuedIds.indexOf(ad.id); // -1 if not queued
+        return (
+          <AdCard
+            key={ad.id}
+            ad={ad}
+            onAction={onAction}
+            onAIOptimize={onAIOptimize}
+            onPriceCheck={onPriceCheck}
+            onSchedule={onSchedule}
+            onEbayCrossPost={onEbayCrossPost}
+            onConnectEbay={onConnectEbay}
+            isEbayConnected={isEbayConnected}
+            onUpdateFields={onUpdateFields}
+            aiBlocked={aiBlocked}
+            aiWarning={aiWarning}
+            repostState={repostState}
+            repostBusy={repostBusy}
+            repostQueuePosition={queuePosition >= 0 ? queuePosition + 1 : 0}
+          />
+        );
+      })}
     </div>
   );
 }

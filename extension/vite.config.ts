@@ -9,6 +9,7 @@ export default defineConfig({
       input: {
         background: resolve(__dirname, 'src/background/index.ts'),
         content: resolve(__dirname, 'src/content/index.ts'),
+        overlay: resolve(__dirname, 'src/content/overlay.ts'), // document_start repost overlay
         dashboard: resolve(__dirname, 'src/content/dashboard.ts'), // ← keep .ts
         popup: resolve(__dirname, 'src/popup/index.html'),
       },

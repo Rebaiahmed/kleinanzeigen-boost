@@ -151,7 +151,10 @@ export function Settings() {
 
       <h1 className="text-3xl font-bold text-[#333]">Einstellungen</h1>
       
-      {/* Platform Connections Section */}
+      {/* Platform Connections Section — only shown once a platform is enabled.
+          Every card is feature-flagged; with all flags off this would otherwise
+          render an empty heading, so hide the whole section. */}
+      {(flags.enableVinted || flags.enableEbay || flags.enableFacebookMarketplace) && (
       <section className="bg-white p-6 rounded-lg shadow-sm border border-ka-gray-200">
         <h2 className="text-xl font-semibold mb-6 text-ka-gray-900">Plattform-Verbindungen</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -255,10 +258,11 @@ export function Settings() {
 
         </div>
       </section>
+      )}
 
       {/* AI Usage Section */}
       <section className="bg-white p-6 rounded-lg shadow-sm border border-ka-gray-200">
-        <h2 className="text-xl font-semibold mb-6 text-ka-gray-900">AI Optimizations</h2>
+        <h2 className="text-xl font-semibold mb-6 text-ka-gray-900">KI-Optimierungen</h2>
         
         {isLoadingUsage ? (
           <div className="text-sm text-gray-500 animate-pulse py-4">Lade KI-Nutzungsdaten...</div>
@@ -292,26 +296,17 @@ export function Settings() {
                   </span>
                 </div>
 
-                {/* Detailed Text & Upgrade Button */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
-                  <div className="text-sm text-gray-600 leading-normal">
-                    {isUnlimited ? (
-                      <p className="font-semibold text-gray-800">
-                        {callsCount} Optimierungen genutzt. Unbegrenzter Zugriff aktiv.
-                      </p>
-                    ) : (
-                      <p className="font-semibold text-gray-800">
-                        {callsCount} von {(limit || 0).toLocaleString('de-DE')} KI-Optimierungen verfügbar diesen Monat.
-                      </p>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={() => showToast('Plan-Upgrade wird geladen...', 'success')}
-                    className="px-5 py-2 bg-[#A8C300] hover:bg-[#96ae00] text-white font-bold text-[13px] rounded-sm transition-colors shadow-sm cursor-pointer whitespace-nowrap self-start sm:self-center"
-                  >
-                    Plan upgraden
-                  </button>
+                {/* Detailed usage text */}
+                <div className="pt-2 text-sm text-gray-600 leading-normal">
+                  {isUnlimited ? (
+                    <p className="font-semibold text-gray-800">
+                      {callsCount} Optimierungen genutzt. Unbegrenzter Zugriff aktiv.
+                    </p>
+                  ) : (
+                    <p className="font-semibold text-gray-800">
+                      {callsCount} von {(limit || 0).toLocaleString('de-DE')} KI-Optimierungen verfügbar diesen Monat.
+                    </p>
+                  )}
                 </div>
               </div>
             );

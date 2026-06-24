@@ -20,6 +20,20 @@ const visibleLoginJobs = new Map<string, {
   error?: string;
 }>();
 
+// ─── Health check (PUBLIC — declared before the auth guard) ─────────────────
+// Unauthenticated so uptime monitors / CI can probe it without the internal
+// secret. Reports whether INTERNAL_SECRET is actually configured (vs the dev
+// fallback) WITHOUT leaking it — this surfaces the ".env not loaded" failure mode.
+app.get('/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'anzeigenboost-automation',
+    uptimeSeconds: Math.round(process.uptime()),
+    port,
+    secret: internalSecret === 'dev_secret_key' ? 'DEFAULT_DEV' : 'configured',
+  });
+});
+
 // ─── Security middleware ────────────────────────────────────────────────────
 app.use((req, res, next) => {
   const secret = req.header('X-Internal-Secret');

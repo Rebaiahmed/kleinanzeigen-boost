@@ -333,21 +333,39 @@ export class SchedulerService {
 
       // 1. Atomic state lock — read first so we skip gracefully if the ad was
       //    deleted, or its status/autoRepost changed, between the query and now.
-      const locked = await db.runTransaction(async (t) => {
-        const ref = db.collection('users').doc(userId).collection('ads').doc(adId);
-        const snap = await t.get(ref);
-        if (!snap.exists) return false; // deleted since the query
+      //    Returns WHY it was skipped so we can stop re-querying ineligible ads
+      //    every run (they'd otherwise show up as "due" forever).
+      const adRef = db.collection('users').doc(userId).collection('ads').doc(adId);
+      const lock = await db.runTransaction(async (t): Promise<
+        { locked: true } | { locked: false; action: 'clear' | 'snooze' | 'retry' }
+      > => {
+        const snap = await t.get(adRef);
+        if (!snap.exists) return { locked: false, action: 'clear' };          // gone from our DB
         const cur = snap.data() as any;
-        if (cur.status !== AdStatus.ACTIVE || cur.autoRepost !== true) return false; // no longer eligible
-        // Don't repost listings that KA marks reserved/paused/deleted — reposting
-        // a reserved ad would be wrong. State is refreshed on every sync.
-        if (cur.listingState && cur.listingState !== 'active') return false;
-        t.update(ref, { status: AdStatus.PENDING_REPOST, pendingRepostSince: new Date().toISOString() });
-        return true;
+        if (cur.autoRepost !== true) return { locked: false, action: 'clear' };// recurring turned off
+        if (cur.listingState === 'deleted') return { locked: false, action: 'clear' }; // gone on KA
+        // Reserved/paused on KA is TEMPORARY — don't clear the schedule, just snooze.
+        if (cur.listingState && cur.listingState !== 'active') return { locked: false, action: 'snooze' };
+        if (cur.status !== AdStatus.ACTIVE) return { locked: false, action: 'retry' }; // transient (e.g. already pending)
+        t.update(adRef, { status: AdStatus.PENDING_REPOST, pendingRepostSince: new Date().toISOString() });
+        return { locked: true };
       });
 
-      if (!locked) {
-        this.logger.log(`${logCtx(userId, adId)} Skipped — ad deleted or no longer eligible`);
+      if (!lock.locked) {
+        if (lock.action === 'clear') {
+          // Deleted or recurring disabled — stop re-querying it every run.
+          await adRef.update({ nextRepostAt: null, autoRepost: false }).catch(() => {});
+          this.logger.log(`${logCtx(userId, adId)} Skipped & cleared — deleted/ineligible; auto-repost off`);
+        } else if (lock.action === 'snooze') {
+          // Paused/reserved on KA: push nextRepostAt forward one interval so it's
+          // re-checked later, not every run. Sync flips listingState back to
+          // 'active' when the reservation lifts, and reposting resumes.
+          const next = new Date(Date.now() + repostIntervalMinutes * 60000).toISOString();
+          await adRef.update({ nextRepostAt: next }).catch(() => {});
+          this.logger.log(`${logCtx(userId, adId)} Skipped & snoozed — listing not active; re-check ${next}`);
+        } else {
+          this.logger.log(`${logCtx(userId, adId)} Skipped — transient state, will retry next run`);
+        }
         continue;
       }
 
@@ -405,8 +423,7 @@ export class SchedulerService {
         }
         this.logger.error(`${logCtx(userId, adId, runId)} ✗ Repost failed [${errorCode}]: ${error.message}`);
 
-        const adRef = db.collection('users').doc(userId).collection('ads').doc(adId);
-
+        // adRef is declared at the top of this loop iteration.
         // Always record the failure in the ad's repostLogs for traceability.
         await adRef.collection('repostLogs').add({
           status: 'failed',

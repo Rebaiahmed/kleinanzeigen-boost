@@ -32,4 +32,28 @@ jobs:
             npm run build
             pm2 restart anzeigenboost-automation --update-env || pm2 start dist/index.js --name anzeigenboost-automation
             pm2 save
-            echo "✅ Automation worker deployed."
+
+            # ── Post-deploy health check ──────────────────────────────────────
+            # A "successful" deploy means nothing if the worker crash-loops (e.g.
+            # a port conflict) or rejects the internal secret. Probe it on 3001 and
+            # fail the workflow if it's not actually up + authenticated.
+            echo "▶ Health check on :3001…"
+            SEC=$(grep '^INTERNAL_SECRET=' .env | cut -d= -f2-)
+            RESP=""
+            for i in 1 2 3 4 5 6; do
+              sleep 2
+              RESP=$(curl -s -m 5 -H "X-Internal-Secret: $SEC" -X POST \
+                http://127.0.0.1:3001/scrape-views -H "Content-Type: application/json" -d '{}' || true)
+              [ -n "$RESP" ] && break
+            done
+            echo "Worker response: ${RESP:-<none>}"
+            if [ -z "$RESP" ]; then
+              echo "❌ Worker not responding on :3001 (crashed or not listening)"
+              pm2 logs anzeigenboost-automation --lines 40 --nostream || true
+              exit 1
+            fi
+            if echo "$RESP" | grep -qi "mismatch"; then
+              echo "❌ INTERNAL_SECRET mismatch — automation/.env and backend/.env differ"
+              exit 1
+            fi
+            echo "✅ Automation worker deployed & healthy (online + authenticated)."

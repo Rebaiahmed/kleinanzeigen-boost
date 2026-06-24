@@ -39,6 +39,22 @@ async function acceptConsent(page: Page): Promise<boolean> {
   return false;
 }
 
+/**
+ * The CMP loads asynchronously and can re-overlay the form, so a single early
+ * click misses it. Poll for up to ~4s, clicking as soon as it appears (breaks
+ * early once dismissed). Cheap no-op when consent isn't shown.
+ */
+async function dismissConsent(page: Page, label = ''): Promise<void> {
+  for (let i = 0; i < 8; i++) {
+    if (await acceptConsent(page)) {
+      console.log(`[repost] accepted cookie-consent wall${label ? ` (${label})` : ''}`);
+      await delay(800);
+      return;
+    }
+    await delay(500);
+  }
+}
+
 // Helper to mimic human latency
 export const randomDelay = async (min = 1000, max = 5000) => {
   const ms = Math.floor(Math.random() * (max - min + 1) + min);
@@ -390,6 +406,8 @@ async function uploadPhotos(page: Page, files: string[]): Promise<boolean> {
 }
 
 async function submitForm(page: Page): Promise<boolean> {
+  // Clear any consent overlay that re-appeared, so it can't swallow the submit.
+  await dismissConsent(page, 'before submit');
   const clickInfo = await page.evaluate(() => {
     const btns = Array.from(document.querySelectorAll('button'));
     const btn = btns.find((x) => (x.textContent || '').toLowerCase().includes('aufgeben')) as HTMLButtonElement | undefined;
@@ -538,11 +556,12 @@ export async function executeRepostFlow(userId: string, adId: string, adData: an
       await captureFullDiagnostics(context, page, createResp, currentStep, '403 AT CREATE PAGE');
       throw new Error('403_FORBIDDEN at create page');
     }
-    // Consent wall can also appear here — dismiss before waiting for the form.
-    if (await acceptConsent(page)) { console.log('[repost] accepted cookie-consent wall (create page)'); await delay(800); }
     if (!(await page.waitForSelector('input#ad-title', { timeout: 15000 }).then(() => true).catch(() => false))) {
       throw new Error('FORM_NOT_FOUND — create form did not render');
     }
+    // Dismiss the consent overlay AFTER the form renders — the CMP loads async and
+    // would otherwise block the title/price fills (leaving them empty at submit).
+    await dismissConsent(page, 'create page');
 
     // 1) Category FIRST (renders category-specific fields). Use L1 id from the path.
     currentStep = 'set_category';
@@ -586,8 +605,20 @@ export async function executeRepostFlow(userId: string, adId: string, adData: an
 
     // 7) Title — deferred to just before submit (prevents React re-render clearing it).
     currentStep = 'set_title';
-    if (merged.title) await fillField(page, 'input#ad-title', merged.title);
-    await delay(400);
+    if (merged.title) {
+      await fillField(page, 'input#ad-title', merged.title);
+      await delay(400);
+      // Verify it stuck — a consent overlay or re-render can swallow the fill,
+      // leaving the title empty (a top cause of SUBMIT_NOT_CONFIRMED). Dismiss
+      // consent and re-fill once if so.
+      const titleVal = await page.$eval('input#ad-title', (el) => (el as HTMLInputElement).value).catch(() => '');
+      if (!titleVal) {
+        console.warn('[repost] title empty after fill — dismissing consent + retrying');
+        await dismissConsent(page, 'title retry');
+        await fillField(page, 'input#ad-title', merged.title);
+        await delay(400);
+      }
+    }
 
     // 8) Submit.
     currentStep = 'submit';

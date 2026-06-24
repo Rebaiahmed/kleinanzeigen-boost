@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { TopBar } from './TopBar';
+import { BrowserSupportBanner } from '../BrowserSupportBanner';
 import { useExtension } from '../../hooks/useExtension';
 import { useRepostNotifications } from '../../hooks/useRepostNotifications';
 import { AlertCircle, MessageSquare } from 'lucide-react';
@@ -97,6 +98,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       <main className="flex-1 w-full max-w-[900px] mx-auto px-4 sm:px-6 py-6 pb-24">
+        <BrowserSupportBanner />
         {children}
       </main>
 

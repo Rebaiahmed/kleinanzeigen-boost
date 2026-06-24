@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, ShieldCheck, CheckCircle2, ChevronRight, Terminal, AlertCircle } from 'lucide-react';
+import { BrowserSupportBanner } from '../components/BrowserSupportBanner';
 
 // Feature Flag
 const SHOW_MANUAL_COOKIE_METHOD = false;
@@ -124,7 +125,9 @@ export function Auth() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        
+
+        <BrowserSupportBanner />
+
         {/* Sleek Gradient Branding Card */}
         <div className="bg-slate-900 border border-slate-800 py-10 px-8 rounded-2xl shadow-2xl relative overflow-hidden">
           {/* Decorative glowing gradient effect */}

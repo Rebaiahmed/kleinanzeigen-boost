@@ -153,20 +153,69 @@ chrome.runtime.onInstalled.addListener((details) => {
 
 // ─── Periodic sync via alarms (wake-safe) ────────────────────────────────────
 
-async function doSync(token: string): Promise<{ success: boolean; ads?: any[]; error?: string }> {
-  const res = await fetch(ENDPOINTS.MARKETPLACE_ADS_JSON, { credentials: 'include' });
-  if (!res.ok) throw new Error(`Kleinanzeigen returned ${res.status}`);
-  const raw = await res.json();
-  const ads = Array.isArray(raw.ads) ? raw.ads
-    : Array.isArray(raw.listings) ? raw.listings
+/** Parse the ads array out of one page of the Kleinanzeigen manage-ads JSON. */
+function extractAds(raw: any): any[] {
+  return Array.isArray(raw?.ads) ? raw.ads
+    : Array.isArray(raw?.listings) ? raw.listings
     : Array.isArray(raw) ? raw : [];
+}
+
+async function doSync(token: string): Promise<{ success: boolean; ads?: any[]; error?: string }> {
+  // Kleinanzeigen paginates this endpoint at pageSize=25 (see `paging` in the
+  // response). The old sync read only page 1, so accounts with >25 ads silently
+  // lost everything past the first 25. Fetch every page — throttled, so we don't
+  // burst-hit KA and trip bot detection (Step 5).
+  const MAX_PAGES = 40;            // safety cap (~1000 ads) against runaway loops
+  const PAGE_DELAY_MS = 500;       // human-like pause between page fetches
+
+  const fetchPage = async (pageNum: number) => {
+    const url = new URL(ENDPOINTS.MARKETPLACE_ADS_JSON);
+    if (pageNum > 1) url.searchParams.set('pageNum', String(pageNum));
+    const res = await fetch(url.toString(), { credentials: 'include' });
+    if (!res.ok) throw new Error(`Kleinanzeigen returned ${res.status}`);
+    return res.json();
+  };
+
+  const firstRaw = await fetchPage(1);
+  const allAds: any[] = extractAds(firstRaw);
+  const seenIds = new Set(allAds.map((a) => String(a.id)));
+
+  // `paging.last` is the last page number; fall back to deriving it from
+  // numFound/pageSize. Default to 1 page when paging is absent.
+  const paging = firstRaw?.paging || {};
+  const pageSize = Number(paging.pageSize) || 25;
+  const lastPage = Math.min(
+    Number(paging.last) || Math.ceil((Number(paging.numFound) || allAds.length) / pageSize) || 1,
+    MAX_PAGES,
+  );
+
+  for (let p = 2; p <= lastPage; p++) {
+    await new Promise((r) => setTimeout(r, PAGE_DELAY_MS));
+    let pageAds: any[];
+    try {
+      pageAds = extractAds(await fetchPage(p));
+    } catch (e: any) {
+      // Partial success beats failing the whole sync — keep what we have.
+      console.warn(`[BG][sync] page ${p}/${lastPage} failed (${e.message}) — importing ${allAds.length} ad(s) collected so far`);
+      break;
+    }
+    // Guard: if KA ignored the page param (returns the same first page) or the
+    // page is empty, stop rather than loop on duplicates.
+    const fresh = pageAds.filter((a) => !seenIds.has(String(a.id)));
+    if (fresh.length === 0) {
+      console.warn(`[BG][sync] page ${p} returned no new ads — stopping (page param may be unsupported)`);
+      break;
+    }
+    for (const a of fresh) { seenIds.add(String(a.id)); allAds.push(a); }
+    console.log(`[BG][sync] page ${p}/${lastPage} — ${allAds.length} ad(s) total`);
+  }
 
   // NOTE: Kleinanzeigen list endpoint does NOT return description or photo URLs
   // - articles[] = add-on services (AD_BUMP_UP, etc), NOT the description
   // - imageCount = count of images, but not the URLs themselves
   // Description and photos would need to be fetched from individual ad pages
 
-  const enrichedAds = ads.map((ad: any) => {
+  const enrichedAds = allAds.map((ad: any) => {
     // Remove articles field (not needed - it's just add-on services)
     const { articles, ...adWithoutArticles } = ad;
     return adWithoutArticles;

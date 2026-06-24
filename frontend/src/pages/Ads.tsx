@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, RefreshCw, Sparkles, Loader2, AlertCircle } from 'lucide-react';
+import { X, RefreshCw, Sparkles, Loader2, AlertCircle, Search } from 'lucide-react';
 import { useAdsActions } from '../hooks/useAdsActions';
 import { useAds } from '../hooks/useAds';
 import { useAiUsage } from '../hooks/useAiUsage';
@@ -31,6 +31,7 @@ export function Ads() {
   const [syncError, setSyncError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'newest' | 'views-desc' | 'views-asc'>('newest');
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
   const ADS_PER_PAGE = 12;
   const [isBackgroundSyncing, setIsBackgroundSyncing] = useState(false);
   const [scheduleModalAd, setScheduleModalAd] = useState<string | null>(null);
@@ -144,7 +145,14 @@ export function Ads() {
   // Users don't need to see deleted listings.
   const visibleAds = ads.filter((a: any) => a.listingState !== 'deleted');
 
-  const sortedAds = [...visibleAds].sort((a, b) => {
+  // Title search — matters more than paging at high ad counts. Case-insensitive
+  // substring match on the title.
+  const q = searchQuery.trim().toLowerCase();
+  const searchedAds = q
+    ? visibleAds.filter((a: any) => (a.title || '').toLowerCase().includes(q))
+    : visibleAds;
+
+  const sortedAds = [...searchedAds].sort((a, b) => {
     if (sortBy === 'newest') {
       // Newest-first by when the ad FIRST appeared in a sync. syncedAt is bumped
       // every sync, so it's not used here — ads without firstSyncedAt (legacy)
@@ -164,8 +172,8 @@ export function Ads() {
   const safePage = Math.min(currentPage, totalPages);
   const paginatedAds = sortedAds.slice((safePage - 1) * ADS_PER_PAGE, safePage * ADS_PER_PAGE);
 
-  // Reset to page 1 when the sort order changes.
-  useEffect(() => { setCurrentPage(1); }, [sortBy]);
+  // Reset to page 1 when the sort order or search query changes.
+  useEffect(() => { setCurrentPage(1); }, [sortBy, q]);
   // Clamp if the list shrank (e.g. an ad was deleted) and the current page no longer exists.
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages); }, [totalPages, currentPage]);
 
@@ -199,6 +207,25 @@ export function Ads() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold text-[#333]">Meine Anzeigen</h1>
         <div className="flex flex-wrap items-center gap-2">
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-[#999] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Anzeigen durchsuchen…"
+              className="border border-[#ccc] bg-white rounded-sm pl-8 pr-7 py-1.5 text-[13px] text-[#333] shadow-sm focus:outline-none focus:border-[#A8C300] focus:ring-1 focus:ring-[#A8C300] w-44 sm:w-56"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[#999] hover:text-[#333]"
+                aria-label="Suche zurücksetzen"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-1.5 border border-[#ccc] bg-white rounded-sm px-2.5 py-1.5 text-[13px] text-[#333] shadow-sm">
             <span className="text-[#666] font-medium hidden sm:inline">Sortieren nach:</span>
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="bg-transparent focus:outline-none font-semibold text-[#333] cursor-pointer">
@@ -290,6 +317,14 @@ export function Ads() {
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
             Jetzt synchronisieren
+          </button>
+        </div>
+      ) : sortedAds.length === 0 ? (
+        <div className="text-center py-12 text-[#666]">
+          <Search className="w-6 h-6 mx-auto mb-3 text-[#bbb]" />
+          <p className="mb-1">Keine Anzeigen für „{searchQuery}" gefunden.</p>
+          <button onClick={() => setSearchQuery('')} className="text-[#A8C300] font-semibold hover:underline text-[13px]">
+            Suche zurücksetzen
           </button>
         </div>
       ) : (

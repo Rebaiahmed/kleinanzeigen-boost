@@ -1,3 +1,4 @@
+import 'dotenv/config'; // load automation/.env BEFORE reading process.env below
 import express from 'express';
 import { executeRepostFlow } from './repost';
 import { executeVintedLogin } from './vinted-login';

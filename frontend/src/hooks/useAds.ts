@@ -20,6 +20,10 @@ function devMockAds(): any[] | null {
   const n = parseInt(localStorage.getItem('ab_mock_ads') || '', 10);
   if (!n || n < 1) return null;
   const titles = ['Sessel', 'iPhone 13', 'Bücherregal', 'Umzugskartons', 'Fahrrad', 'Sofa', 'Tisch', 'Lampe'];
+  const thumb = (i: number) =>
+    'data:image/svg+xml,' + encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="130" height="100"><rect width="130" height="100" fill="#eef2e6"/><text x="65" y="56" font-size="13" fill="#7a9000" text-anchor="middle" font-family="sans-serif">Foto ${i + 1}</text></svg>`,
+    );
   return Array.from({ length: n }, (_, i) => ({
     id: `mock-${i + 1}`,
     title: `${titles[i % titles.length]} #${i + 1}`,
@@ -29,7 +33,8 @@ function devMockAds(): any[] | null {
     favorites: (i * 5) % 23,    // varied so "Meiste Favoriten" is testable
     listingState: 'active',
     firstSyncedAt: new Date(Date.now() - i * 3600_000).toISOString(),
-    adImage: { url: '' },
+    // Every 5th ad has no image so the "Kein Bild" placeholder is testable too.
+    image: i % 5 === 0 ? '' : thumb(i),
   }));
 }
 

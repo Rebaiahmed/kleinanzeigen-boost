@@ -64,7 +64,7 @@ export function SuggestPriceButton({ ad }: SuggestPriceButtonProps) {
   };
 
   return (
-    <div className="flex-1 relative">
+    <div className="w-full relative">
       <button
         ref={buttonRef}
         onClick={handleClick}

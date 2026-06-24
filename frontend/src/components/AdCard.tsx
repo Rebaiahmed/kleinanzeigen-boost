@@ -420,13 +420,19 @@ export function AdCard({
               onClick={() => setScheduleOpen((o) => !o)}
               className="w-full flex items-center justify-between gap-1 text-[12px] text-gray-600 hover:text-[#A8C300] transition-colors"
             >
-              <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5" />
-                {localAutoRepost ? 'Automatisch wiederholen: an' : 'Automatisch wiederholen'}
+              <span className="flex items-center gap-1 min-w-0">
+                <Clock className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Automatisch wiederholen</span>
               </span>
-              <span className="text-[11px] text-gray-400">
-                {localAutoRepost ? `Nächster: ${formatNextRepostGerman(localNextRepostAt, true)}` : 'aus'}
-              </span>
+              {localAutoRepost ? (
+                <span className="text-[11px] text-[#6f8f00] font-medium shrink-0">
+                  Nächster: {formatNextRepostGerman(localNextRepostAt, true)}
+                </span>
+              ) : (
+                <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 border border-gray-200 rounded-full px-2 py-0.5 shrink-0">
+                  Aus
+                </span>
+              )}
             </button>
 
             {scheduleOpen && (
@@ -483,14 +489,15 @@ export function AdCard({
           </div>
         )}
 
-        {/* Bottom: Desktop Action Buttons Row */}
-        <div className="hidden md:flex items-center gap-1 w-full">
+        {/* Bottom: Desktop Action Buttons — 2-col grid so the (up to 4) buttons
+            reflow onto rows instead of being squeezed/clipped in one narrow row. */}
+        <div className="hidden md:grid grid-cols-2 gap-1.5 w-full">
           {/* KI-Optimierung */}
           <button
             onClick={() => onAIOptimize(ad.id)}
             title={aiBlocked ? 'Monatslimit erreicht' : aiWarning ? 'Fast am Limit' : 'KI-Optimierung'}
             disabled={aiBlocked}
-            className={`flex-1 border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors whitespace-nowrap ${
+            className={`w-full border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors whitespace-nowrap ${
               aiBlocked
                 ? 'border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50'
                 : aiWarning
@@ -519,7 +526,7 @@ export function AdCard({
             }}
             disabled={isLoadingPhotoFeedback}
             title="Foto-Qualität analysieren (kostet 1 Analyse-Guthaben)"
-            className="flex-1 border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors whitespace-nowrap border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+            className="w-full border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors whitespace-nowrap border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-50"
           >
             <span className="shrink-0">📷</span>
             <span>{isLoadingPhotoFeedback ? 'Analysiert…' : 'Foto-Check'}</span>
@@ -527,7 +534,7 @@ export function AdCard({
 
           {/* Vinted — gated behind feature flag */}
           {flags.enableVinted && (
-            <div className="relative flex-1 group">
+            <div className="relative w-full group">
               <button
                 disabled
                 title="Vinted-Integration kommt in Kürze"

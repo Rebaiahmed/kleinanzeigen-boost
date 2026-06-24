@@ -115,10 +115,14 @@ export class AdsService {
 
         const views = ad.viewCount ?? ad.views ?? 0;
         const messages = ad.replies ?? ad.messages ?? 0;
+        // Kleinanzeigen calls favorites "watchCount". It was synced (via ...ad) but
+        // never surfaced as `favorites`, so the heart count rendered blank in the UI
+        // and couldn't be sorted on. Map it explicitly.
+        const favorites = ad.watchCount ?? ad.favorites ?? 0;
         const listingState = this.mapListingState(ad);
         // Re-checked on every sync: a lifted reservation flips listingState back
         // to 'active', clearing the badge and re-enabling auto-repost.
-        const normalized: any = { ...ad, image, pictures, views, messages, listingState, syncedAt: new Date().toISOString() };
+        const normalized: any = { ...ad, image, pictures, views, messages, favorites, listingState, syncedAt: new Date().toISOString() };
         // firstSyncedAt is set ONCE, on first import (merge preserves it after),
         // so newly-appeared ads can be sorted to the top ("Neueste zuerst").
         if (!existingIds.has(docId)) normalized.firstSyncedAt = new Date().toISOString();

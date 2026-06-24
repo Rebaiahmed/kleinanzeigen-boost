@@ -29,7 +29,7 @@ export function Ads() {
   const navigate = useNavigate();
   const { ads, invalidateAds, isLoading, isFetching, isError, error } = useAds();
   const [syncError, setSyncError] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<'newest' | 'views-desc' | 'views-asc'>('newest');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'views-desc' | 'views-asc' | 'messages-desc' | 'favorites-desc'>('newest');
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const ADS_PER_PAGE = 12;
@@ -152,19 +152,27 @@ export function Ads() {
     ? visibleAds.filter((a: any) => (a.title || '').toLowerCase().includes(q))
     : visibleAds;
 
+  // Coerce a possibly-missing/string count to a number (missing → 0, so they sort
+  // to the bottom of any "Meiste …" order rather than jumping around).
+  const num = (v: any) => (typeof v === 'number' ? v : parseInt(v) || 0);
+  // Newest-first by when the ad FIRST appeared in a sync (firstSyncedAt). Also the
+  // stable tie-breaker for the metric sorts, so equal counts never jump around.
+  const byNewest = (a: any, b: any) => {
+    const ta = Date.parse(a.firstSyncedAt || '') || 0;
+    const tb = Date.parse(b.firstSyncedAt || '') || 0;
+    if (tb !== ta) return tb - ta;
+    return String(b.id).localeCompare(String(a.id));
+  };
   const sortedAds = [...searchedAds].sort((a, b) => {
-    if (sortBy === 'newest') {
-      // Newest-first by when the ad FIRST appeared in a sync. syncedAt is bumped
-      // every sync, so it's not used here — ads without firstSyncedAt (legacy)
-      // rank oldest, so genuinely new ads float to the top. id breaks ties.
-      const ta = Date.parse(a.firstSyncedAt || '') || 0;
-      const tb = Date.parse(b.firstSyncedAt || '') || 0;
-      if (tb !== ta) return tb - ta;
-      return String(b.id).localeCompare(String(a.id));
+    switch (sortBy) {
+      case 'oldest':        return -byNewest(a, b);
+      case 'views-desc':    return (num(b.views) - num(a.views))         || byNewest(a, b);
+      case 'views-asc':     return (num(a.views) - num(b.views))         || byNewest(a, b);
+      case 'messages-desc': return (num(b.messages) - num(a.messages))   || byNewest(a, b);
+      case 'favorites-desc':return (num(b.favorites) - num(a.favorites)) || byNewest(a, b);
+      case 'newest':
+      default:              return byNewest(a, b);
     }
-    const viewsA = typeof a.views === 'number' ? a.views : parseInt(a.views) || 0;
-    const viewsB = typeof b.views === 'number' ? b.views : parseInt(b.views) || 0;
-    return sortBy === 'views-desc' ? viewsB - viewsA : viewsA - viewsB;
   });
 
   // Client-side pagination — keeps the dashboard fast for large accounts (100+ ads).
@@ -230,8 +238,11 @@ export function Ads() {
             <span className="text-[#666] font-medium hidden sm:inline">Sortieren nach:</span>
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="bg-transparent focus:outline-none font-semibold text-[#333] cursor-pointer">
               <option value="newest">Neueste zuerst</option>
+              <option value="oldest">Älteste zuerst</option>
               <option value="views-desc">Meiste Aufrufe</option>
               <option value="views-asc">Wenigste Aufrufe</option>
+              <option value="messages-desc">Meiste Nachrichten</option>
+              <option value="favorites-desc">Meiste Favoriten</option>
             </select>
           </div>
 

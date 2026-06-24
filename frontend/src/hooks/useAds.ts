@@ -25,6 +25,8 @@ function devMockAds(): any[] | null {
     title: `${titles[i % titles.length]} #${i + 1}`,
     price: `${(i % 9) * 10 + 5} €`,
     views: (i * 7) % 120,
+    messages: (i * 3) % 17,     // varied so "Meiste Nachrichten" is testable
+    favorites: (i * 5) % 23,    // varied so "Meiste Favoriten" is testable
     listingState: 'active',
     firstSyncedAt: new Date(Date.now() - i * 3600_000).toISOString(),
     adImage: { url: '' },

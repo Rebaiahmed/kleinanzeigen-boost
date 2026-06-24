@@ -8,7 +8,33 @@ function getToken() {
   return localStorage.getItem('kb_session') || localStorage.getItem('token');
 }
 
+/**
+ * DEV-ONLY mock: in a development build (`npm run dev`), set
+ * `localStorage.ab_mock_ads = '100'` and reload to render N synthetic ads so you
+ * can eyeball pagination / search / list performance without a big real account.
+ * Gated on import.meta.env.DEV, so this whole branch is dead-code-eliminated from
+ * production builds and can never affect the live dashboard.
+ */
+function devMockAds(): any[] | null {
+  if (!(import.meta as any).env.DEV) return null;
+  const n = parseInt(localStorage.getItem('ab_mock_ads') || '', 10);
+  if (!n || n < 1) return null;
+  const titles = ['Sessel', 'iPhone 13', 'Bücherregal', 'Umzugskartons', 'Fahrrad', 'Sofa', 'Tisch', 'Lampe'];
+  return Array.from({ length: n }, (_, i) => ({
+    id: `mock-${i + 1}`,
+    title: `${titles[i % titles.length]} #${i + 1}`,
+    price: `${(i % 9) * 10 + 5} €`,
+    views: (i * 7) % 120,
+    listingState: 'active',
+    firstSyncedAt: new Date(Date.now() - i * 3600_000).toISOString(),
+    adImage: { url: '' },
+  }));
+}
+
 async function fetchAdsFromServer(): Promise<any[]> {
+  const mock = devMockAds();
+  if (mock) return mock;
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 

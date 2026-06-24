@@ -4,9 +4,13 @@
   "description": "KleinanzeigenBoost Monorepo",
   "scripts": {
     "start": "concurrently \"npm run start:frontend\" \"npm run start:backend\" \"npm run start:automation\"",
+    "dev": "concurrently -n frontend,backend -c green,cyan \"npm run start:frontend\" \"npm run start:backend\"",
+    "dev:all": "npm start",
     "start:frontend": "cd frontend && npm run dev",
     "start:backend": "cd backend && npm run start:dev",
-    "start:automation": "cd automation && DEBUG_BROWSER=false npm run dev"
+    "start:automation": "cd automation && DEBUG_BROWSER=false npm run dev",
+    "ext:dev": "cd extension && npm run build:dev",
+    "install:all": "npm install && (cd frontend && npm install) && (cd backend && npm install) && (cd extension && npm install)"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

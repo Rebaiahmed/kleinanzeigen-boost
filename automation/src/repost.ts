@@ -10,6 +10,35 @@ const CREATE_URL = 'https://www.kleinanzeigen.de/p-anzeige-aufgeben-schritt2.htm
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * Dismiss the Kleinanzeigen cookie-consent wall ("Willkommen bei Kleinanzeigen …
+ * Alle akzeptieren"). The worker's fresh context lacks the consent cookie, so the
+ * CMP wall appears and silently swallows the submit (the form fields read empty).
+ * The user's real browser never hits this because it already accepted. Clicks the
+ * accept button in the main page or any CMP iframe. Best-effort, never throws.
+ */
+async function acceptConsent(page: Page): Promise<boolean> {
+  const selectors = [
+    '[data-testid="gdpr-banner-accept"]',
+    '#gdpr-banner-accept',
+    'button[id*="accept" i]',
+    'button[aria-label*="akzeptier" i]',
+  ];
+  const tryRoots: Array<Page | import('playwright').Frame> = [page, ...page.frames()];
+  for (const root of tryRoots) {
+    for (const sel of selectors) {
+      const el = await root.$(sel).catch(() => null);
+      if (el) { await el.click({ timeout: 2000 }).catch(() => {}); return true; }
+    }
+    // Text fallback — "Alle akzeptieren" / "Akzeptieren" / "Accept all"
+    try {
+      const btn = root.getByRole('button', { name: /alle akzeptieren|akzeptieren|accept all/i }).first();
+      if (await btn.count()) { await btn.click({ timeout: 2000 }); return true; }
+    } catch { /* not present in this root */ }
+  }
+  return false;
+}
+
 // Helper to mimic human latency
 export const randomDelay = async (min = 1000, max = 5000) => {
   const ms = Math.floor(Math.random() * (max - min + 1) + min);
@@ -464,6 +493,9 @@ export async function executeRepostFlow(userId: string, adId: string, adData: an
     currentStep = 'session_check';
     const sessResp = await page.goto(MY_ADS_URL, { waitUntil: 'domcontentloaded' });
     console.log(`[repost] session_check: ${formatResponseDiagnostics(sessResp, page.url())}`);
+    // Dismiss the cookie-consent wall up front (the fresh worker context lacks the
+    // consent cookie, so it appears and would otherwise swallow the submit).
+    if (await acceptConsent(page)) { console.log('[repost] accepted cookie-consent wall'); await delay(800); }
     if (sessResp?.status() === 403) {
       await captureFullDiagnostics(context, page, sessResp, currentStep, '403 AT SESSION_CHECK');
       // Distinguish a temporary IP-range ban ("IP-Bereich … gesperrt") from a
@@ -506,6 +538,8 @@ export async function executeRepostFlow(userId: string, adId: string, adData: an
       await captureFullDiagnostics(context, page, createResp, currentStep, '403 AT CREATE PAGE');
       throw new Error('403_FORBIDDEN at create page');
     }
+    // Consent wall can also appear here — dismiss before waiting for the form.
+    if (await acceptConsent(page)) { console.log('[repost] accepted cookie-consent wall (create page)'); await delay(800); }
     if (!(await page.waitForSelector('input#ad-title', { timeout: 15000 }).then(() => true).catch(() => false))) {
       throw new Error('FORM_NOT_FOUND — create form did not render');
     }

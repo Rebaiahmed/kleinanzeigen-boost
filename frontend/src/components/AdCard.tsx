@@ -79,6 +79,10 @@ function formatNextRepostGerman(nextRepostAt: string | null, autoRepost: boolean
   if (!autoRepost || !nextRepostAt) return 'Kein Zeitplan';
   const date = new Date(nextRepostAt);
   const now = new Date();
+  // Past due: the scheduled time has passed but it hasn't reposted yet (e.g. the
+  // browser is closed, so the server fallback handles it within ~15 min). Showing
+  // the stale past time as "Nächster" looks broken — show a pending state instead.
+  if (date.getTime() <= now.getTime()) return 'Fällig – wird in Kürze verarbeitet';
   const timeStr = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
   if (date.toDateString() === now.toDateString()) return `Heute ${timeStr}`;
   const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
@@ -425,9 +429,14 @@ export function AdCard({
                 <span className="truncate">Automatisch wiederholen</span>
               </span>
               {localAutoRepost ? (
-                <span className="text-[11px] text-[#6f8f00] font-medium shrink-0">
-                  Nächster: {formatNextRepostGerman(localNextRepostAt, true)}
-                </span>
+                (() => {
+                  const due = !!localNextRepostAt && new Date(localNextRepostAt).getTime() <= Date.now();
+                  return (
+                    <span className={`text-[11px] font-medium shrink-0 ${due ? 'text-[#c2620a]' : 'text-[#6f8f00]'}`}>
+                      {due ? formatNextRepostGerman(localNextRepostAt, true) : `Nächster: ${formatNextRepostGerman(localNextRepostAt, true)}`}
+                    </span>
+                  );
+                })()
               ) : (
                 <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 border border-gray-200 rounded-full px-2 py-0.5 shrink-0">
                   Aus

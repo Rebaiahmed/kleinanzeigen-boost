@@ -53,6 +53,28 @@ async function dismissConsent(page: Page, label = ''): Promise<void> {
     }
     await delay(500);
   }
+  // Couldn't find an accept button (Kleinanzeigen's #consentBanner loads its button
+  // from an external URL we can't reliably target). Forcibly strip the overlay so
+  // the form underneath is interactable — the ad-submit itself doesn't require
+  // tracking consent, it's just a blocking layer.
+  const removed = await page.evaluate(() => {
+    let hit = false;
+    ['consentBanner', 'gdpr-banner', 'cmpbox', 'cmpwrapper'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) { el.remove(); hit = true; }
+    });
+    document.querySelectorAll('[id*="consent" i],[class*="consent" i],[class*="gdpr" i],[id*="cmp" i]').forEach((e) => {
+      const el = e as HTMLElement;
+      const pos = getComputedStyle(el).position;
+      if ((pos === 'fixed' || pos === 'absolute') && el.getBoundingClientRect().height > 80) { el.remove(); hit = true; }
+    });
+    // Restore scroll/interaction the banner may have locked.
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
+    document.body.style.pointerEvents = '';
+    return hit;
+  }).catch(() => false);
+  if (removed) { console.log(`[repost] consent overlay force-removed${label ? ` (${label})` : ''}`); await delay(400); }
 }
 
 // Helper to mimic human latency

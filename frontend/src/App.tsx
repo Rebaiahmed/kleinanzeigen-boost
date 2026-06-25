@@ -7,6 +7,7 @@ import { Settings } from './pages/Settings';
 import { AppShell } from './components/layout/AppShell';
 import { Landing } from './pages/Landing';
 import { Datenschutz } from './pages/Datenschutz';
+import { Impressum } from './pages/Impressum';
 import { AuthCallback } from './pages/AuthCallback';
 import { EbaySuccess } from './pages/EbaySuccess';
 import { ReplyTemplatesList } from './components/reply-templates/ReplyTemplatesList';
@@ -18,6 +19,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/datenschutz" element={<Datenschutz />} />
+        <Route path="/impressum" element={<Impressum />} />
         <Route path="/login" element={<Auth />} />
         {/* Backward-compat: old /auth links redirect to /login */}
         <Route path="/auth" element={<Navigate to="/login" replace />} />

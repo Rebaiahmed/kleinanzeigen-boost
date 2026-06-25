@@ -286,6 +286,7 @@ export function Landing() {
               <a href="#so-gehts" className="hover:text-slate-800">So funktioniert's</a>
               <a href="#faq" className="hover:text-slate-800">FAQ</a>
               <Link to="/datenschutz" className="hover:text-slate-800">Datenschutz</Link>
+              <Link to="/impressum" className="hover:text-slate-800">Impressum</Link>
             </nav>
           </div>
           <p className="text-[12px] text-slate-400 text-center md:text-left leading-relaxed">

@@ -401,9 +401,13 @@ export class AiService {
     }));
 
     const langInstruction = (language || 'de').toLowerCase().startsWith('en')
-      ? 'IMPORTANT: Write the title, description, keyFeatures AND the vinted.title, vinted.description fields in ENGLISH. Keep the "category" value as the exact German Kleinanzeigen category name from the allowed list, and keep both condition fields as the exact allowed enum values (do not translate category or condition).'
-      : 'Schreibe alle Textfelder auf Deutsch.';
+      ? 'OUTPUT LANGUAGE — THIS OVERRIDES ANY LANGUAGE MENTIONED ABOVE: Write title, description, keyFeatures and vinted.title, vinted.description in ENGLISH, even though the seller and platform are German. Keep the "category" value as the exact German Kleinanzeigen category name from the allowed list, and keep both condition fields as the exact allowed enum values (do NOT translate category or condition).'
+      : 'OUTPUT LANGUAGE: Schreibe title, description, keyFeatures sowie vinted.title und vinted.description auf Deutsch.';
 
+    // The base system prompt is written for German output, so the language choice
+    // must be appended as the LAST, authoritative instruction (and repeated in the
+    // user prompt) — otherwise the model ignores the flag and always returns German.
+    const systemInstruction = `${this.analyzePhotosPrompt}\n\n${langInstruction}`;
     const userPrompt = `${langInstruction}\n${hint ? `Optionaler Hinweis vom Verkäufer: ${hint}` : 'Analysiere das Produkt auf den Fotos.'}`;
 
     let responseText = '';
@@ -414,7 +418,7 @@ export class AiService {
     try {
       const fallbackResult = await this.executeWithFallback(
         [userPrompt, ...imageParts],
-        this.analyzePhotosPrompt,
+        systemInstruction,
         {
           responseMimeType: 'application/json',
           maxOutputTokens: 1100,

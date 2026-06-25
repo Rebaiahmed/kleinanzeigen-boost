@@ -28,6 +28,9 @@
     />
     <meta property="og:url" content="https://anzeigenboost.de/" />
     <meta property="og:locale" content="de_DE" />
+    <meta property="og:image" content="https://anzeigenboost.de/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
 
     <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image" />
@@ -36,6 +39,33 @@
       name="twitter:description"
       content="Automatisches Reposting + KI-Anzeigenerstellung per Foto für Kleinanzeigen."
     />
+    <meta name="twitter:image" content="https://anzeigenboost.de/og-image.png" />
+
+    <!-- Structured data: software + FAQ (helps Google understand the page + earn rich results) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "AnzeigenBoost",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Chrome, Edge, Brave",
+      "url": "https://anzeigenboost.de/",
+      "description": "Stelle deine Kleinanzeigen mit einem Klick oder per Zeitplan neu ein, erstelle Anzeigen per Foto mit KI und optimiere Titel & Beschreibung. Mehr Aufrufe, weniger Aufwand.",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "Wie bringe ich meine Kleinanzeigen wieder nach oben?", "acceptedAnswer": { "@type": "Answer", "text": "Mit AnzeigenBoost stellst du eine Anzeige mit einem Klick neu ein – Titel, Beschreibung, Preis, Kategorie und Fotos werden übernommen, und die Anzeige erscheint wieder ganz oben in den Suchergebnissen." } },
+        { "@type": "Question", "name": "Kann man Anzeigen automatisch neu einstellen?", "acceptedAnswer": { "@type": "Answer", "text": "Ja. Du kannst pro Anzeige ein Intervall festlegen, in dem sie automatisch wieder nach oben geschoben wird – auch wenn dein Browser geschlossen ist." } },
+        { "@type": "Question", "name": "Was kostet AnzeigenBoost?", "acceptedAnswer": { "@type": "Answer", "text": "AnzeigenBoost ist aktuell kostenlos – keine Kreditkarte nötig." } },
+        { "@type": "Question", "name": "Ist AnzeigenBoost offiziell von Kleinanzeigen?", "acceptedAnswer": { "@type": "Answer", "text": "Nein. AnzeigenBoost ist ein unabhängiges Projekt und steht in keiner Verbindung zur Kleinanzeigen GmbH." } }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

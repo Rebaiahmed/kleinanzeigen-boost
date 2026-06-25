@@ -96,10 +96,12 @@ export function Landing() {
                 <Zap className="w-3.5 h-3.5 text-[#A8C300]" /> Mehr verkaufen auf Kleinanzeigen
               </div>
               <h1 className="text-3xl sm:text-[40px] font-bold tracking-tight text-slate-900 mb-4 leading-[1.15]">
-                Deine Anzeigen bleiben oben. Automatisch.
+                Deine Anzeigen mit einem Klick wieder ganz nach oben
               </h1>
               <p className="text-lg text-slate-600 mb-7 leading-relaxed">
-                AnzeigenBoost schiebt deine Inserate nach oben, erstellt Anzeigen per Foto und optimiert sie mit KI. Mehr Aufrufe, weniger Klickarbeit.
+                AnzeigenBoost stellt deine Kleinanzeigen neu ein, damit sie wieder oben in den
+                Suchergebnissen erscheinen – per Klick oder nach Zeitplan. Dazu Anzeigen per Foto mit KI
+                erstellen, Texte optimieren und schneller auf Nachrichten antworten. Mehr Aufrufe, weniger Klickarbeit.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Link to="/login" className="inline-flex items-center justify-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] text-white font-bold py-3 px-7 rounded-full text-[15px] shadow-sm transition-all hover:-translate-y-0.5">
@@ -221,6 +223,50 @@ export function Landing() {
           </div>
         </section>
 
+        {/* FAQ — captures long-tail German search queries + FAQPage rich snippets */}
+        <section id="faq" className="py-16">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6">
+            <h2 className="text-2xl sm:text-[28px] font-bold text-slate-900 text-center mb-10">Häufige Fragen</h2>
+            <div className="space-y-6">
+              {[
+                {
+                  q: 'Wie bringe ich meine Kleinanzeigen wieder nach oben?',
+                  a: 'Auf Kleinanzeigen rutschen ältere Inserate mit der Zeit nach unten. Mit AnzeigenBoost stellst du eine Anzeige mit einem Klick neu ein – Titel, Beschreibung, Preis, Kategorie und Fotos werden übernommen, und die Anzeige erscheint wieder ganz oben in den Suchergebnissen.',
+                },
+                {
+                  q: 'Kann man Anzeigen automatisch neu einstellen?',
+                  a: 'Ja. Du kannst pro Anzeige ein Intervall festlegen, in dem sie automatisch wieder nach oben geschoben wird – auch wenn dein Browser geschlossen ist. Alternativ stellst du jederzeit manuell mit einem Klick neu ein.',
+                },
+                {
+                  q: 'Was kostet AnzeigenBoost?',
+                  a: 'AnzeigenBoost ist aktuell kostenlos – keine Kreditkarte nötig. Du verbindest dein Konto und legst direkt los.',
+                },
+                {
+                  q: 'Kann ich Anzeigen per Foto mit KI erstellen?',
+                  a: 'Ja. Lade ein Foto deines Artikels hoch, und die KI schlägt dir einen passenden Titel, eine Beschreibung und eine Kategorie vor. Du prüfst alles und veröffentlichst mit einem Klick.',
+                },
+                {
+                  q: 'Brauche ich einen bestimmten Browser?',
+                  a: 'AnzeigenBoost läuft als Browser-Erweiterung in Chrome sowie in Chromium-Browsern wie Edge, Brave oder Opera. In Firefox und Safari ist die Erweiterung nicht verfügbar.',
+                },
+                {
+                  q: 'Ist das sicher? Seht ihr mein Passwort?',
+                  a: 'Nein. Dein Kleinanzeigen-Passwort sehen oder speichern wir nie. Die Verbindung läuft über deine bestehende Browser-Sitzung; Zugangsdaten werden verschlüsselt verarbeitet.',
+                },
+                {
+                  q: 'Ist AnzeigenBoost offiziell von Kleinanzeigen?',
+                  a: 'Nein. AnzeigenBoost ist ein unabhängiges Projekt und steht in keiner Verbindung zur Kleinanzeigen GmbH. Es ist ein Hilfswerkzeug, das deine eigenen Anzeigen verwaltet.',
+                },
+              ].map((item) => (
+                <div key={item.q} className="border border-slate-200 rounded-2xl p-5">
+                  <h3 className="text-[16px] font-bold text-slate-900">{item.q}</h3>
+                  <p className="text-[14px] text-slate-600 mt-2 leading-relaxed">{item.a}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Final CTA */}
         <section className="py-16 text-center">
           <div className="max-w-2xl mx-auto px-4 sm:px-6">
@@ -233,9 +279,19 @@ export function Landing() {
       </main>
 
       <footer className="bg-white py-8 border-t border-slate-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row justify-between items-center gap-3 text-slate-500">
-          <div className="flex items-center"><Zap className="h-4 w-4 text-[#A8C300] mr-1.5" /><span className="font-bold text-slate-700">Anzeigen</span><span className="text-[13px]">Boost</span></div>
-          <p className="text-[13px]">Mehr verkaufen auf Kleinanzeigen – mit weniger Aufwand.</p>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col gap-4 text-slate-500">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-3">
+            <div className="flex items-center"><Zap className="h-4 w-4 text-[#A8C300] mr-1.5" /><span className="font-bold text-slate-700">Anzeigen</span><span className="text-[13px]">Boost</span></div>
+            <nav className="flex items-center gap-4 text-[13px]">
+              <a href="#so-gehts" className="hover:text-slate-800">So funktioniert's</a>
+              <a href="#faq" className="hover:text-slate-800">FAQ</a>
+              <Link to="/datenschutz" className="hover:text-slate-800">Datenschutz</Link>
+            </nav>
+          </div>
+          <p className="text-[12px] text-slate-400 text-center md:text-left leading-relaxed">
+            AnzeigenBoost ist ein unabhängiges Projekt und steht in keiner Verbindung zur Kleinanzeigen GmbH.
+            „Kleinanzeigen" wird ausschließlich beschreibend verwendet, um die Kompatibilität des Werkzeugs zu erklären.
+          </p>
         </div>
       </footer>
     </div>

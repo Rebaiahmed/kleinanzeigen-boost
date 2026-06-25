@@ -18,3 +18,4 @@ serviceAccountKey.json
 !.vscode/extensions.json
 .idea
 .DS_Store
+.ssr-prerender

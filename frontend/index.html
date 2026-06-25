@@ -69,6 +69,10 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- The landing page is prerendered into #root at build time (SEO). For any
+         non-"/" route, clear it before React mounts so app routes don't flash the
+         landing. Inline + synchronous, so it runs before the deferred module below. -->
+    <script>if (location.pathname !== '/') { var r = document.getElementById('root'); if (r) r.innerHTML = ''; }</script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

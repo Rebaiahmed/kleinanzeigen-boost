@@ -20,7 +20,6 @@ export class AuthService {
     // Short, non-sensitive fingerprint of the key (a hash of the key, not the key)
     // — used to detect when cookies were encrypted with a DIFFERENT key/backend.
     this.keyId = crypto.createHash('sha256').update(this.encryptionKey).digest('hex').slice(0, 8);
-    this.logger.log(`[handshake] auth encryption keyId=${this.keyId} (INTERNAL_SECRET ${process.env.INTERNAL_SECRET ? 'set' : 'DEFAULT dev key'})`);
   }
 
   private readonly keyId: string;
@@ -123,7 +122,6 @@ export class AuthService {
       username: username || null,
       used: false,
     });
-    this.logger.log(`[handshake] created token (keyId=${this.keyId})`);
 
     return token;
   }
@@ -132,7 +130,6 @@ export class AuthService {
     const db = this.firebaseService.firestore;
     const linkUserId = this.userIdFromAuthHeader(authHeader);
     const docRef = db.collection('handshakes').doc(token);
-    this.logger.log(`[handshake] exchange-token received (token=${token?.slice(0, 8)}…, linkUser=${linkUserId ? 'yes' : 'no'})`);
 
     // Atomically claim the token inside a Firestore transaction.
     // This prevents a race condition where two concurrent requests both

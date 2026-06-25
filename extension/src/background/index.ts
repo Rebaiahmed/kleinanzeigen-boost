@@ -82,38 +82,39 @@ async function runDueClientReposts(verbose = false): Promise<void> {
     (!a.listingState || a.listingState === 'active'));
   if (due.length === 0) { if (verbose) console.log('[BG][sched] no due reposts'); return; }
 
-  console.log(`[BG][sched] ${due.length} due repost(s) — running client-side, one at a time`);
+  console.log(`[BG][sched] ${due.length} due repost(s) — claiming all up front, then reposting one at a time`);
   clientSchedulerRunning = true;
   const authHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
   try {
-    for (let i = 0; i < due.length; i++) {
-      const ad = due[i];
+    // BATCH-CLAIM: advance nextRepostAt for ALL due ads up front, BEFORE reposting
+    // any. Otherwise ads later in the queue stay "due" while we work through it one
+    // at a time, and the server fallback (after its grace window) could grab and
+    // repost them in parallel → duplicate listings. Claiming the whole batch first
+    // mirrors the server's atomic lock across every due ad. Only successfully
+    // claimed ads are reposted; a failed claim is skipped (avoids a double post).
+    const claimed: any[] = [];
+    for (const ad of due) {
       const interval = Number(ad.repostIntervalMinutes) || 1440;
-
-      // CLAIM BEFORE REPOSTING — advance nextRepostAt up front so this ad is no
-      // longer "due". MV3 can recycle the service worker mid-repost (create-first
-      // flow takes 60-90s), which resets the in-memory repostBusy/clientScheduler
-      // guards; without this claim, the next 1-min tick would see the ad still due
-      // and repost it AGAIN → duplicate listings. This mirrors the server's atomic
-      // PENDING_REPOST lock. If the claim PATCH fails, skip rather than risk a
-      // double post.
       const claimedNext = new Date(Date.now() + interval * 60000).toISOString();
       try {
         const claimRes = await fetch(`${API_URL}/ads/${ad.id}`, {
           method: 'PATCH', headers: authHeaders, body: JSON.stringify({ nextRepostAt: claimedNext }),
         });
-        if (!claimRes.ok) { console.warn(`[BG][sched] claim failed for ${ad.id} (HTTP ${claimRes.status}) — skipping to avoid double post`); continue; }
+        if (claimRes.ok) claimed.push(ad);
+        else console.warn(`[BG][sched] claim failed for ${ad.id} (HTTP ${claimRes.status}) — skipping to avoid double post`);
       } catch (e: any) {
         console.warn(`[BG][sched] claim error for ${ad.id} — skipping:`, e.message);
-        continue;
       }
+    }
 
+    // Now repost the claimed ads one at a time, jittered (human-like, lowers risk).
+    for (let i = 0; i < claimed.length; i++) {
+      const ad = claimed[i];
       const result = await performRepost(String(ad.id), ad);
 
       // On failure, pull nextRepostAt back to a short retry window (not the full
-      // interval) so it retries soon — but not on the immediate next tick, which
-      // would re-trigger before the page settles. The claimed future value already
-      // stands on success, so no second PATCH is needed there.
+      // interval) so it retries soon — but not on the immediate next tick. The
+      // claimed future value already stands on success, so no second PATCH there.
       if (!result.ok) {
         const retryAt = new Date(Date.now() + 10 * 60000).toISOString();
         try {
@@ -121,8 +122,7 @@ async function runDueClientReposts(verbose = false): Promise<void> {
         } catch { /* non-fatal — claimed value keeps it from looping */ }
       }
 
-      // Jittered pause before the next queued repost (human-like, lowers risk).
-      if (i < due.length - 1) {
+      if (i < claimed.length - 1) {
         await new Promise((r) => setTimeout(r, 4000 + Math.floor(Math.random() * 4000)));
       }
     }

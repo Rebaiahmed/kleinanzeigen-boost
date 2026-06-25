@@ -260,6 +260,23 @@ export function CreateWithAi() {
       return;
     }
 
+    // Pre-upload size guard. The server (and nginx in front) rejects oversized
+    // uploads with a 413 that the browser surfaces as an opaque "Failed to fetch"
+    // / CORS error. Catch it here with a clear, actionable message instead.
+    const MB = 1024 * 1024;
+    const MAX_PER_FILE = 4 * MB;   // matches backend per-photo limit
+    const MAX_TOTAL = 30 * MB;     // stay safely under the server body limit
+    const tooBig = photos.find((p) => (p.file?.size || 0) > MAX_PER_FILE);
+    if (tooBig) {
+      setErrorMessage(`Ein Foto ist zu groß (max. 4 MB pro Foto). Bitte ersetze „${tooBig.file.name}" durch ein kleineres Bild.`);
+      return;
+    }
+    const totalBytes = photos.reduce((sum, p) => sum + (p.file?.size || 0), 0);
+    if (totalBytes > MAX_TOTAL) {
+      setErrorMessage(`Die Fotos sind zusammen zu groß (${(totalBytes / MB).toFixed(1)} MB). Bitte verwende weniger oder kleinere Fotos.`);
+      return;
+    }
+
     setIsLoading(true);
     setErrorMessage(null);
     setUpgradeLink(null);
@@ -333,7 +350,16 @@ export function CreateWithAi() {
       incrementUsage(); // update usage counter immediately
       setStep('result');
     } catch (err: any) {
-      setErrorMessage(err.message || 'Netzwerkfehler beim Analysieren der Fotos.');
+      // A 413 (payload too large) from nginx has no CORS header, so the browser
+      // blocks reading it and fetch rejects with a TypeError "Failed to fetch" —
+      // there's no status to inspect. Treat that opaque network failure as the
+      // most likely cause (oversized upload) with an actionable message.
+      const isNetwork = err?.name === 'TypeError' || /failed to fetch|networkerror|load failed/i.test(err?.message || '');
+      setErrorMessage(
+        isNetwork
+          ? 'Upload fehlgeschlagen – die Fotos sind vermutlich zu groß. Bitte verwende weniger oder kleinere Fotos und versuche es erneut.'
+          : err.message || 'Netzwerkfehler beim Analysieren der Fotos.',
+      );
     } finally {
       setIsLoading(false);
     }

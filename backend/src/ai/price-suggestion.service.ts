@@ -108,15 +108,14 @@ export class PriceSuggestionService {
     comparablesUsed: number;
   }> {
     try {
-      // 1. Get comparables
+      // 1. Get comparables. Empty (e.g. no KLAZ_API_KEY) is NOT fatal — we fall
+      //    back to an AI-only estimate from the item details below.
       const comparables = await this.getComparables(ad.title);
       this.logger.log(`[Price] Got ${comparables.length} comparables for "${ad.title}"`);
 
-      if (comparables.length === 0) {
-        throw new Error('No comparables found');
-      }
+      const hasComparables = comparables.length > 0;
 
-      // 2. Call LLM with filtering instructions
+      // 2. Call LLM with filtering instructions (or an estimate when no comparables).
       const prompt = `You are a pricing assistant for the German classifieds site Kleinanzeigen.
 
 USER'S ITEM:
@@ -124,8 +123,9 @@ Title: ${ad.title}
 Description: ${ad.description || '(keine)'}
 Condition: ${ad.condition || '(unbekannt)'}
 
-COMPARABLE LISTINGS (raw from Kleinanzeigen API):
-${JSON.stringify(comparables, null, 2)}
+${hasComparables
+  ? `COMPARABLE LISTINGS (raw from Kleinanzeigen API):\n${JSON.stringify(comparables, null, 2)}`
+  : `NO COMPARABLE LISTINGS ARE AVAILABLE. Estimate a realistic German second-hand price range for this item from your own knowledge of the title, description and condition. Set "confidence" to "low" and "comparablesUsed" to 0.`}
 
 FILTER & ANALYZE:
 1. Keep ONLY listings that are genuinely similar:

@@ -249,7 +249,9 @@ export function Ads() {
           {(isFetching || isBackgroundSyncing) && ads.length > 0 && (
             <div className="flex items-center gap-1.5 text-xs text-gray-500 py-1.5 px-1 shrink-0">
               <RefreshCw className="w-3 h-3 animate-spin text-gray-400" />
-              <span className="hidden md:inline text-[11px]">Aktualisierung...</span>
+              <span className="hidden md:inline text-[11px]">
+                {isBackgroundSyncing ? `Synchronisiere ${ads.length} Anzeigen…` : 'Aktualisierung…'}
+              </span>
             </div>
           )}
           {contextInvalidated && (
@@ -302,8 +304,24 @@ export function Ads() {
         </div>
       )}
 
+      {/* Sync progress bar — indeterminate (the sync is one bulk operation, so
+          there is no per-ad progress to report). Reassures during longer syncs
+          on large accounts. */}
+      {(isSyncing || isBackgroundSyncing) && (
+        <div className="mb-4" role="status" aria-live="polite">
+          <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+            <div className="ab-indeterminate-bar" />
+          </div>
+          <p className="mt-1.5 text-[12px] text-gray-500">
+            {ads.length > 0
+              ? `Synchronisiere ${ads.length} Anzeigen mit Kleinanzeigen…`
+              : 'Synchronisiere deine Anzeigen mit Kleinanzeigen…'}
+          </p>
+        </div>
+      )}
+
       {/* Ad list */}
-      {isLoading ? (
+      {isLoading || ((isSyncing || isBackgroundSyncing) && ads.length === 0) ? (
         <div className="space-y-3">
           {[1, 2, 3].map(i => (
             <div key={i} className="bg-white border border-[#e5e5e5] h-[120px] rounded-sm animate-pulse">

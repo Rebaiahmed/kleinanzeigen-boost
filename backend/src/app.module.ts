@@ -14,6 +14,7 @@ import { EbayModule } from './ebay/ebay.module';
 import { ReplyTemplatesModule } from './reply-templates/reply-templates.module';
 import { AdminModule } from './admin/admin.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { MonitoringModule } from './monitoring/monitoring.module';
 import { ConfigController } from './config/config.controller';
 import { HealthController } from './health/health.controller';
 
@@ -35,6 +36,7 @@ import { HealthController } from './health/health.controller';
     ReplyTemplatesModule,
     AdminModule,
     NotificationsModule,
+    MonitoringModule,
     // TODO: Import Users Modules
   ],
   controllers: [ConfigController, HealthController],

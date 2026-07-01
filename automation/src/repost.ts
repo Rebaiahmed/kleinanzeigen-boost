@@ -614,10 +614,13 @@ export async function executeRepostFlow(userId: string, adId: string, adData: an
     await setPriceType(page, priceType);
     await delay(400);
 
-    // 5) Description + price.
+    // 5) Description + price. Use the NUMERIC price (priceNum) — merged.price is the
+    //    raw label like "80 €", and the #ad-price-amount field is numeric, so filling
+    //    "80 €" is rejected and the price ends up empty → SUBMIT_NOT_CONFIRMED. Only
+    //    fill for priced ads; give-aways (priceNum 0) have no price field.
     currentStep = 'fill_fields';
     if (merged.description) await fillField(page, 'textarea#ad-description', merged.description);
-    if (merged.price != null) await fillField(page, 'input#ad-price-amount', String(merged.price));
+    if (priceNum > 0) await fillField(page, 'input#ad-price-amount', String(priceNum));
     await delay(400);
 
     // 6) Shipping.

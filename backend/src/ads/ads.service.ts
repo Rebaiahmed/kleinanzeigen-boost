@@ -225,12 +225,15 @@ export class AdsService {
           status: AdStatus.ACTIVE,
           lastPostedAt: new Date().toISOString(),
           nextRepostAt,
+          ...(result.newAdId ? { lastRepostNewAdId: result.newAdId } : {}),
+          ...(result.newAdUrl ? { lastRepostNewAdUrl: result.newAdUrl } : {}),
         });
         await adRef.collection('repostLogs').add({
           status: 'success', executedAt: new Date().toISOString(),
           durationMs: Date.now() - startTime, triggeredBy: 'manual', runId: null,
+          newAdId: result.newAdId || null, newAdUrl: result.newAdUrl || null,
         }).catch(() => {});
-        return { success: true, message: 'Anzeige wurde erfolgreich neu eingestellt' };
+        return { success: true, message: 'Anzeige wurde erfolgreich neu eingestellt', newAdId: result.newAdId || null, newAdUrl: result.newAdUrl || null };
       } else {
         await adRef.update({ status: AdStatus.ACTIVE });
         throw new InternalServerErrorException(result.error || 'Repost fehlgeschlagen');

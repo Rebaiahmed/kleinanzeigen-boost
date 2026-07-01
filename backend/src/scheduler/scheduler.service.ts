@@ -400,6 +400,9 @@ export class SchedulerService {
             pendingRepostSince: null,
             repostFailureCount: 0,        // reset on success
             repostDisabledReason: null,
+            // Verification: the id/url of the freshly-published listing (from the worker).
+            ...(result.newAdId ? { lastRepostNewAdId: result.newAdId } : {}),
+            ...(result.newAdUrl ? { lastRepostNewAdUrl: result.newAdUrl } : {}),
           });
 
           await db.collection('users').doc(userId).collection('ads').doc(adId).collection('repostLogs').add({
@@ -410,6 +413,8 @@ export class SchedulerService {
             viewsAfter: null,
             triggeredBy,
             runId: runId || null,
+            newAdId: result.newAdId || null,
+            newAdUrl: result.newAdUrl || null,
           });
 
           if (stats) stats.succeeded++;

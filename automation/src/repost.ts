@@ -507,7 +507,7 @@ async function deleteOldAd(page: Page, adId: string): Promise<boolean> {
 
 // ─── Main flow: create-first (mirrors the extension engine), delete-after ─────
 
-export async function executeRepostFlow(userId: string, adId: string, adData: any, cookies?: any[]): Promise<{ success: boolean; step: string; error?: string }> {
+export async function executeRepostFlow(userId: string, adId: string, adData: any, cookies?: any[]): Promise<{ success: boolean; step: string; error?: string; newAdId?: string | null; newAdUrl?: string | null }> {
   let page: Page | null = null;
   let currentStep = 'init';
   console.log(`[repost] ▶ start ad=${adId} user=${userId} cookies=${Array.isArray(cookies) ? cookies.length : 0}`);
@@ -651,12 +651,25 @@ export async function executeRepostFlow(userId: string, adId: string, adData: an
     if (!submitted) throw new Error('SUBMIT_NOT_CONFIRMED — no confirmation page after submit');
     console.log(`[repost] ✓ published — ${page.url()}`);
 
+    // 8b) Verify a REAL new listing was created (not just that a confirmation page
+    //     rendered): pull the new ad's id/url from the Bestätigung page. This is
+    //     the actual proof of a successful repost.
+    currentStep = 'verify_published';
+    const verify = await page.evaluate(() => {
+      const href = Array.from(document.querySelectorAll('a[href*="/s-anzeige/"]'))
+        .map((a) => (a as HTMLAnchorElement).href)
+        .find((h) => /\/s-anzeige\/[^/]+\/\d{5,}/.test(h)) || null;
+      const m = href ? href.match(/\/s-anzeige\/[^/]+\/(\d{5,})/) : null;
+      return { newAdUrl: href, newAdId: m ? m[1] : null };
+    }).catch(() => ({ newAdUrl: null as string | null, newAdId: null as string | null }));
+    console.log(`[repost] ✓ verified new listing: id=${verify.newAdId || '?'} url=${verify.newAdUrl || page.url()}`);
+
     // 9) Delete the OLD ad AFTER a confirmed publish (best-effort, non-fatal).
     currentStep = 'delete_old_ad';
     await deleteOldAd(page, adId);
 
     await page.close().catch(() => {});
-    return { success: true, step: 'submitted' };
+    return { success: true, step: 'submitted', newAdId: verify.newAdId, newAdUrl: verify.newAdUrl };
   } catch (error: any) {
     const url = page ? page.url() : 'n/a';
     const errorMsg = error?.message || 'Unknown error';

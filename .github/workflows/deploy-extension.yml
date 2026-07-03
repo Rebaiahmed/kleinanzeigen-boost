@@ -54,7 +54,11 @@ jobs:
         id: version
         run: |
           MANIFEST="extension/public/manifest.json"
-          CURRENT=$(jq -r '.version' "$MANIFEST")
+          MANIFEST_V=$(jq -r '.version' "$MANIFEST")
+          # Base the bump on whichever is higher: the manifest version or the latest
+          # published tag. Prevents "tag already exists" when they drift out of sync.
+          TAG_V=$(git tag --list 'extension-v*' --sort=version:refname | tail -1 | sed 's/^extension-v//')
+          CURRENT=$(printf '%s\n%s\n' "$MANIFEST_V" "${TAG_V:-0.0.0}" | sort -V | tail -1)
           IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
 
           TYPE="${{ steps.bump.outputs.type }}"

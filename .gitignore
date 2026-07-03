@@ -59,3 +59,11 @@ aachen-*.json
 
 # Local test artifacts (sample product images, payloads)
 testing_data/
+
+# Build artifacts
+*.zip
+extension/dist/
+# Loose design/screenshot exports at repo root (Chrome-store covers, etc.)
+/2026-*.png
+/cover_*.png
+/cover_*.jpg

@@ -162,7 +162,13 @@ async function doSync(token: string): Promise<{ success: boolean; ads?: any[]; e
   // so it can be unit-tested without a browser.
   const fetchPage = async (pageNum: number) => {
     const url = new URL(ENDPOINTS.MARKETPLACE_ADS_JSON);
-    if (pageNum > 1) url.searchParams.set('pageNum', String(pageNum));
+    if (pageNum > 1) {
+      // Set BOTH common page params — KA uses whichever it supports and ignores
+      // the other. Robust without needing to verify the exact param name against
+      // a real >25-ad account. (collectAdPages still stops if no new ads arrive.)
+      url.searchParams.set('pageNum', String(pageNum));
+      url.searchParams.set('page', String(pageNum));
+    }
     const res = await fetch(url.toString(), { credentials: 'include' });
     if (!res.ok) throw new Error(`Kleinanzeigen returned ${res.status}`);
     return res.json();

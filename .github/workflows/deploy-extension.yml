@@ -1,10 +1,15 @@
 name: Build & Deploy Chrome Extension
 
 on:
-  # Manual only: publish to the Chrome Web Store when YOU trigger it
-  # (Actions tab → "Build & Deploy Chrome Extension" → Run workflow). This stops
-  # every push to main from auto-publishing while the extension is still in test.
-  # Re-enable push-triggered publishing once it's live in the store.
+  # Auto-publish to the Chrome Web Store on any push to main that touches the
+  # extension (now that it's live in the store). Still runnable manually from the
+  # Actions tab. To pause auto-publishing, comment out the `push:` block below.
+  push:
+    branches:
+      - main
+    paths:
+      - 'extension/**'
+      - '.github/workflows/deploy-extension.yml'
   workflow_dispatch: {}
 
 # Prevent concurrent runs — only one deploy at a time

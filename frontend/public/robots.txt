@@ -2,7 +2,9 @@ User-agent: *
 Allow: /$
 Allow: /index.html
 
-# App routes are behind login and not useful in search — keep crawl budget on the landing page
+# App routes are behind login and not useful in search — keep crawl budget on the
+# landing page (the public /datenschutz + /impressum stay crawlable).
+Disallow: /login
 Disallow: /auth
 Disallow: /meine-anzeigen
 Disallow: /einstellungen

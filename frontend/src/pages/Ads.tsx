@@ -254,7 +254,7 @@ export function Ads() {
             <div className="flex items-center gap-1.5 text-xs text-gray-500 py-1.5 px-1 shrink-0">
               <RefreshCw className="w-3 h-3 animate-spin text-gray-400" />
               <span className="hidden md:inline text-[11px]">
-                {isBackgroundSyncing ? `Synchronisiere ${ads.length} Anzeigen…` : 'Aktualisierung…'}
+                {isBackgroundSyncing ? `Synchronisiere ${visibleAds.length} Anzeigen…` : 'Aktualisierung…'}
               </span>
             </div>
           )}
@@ -286,7 +286,7 @@ export function Ads() {
       {syncSuccess && !syncError && (
         <div className="flex items-center gap-2 bg-[#f2f7e6] border border-[#d4e39a] rounded-sm px-4 py-2.5 mb-4 text-[13px] text-[#5a6e00]">
           <CheckCircle2 className="w-4 h-4 shrink-0 text-[#7a9000]" />
-          <span>{ads.length} {ads.length === 1 ? 'Anzeige' : 'Anzeigen'} synchronisiert.</span>
+          <span>{visibleAds.length} {visibleAds.length === 1 ? 'Anzeige' : 'Anzeigen'} synchronisiert.</span>
         </div>
       )}
 
@@ -324,8 +324,8 @@ export function Ads() {
             <div className="ab-indeterminate-bar" />
           </div>
           <p className="mt-1.5 text-[12px] text-gray-500">
-            {ads.length > 0
-              ? `Synchronisiere ${ads.length} Anzeigen mit Kleinanzeigen…`
+            {visibleAds.length > 0
+              ? `Synchronisiere ${visibleAds.length} Anzeigen mit Kleinanzeigen…`
               : 'Synchronisiere deine Anzeigen mit Kleinanzeigen…'}
           </p>
         </div>

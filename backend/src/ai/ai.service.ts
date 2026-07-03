@@ -400,14 +400,17 @@ export class AiService {
       },
     }));
 
-    const langInstruction = (language || 'de').toLowerCase().startsWith('en')
-      ? 'OUTPUT LANGUAGE — THIS OVERRIDES ANY LANGUAGE MENTIONED ABOVE: Write title, description, keyFeatures and vinted.title, vinted.description in ENGLISH, even though the seller and platform are German. Keep the "category" value as the exact German Kleinanzeigen category name from the allowed list, and keep both condition fields as the exact allowed enum values (do NOT translate category or condition).'
-      : 'OUTPUT LANGUAGE: Schreibe title, description, keyFeatures sowie vinted.title und vinted.description auf Deutsch.';
+    const wantEnglish = (language || 'de').toLowerCase().startsWith('en');
+    this.logger.log(`[analyze-photos] language='${language ?? '(none)'}' → output ${wantEnglish ? 'ENGLISH' : 'GERMAN'}`);
 
-    // The base system prompt is written for German output, so the language choice
-    // must be appended as the LAST, authoritative instruction (and repeated in the
-    // user prompt) — otherwise the model ignores the flag and always returns German.
-    const systemInstruction = `${this.analyzePhotosPrompt}\n\n${langInstruction}`;
+    const langInstruction = wantEnglish
+      ? 'CRITICAL OUTPUT-LANGUAGE RULE — overrides every "German" mention below: write title, description, keyFeatures and vinted.title, vinted.description in ENGLISH. The seller/platform being German does NOT mean the text is German. If any of those fields come out in German, the answer is WRONG. Exceptions that STAY as-is: keep "category" as the exact German Kleinanzeigen category name from the allowed list, and keep both condition fields as the exact allowed enum values (do NOT translate category or condition).'
+      : 'AUSGABE-SPRACHE: Schreibe title, description, keyFeatures sowie vinted.title und vinted.description auf Deutsch.';
+
+    // The base system prompt is written for German output and repeats "German" per
+    // field, which outvotes a single trailing override. Put the language rule FIRST
+    // and LAST (and in the user prompt) so the model can't miss it.
+    const systemInstruction = `${langInstruction}\n\n${this.analyzePhotosPrompt}\n\n${langInstruction}`;
     const userPrompt = `${langInstruction}\n${hint ? `Optionaler Hinweis vom Verkäufer: ${hint}` : 'Analysiere das Produkt auf den Fotos.'}`;
 
     let responseText = '';

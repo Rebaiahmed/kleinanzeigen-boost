@@ -7,3 +7,19 @@
     @apply bg-ka-gray-50 text-ka-gray-900 font-sans antialiased;
   }
 }
+
+/* Indeterminate progress bar (used during ad sync) — a segment sweeps across the
+   track to signal "working" without needing real per-item progress. */
+@keyframes anzeigenboost-indeterminate {
+  0%   { left: -40%; width: 40%; }
+  50%  { left: 25%;  width: 50%; }
+  100% { left: 100%; width: 40%; }
+}
+.ab-indeterminate-bar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 9999px;
+  background: #A8C300;
+  animation: anzeigenboost-indeterminate 1.1s ease-in-out infinite;
+}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, RefreshCw, Sparkles, Loader2, AlertCircle, Search } from 'lucide-react';
+import { X, RefreshCw, Sparkles, Loader2, AlertCircle, Search, CheckCircle2 } from 'lucide-react';
 import { useAdsActions } from '../hooks/useAdsActions';
 import { useAds } from '../hooks/useAds';
 import { useAiUsage } from '../hooks/useAiUsage';
@@ -29,6 +29,7 @@ export function Ads() {
   const navigate = useNavigate();
   const { ads, invalidateAds, isLoading, isFetching, isError, error } = useAds();
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncSuccess, setSyncSuccess] = useState(false);
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'views-desc' | 'views-asc' | 'messages-desc' | 'favorites-desc'>('newest');
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
@@ -111,10 +112,13 @@ export function Ads() {
   const handleSync = async () => {
     if (contextInvalidated) { window.location.reload(); return; }
     setSyncError(null);
+    setSyncSuccess(false);
     setIsBackgroundSyncing(true);
     try {
       await syncAds(() => {});
       invalidateAds();
+      setSyncSuccess(true);
+      setTimeout(() => setSyncSuccess(false), 3500);
     } catch (e: any) {
       setSyncError(e.message || 'Synchronisierung fehlgeschlagen');
     } finally {
@@ -249,7 +253,9 @@ export function Ads() {
           {(isFetching || isBackgroundSyncing) && ads.length > 0 && (
             <div className="flex items-center gap-1.5 text-xs text-gray-500 py-1.5 px-1 shrink-0">
               <RefreshCw className="w-3 h-3 animate-spin text-gray-400" />
-              <span className="hidden md:inline text-[11px]">Aktualisierung...</span>
+              <span className="hidden md:inline text-[11px]">
+                {isBackgroundSyncing ? `Synchronisiere ${ads.length} Anzeigen…` : 'Aktualisierung…'}
+              </span>
             </div>
           )}
           {contextInvalidated && (
@@ -275,6 +281,14 @@ export function Ads() {
           </button>
         </div>
       </div>
+
+      {/* Sync success confirmation (auto-hides) */}
+      {syncSuccess && !syncError && (
+        <div className="flex items-center gap-2 bg-[#f2f7e6] border border-[#d4e39a] rounded-sm px-4 py-2.5 mb-4 text-[13px] text-[#5a6e00]">
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-[#7a9000]" />
+          <span>{ads.length} {ads.length === 1 ? 'Anzeige' : 'Anzeigen'} synchronisiert.</span>
+        </div>
+      )}
 
       {/* Sync error banner */}
       {syncError && (
@@ -302,8 +316,23 @@ export function Ads() {
         </div>
       )}
 
+      {/* Sync progress bar — indeterminate (sync is one bulk operation, so there's
+          no per-ad progress). Reassures during longer syncs on large accounts. */}
+      {(isSyncing || isBackgroundSyncing) && (
+        <div className="mb-4" role="status" aria-live="polite">
+          <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+            <div className="ab-indeterminate-bar" />
+          </div>
+          <p className="mt-1.5 text-[12px] text-gray-500">
+            {ads.length > 0
+              ? `Synchronisiere ${ads.length} Anzeigen mit Kleinanzeigen…`
+              : 'Synchronisiere deine Anzeigen mit Kleinanzeigen…'}
+          </p>
+        </div>
+      )}
+
       {/* Ad list */}
-      {isLoading ? (
+      {isLoading || ((isSyncing || isBackgroundSyncing) && ads.length === 0) ? (
         <div className="space-y-3">
           {[1, 2, 3].map(i => (
             <div key={i} className="bg-white border border-[#e5e5e5] h-[120px] rounded-sm animate-pulse">

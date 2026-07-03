@@ -146,6 +146,22 @@ export class AdsService {
       this.logger.log(`importAds: flagged ${gone.length} ad(s) as deleted/expired (gone from KA)`);
     }
 
+    // Housekeeping: hard-delete ads that have been soft-deleted for >30 days, so the
+    // DB doesn't grow forever. Runs opportunistically on sync (no extra cron/index).
+    const PURGE_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
+    const purgeCutoff = Date.now() - PURGE_AFTER_MS;
+    const stale = existingSnap.docs.filter(d => {
+      const data: any = d.data();
+      const detectedAt = Date.parse(data.deletedDetectedAt || '');
+      return data.listingState === 'deleted' && detectedAt && detectedAt <= purgeCutoff;
+    });
+    if (stale.length > 0) {
+      const purgeBatch = db.batch();
+      stale.forEach(d => purgeBatch.delete(d.ref));
+      await purgeBatch.commit();
+      this.logger.log(`importAds: purged ${stale.length} ad(s) soft-deleted >30 days ago`);
+    }
+
     const snap = await adsCol.get();
     const allAds = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     return { success: true, ads: allAds };

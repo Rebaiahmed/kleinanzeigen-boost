@@ -1,15 +1,11 @@
 name: Build & Deploy Chrome Extension
 
 on:
-  # Auto-publish to the Chrome Web Store on any push to main that touches the
-  # extension (now that it's live in the store). Still runnable manually from the
-  # Actions tab. To pause auto-publishing, comment out the `push:` block below.
-  push:
-    branches:
-      - main
-    paths:
-      - 'extension/**'
-      - '.github/workflows/deploy-extension.yml'
+  # Manual only for now. Auto-publish needs the Chrome Web Store API secrets set in
+  # the repo (CHROME_CLIENT_ID, CHROME_CLIENT_SECRET, CHROME_REFRESH_TOKEN,
+  # CHROME_EXTENSION_ID). Until they're configured, a push would bump the version
+  # and tag, then fail at the store upload. Once the secrets exist, re-add:
+  #   push: { branches: [main], paths: ['extension/**', '.github/workflows/deploy-extension.yml'] }
   workflow_dispatch: {}
 
 # Prevent concurrent runs — only one deploy at a time

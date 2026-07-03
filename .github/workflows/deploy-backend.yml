@@ -24,7 +24,14 @@ jobs:
             set -e
             echo "▶ Pulling latest code…"
             cd /root/kleinanzeigen-boost
-            git fetch origin main
+            # Self-heal the recurring "incorrect old value provided" ref corruption:
+            # drop the stale remote ref + prune, then fetch fresh.
+            git fetch origin main || {
+              echo "fetch failed — repairing refs and retrying"
+              git update-ref -d refs/remotes/origin/main 2>/dev/null || true
+              git remote prune origin 2>/dev/null || true
+              git fetch origin main
+            }
             git reset --hard origin/main
             cd backend
             echo "▶ Installing dependencies…"

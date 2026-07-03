@@ -32,7 +32,12 @@ jobs:
             set -e
             echo "▶ Deploying frontend…"
             cd /root/kleinanzeigen-boost
-            git fetch origin main
+            git fetch origin main || {
+              echo "fetch failed — repairing refs and retrying"
+              git update-ref -d refs/remotes/origin/main 2>/dev/null || true
+              git remote prune origin 2>/dev/null || true
+              git fetch origin main
+            }
             git reset --hard origin/main
             cd frontend
             npm ci

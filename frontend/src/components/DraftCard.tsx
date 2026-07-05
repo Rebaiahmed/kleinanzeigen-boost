@@ -1,5 +1,6 @@
 import React from 'react';
 import { Trash2, ExternalLink } from 'lucide-react';
+import { useDraftThumbnail } from '../hooks/useDraftThumbnail';
 
 const VintedLogo = () => (
   <svg viewBox="0 0 100 100" className="w-3 h-3 shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -14,7 +15,7 @@ interface DraftCardProps {
 }
 
 export function DraftCard({ ad, onOpen, onDelete }: DraftCardProps) {
-  const thumbnail = ad.images?.[0] || ad.image;
+  const thumbnail = useDraftThumbnail(ad.id);
 
   return (
     <div className="bg-white border border-[#e5e5e5] rounded-sm shadow-sm flex flex-col md:flex-row overflow-hidden">

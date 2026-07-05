@@ -1,10 +1,42 @@
-import { IsString, IsNumber, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsBoolean, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
-// Sent as multipart/form-data (images travel as files, see AdsController#saveDraft).
-// keyFeatures/vinted arrive as JSON-encoded strings because multipart form fields
-// are always plain strings — AdsService.saveDraft() parses them back into
-// string[]/object before writing to Firestore.
+// Sent as plain JSON — images never reach the backend. They're stored
+// client-side (IndexedDB, keyed by draft id) and never leave the browser.
+export class VintedDraftDto {
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsNumber()
+  price?: number;
+
+  @IsOptional()
+  @IsString()
+  condition?: string;
+
+  @IsOptional()
+  @IsString()
+  size?: string | null;
+
+  @IsOptional()
+  @IsString()
+  brand?: string | null;
+
+  @IsOptional()
+  @IsString()
+  color?: string | null;
+
+  @IsOptional()
+  @IsString()
+  material?: string | null;
+}
+
 export class SaveDraftDto {
   @IsOptional()
   @IsString()
@@ -18,7 +50,6 @@ export class SaveDraftDto {
   description?: string;
 
   @IsOptional()
-  @Type(() => Number)
   @IsNumber()
   price?: number;
 
@@ -28,29 +59,27 @@ export class SaveDraftDto {
 
   @IsOptional()
   @IsString()
-  brand?: string;
+  brand?: string | null;
 
   @IsOptional()
   @IsString()
   condition?: string;
 
-  /** JSON-encoded string[] */
   @IsOptional()
-  @IsString()
-  keyFeatures?: string;
-
-  /** JSON-encoded { title, description, price, condition, size, brand, color, material } */
-  @IsOptional()
-  @IsString()
-  vinted?: string;
+  @IsArray()
+  @IsString({ each: true })
+  keyFeatures?: string[];
 
   @IsOptional()
-  @Type(() => Boolean)
+  @ValidateNested()
+  @Type(() => VintedDraftDto)
+  vinted?: VintedDraftDto;
+
+  @IsOptional()
   @IsBoolean()
   autoRepost?: boolean;
 
   @IsOptional()
-  @Type(() => Number)
   @IsNumber()
   repostIntervalMinutes?: number;
 }

@@ -13,6 +13,7 @@ import {
 import { useAdsActions } from '../hooks/useAdsActions';
 import { useAds } from '../hooks/useAds';
 import { useAiUsage } from '../hooks/useAiUsage';
+import { saveDraftPhotos, loadDraftPhotos } from '../lib/draftPhotoStore';
 import { PriceSuggestion } from '../components/ads/PriceSuggestion';
 import { compressImage } from '../utils/compressImage';
 
@@ -85,10 +86,7 @@ const EbayLogo = () => (
 );
 
 interface UploadedPhoto {
-  // null for photos hydrated from a previously-saved draft (no local File
-  // available, only the persisted URL) — these can be displayed but not
-  // re-uploaded to /ai/analyze-photos or re-sent as new draft images.
-  file: File | null;
+  file: File;
   preview: string;
 }
 
@@ -202,7 +200,8 @@ export function CreateWithAi() {
   }, [photos]);
 
   // Hydrate from an existing draft when opened via ?draftId=... (e.g. "Öffnen"
-  // from Meine Entwürfe). Reads from the already-cached /ads list — no extra fetch.
+  // from Meine Entwürfe). Text fields come from the already-cached /ads list;
+  // photos come from IndexedDB — they never left the browser that saved them.
   useEffect(() => {
     if (!draftIdParam || draftDocId === draftIdParam) return;
     const draft = ads.find((a: any) => a.id === draftIdParam);
@@ -227,9 +226,11 @@ export function CreateWithAi() {
     setVintedMaterial(v.material || null);
     setShowAllVintedFields(false);
 
-    if (Array.isArray(draft.images) && draft.images.length > 0) {
-      setPhotos(draft.images.map((url: string) => ({ file: null, preview: url })));
-    }
+    loadDraftPhotos(draftIdParam).then((files) => {
+      if (files.length > 0) {
+        setPhotos(files.map((file) => ({ file, preview: URL.createObjectURL(file) })));
+      }
+    });
 
     setActiveTab('kleinanzeigen');
     setDraftDocId(draftIdParam);
@@ -304,13 +305,7 @@ export function CreateWithAi() {
       setErrorMessage(`Monatslimit erreicht (${callsCount}/${limit}). Nächsten Monat wieder verfügbar.`);
       return;
     }
-    // Photos hydrated from a saved draft only carry a persisted image URL, not
-    // the original File — they can't be re-sent to the analysis endpoint.
-    if (photos.some(p => !p.file)) {
-      setErrorMessage('Diese Fotos stammen aus einem gespeicherten Entwurf und können nicht erneut analysiert werden. Bitte lade neue Fotos hoch.');
-      return;
-    }
-    const files = photos.map(p => p.file as File);
+    const files = photos.map(p => p.file);
 
     // Pre-upload size guard. The server (and nginx in front) rejects oversized
     // uploads with a 413 that the browser surfaces as an opaque "Failed to fetch"
@@ -444,21 +439,18 @@ export function CreateWithAi() {
     });
   };
 
-  // Builds the multipart payload for POST /ads/draft. Only appends real File
-  // objects as images — photos hydrated from an already-saved draft (file: null)
-  // are left out, so the backend keeps their previously-persisted images (see
-  // AdsService.saveDraft's merge behavior).
-  const buildDraftFormData = () => {
-    const fd = new FormData();
-    if (draftDocId) fd.append('id', draftDocId);
-    fd.append('title', title);
-    fd.append('category', category);
-    fd.append('price', String(price));
-    fd.append('description', description);
-    if (brand) fd.append('brand', brand);
-    fd.append('condition', condition);
-    fd.append('keyFeatures', JSON.stringify(keyFeatures));
-    fd.append('vinted', JSON.stringify({
+  // Builds the JSON payload for POST /ads/draft. Images are never included —
+  // they're saved separately to IndexedDB, keyed by the same draft id.
+  const buildDraftPayload = (id: string) => ({
+    id,
+    title,
+    category,
+    price,
+    description,
+    brand,
+    condition,
+    keyFeatures,
+    vinted: {
       title: vintedTitle,
       description: vintedDescription,
       price: vintedPrice,
@@ -467,21 +459,21 @@ export function CreateWithAi() {
       brand: vintedBrand,
       color: vintedColor,
       material: vintedMaterial,
-    }));
-    fd.append('autoRepost', 'false');
-    photos.forEach(p => { if (p.file) fd.append('images', p.file); });
-    return fd;
-  };
+    },
+    autoRepost: false,
+  });
 
   // Save Draft in Firestore
   const handleSaveDraft = async () => {
     setIsSaving(true);
 
-    const draftResult = await saveDraft(buildDraftFormData());
+    const id = draftDocId || `draft_${crypto.randomUUID()}`;
+    await saveDraftPhotos(id, photos.map(p => p.file));
+    const draftResult = await saveDraft(buildDraftPayload(id));
     setIsSaving(false);
 
     if (draftResult && draftResult.success) {
-      if (draftResult.ad?.id) setDraftDocId(draftResult.ad.id);
+      setDraftDocId(id);
       navigate('/meine-entwuerfe');
     }
   };
@@ -496,11 +488,13 @@ export function CreateWithAi() {
     setErrorMessage(null);
 
     try {
-      const draftResult = await saveDraft(buildDraftFormData());
+      const id = draftDocId || `draft_${crypto.randomUUID()}`;
+      await saveDraftPhotos(id, photos.map(p => p.file));
+      const draftResult = await saveDraft(buildDraftPayload(id));
       if (!draftResult || !draftResult.success) {
         throw new Error("Fehler beim Speichern des Entwurfs vor dem Posten auf eBay.");
       }
-      setDraftDocId(draftResult.ad.id);
+      setDraftDocId(id);
 
       const adId = draftResult.ad.id;
 
@@ -745,12 +739,8 @@ export function CreateWithAi() {
               <button
                 type="button"
                 onClick={analyzePhotos}
-                disabled={isLoading || isBlocked || photos.some(p => !p.file)}
-                title={
-                  photos.some(p => !p.file)
-                    ? 'Aus einem Entwurf geladene Fotos können nicht erneut analysiert werden'
-                    : isBlocked ? 'Monatslimit erreicht' : 'Erneut generieren (verbraucht eine weitere KI-Analyse)'
-                }
+                disabled={isLoading || isBlocked}
+                title={isBlocked ? 'Monatslimit erreicht' : 'Erneut generieren (verbraucht eine weitere KI-Analyse)'}
                 className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#86b817] hover:text-[#6f8f00] disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
               >
                 {isLoading

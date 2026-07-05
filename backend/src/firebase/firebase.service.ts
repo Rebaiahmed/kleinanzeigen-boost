@@ -37,7 +37,6 @@ export class FirebaseService implements OnModuleInit {
         this.app = admin.initializeApp({
           credential: admin.credential.cert(credentialObj),
           projectId: credentialObj.project_id,
-          storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
         });
       } else {
         this.app = admin.apps[0]!;
@@ -182,26 +181,5 @@ export class FirebaseService implements OnModuleInit {
 
   get auth() {
     return this.app?.auth() as any;
-  }
-
-  private storageWarned = false;
-
-  /** Returns the default Storage bucket, or null if Firebase credentials /
-   *  FIREBASE_STORAGE_BUCKET aren't configured (dev-without-credentials mode).
-   *  Callers must handle null by skipping persistence rather than crashing. */
-  get storageBucket() {
-    if (this.app && process.env.FIREBASE_STORAGE_BUCKET) {
-      try {
-        return this.app.storage().bucket();
-      } catch (e: any) {
-        this.logger.warn(`Firebase Storage not available: ${e.message}`);
-        return null;
-      }
-    }
-    if (!this.storageWarned) {
-      this.storageWarned = true;
-      this.logger.warn('Firebase Storage not configured (missing credentials or FIREBASE_STORAGE_BUCKET) — draft images will not be persisted.');
-    }
-    return null;
   }
 }

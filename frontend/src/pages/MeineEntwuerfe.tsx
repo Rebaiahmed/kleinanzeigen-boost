@@ -5,6 +5,7 @@ import { useAds } from '../hooks/useAds';
 import { useAdsActions } from '../hooks/useAdsActions';
 import { DraftCard } from '../components/DraftCard';
 import { Toast } from '../components/Toast';
+import { deleteDraftPhotos } from '../lib/draftPhotoStore';
 
 export function MeineEntwuerfe() {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ export function MeineEntwuerfe() {
     if (!deleteTargetId) return;
     setIsDeleting(true);
     const ok = await deleteDraft(deleteTargetId);
+    if (ok) await deleteDraftPhotos(deleteTargetId);
     setIsDeleting(false);
     setDeleteTargetId(null);
     if (ok) invalidateAds();

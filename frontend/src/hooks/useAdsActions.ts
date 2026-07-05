@@ -28,7 +28,7 @@ export interface AdsActionsReturn {
   handlePriceCheck: (adId: string, title: string) => Promise<{ suggestedPrice: number; reasoning: string } | null>;
   handleVintedCrossPost: (adId: string) => Promise<{ success: boolean; url?: string; error?: string }>;
   handleEbayCrossPost: (adId: string) => Promise<{ success: boolean; url?: string; error?: string }>;
-  saveDraft: (formData: FormData) => Promise<any>;
+  saveDraft: (adData: any) => Promise<any>;
   deleteDraft: (adId: string) => Promise<boolean>;
   optimizeExistingAd: (title: string, description: string, category: string, price: string | number) => Promise<any>;
   updateAdFields: (adId: string, fields: { title?: string; description?: string; status?: string; repostIntervalMinutes?: number; nextRepostAt?: string; autoRepost?: boolean }) => Promise<boolean>;
@@ -393,13 +393,15 @@ export function useAdsActions(): AdsActionsReturn {
   );
 
   const saveDraft = useCallback(
-    async (formData: FormData): Promise<any> => {
+    async (adData: any): Promise<any> => {
       try {
         const res = await fetch(`${API_URL}/ads/draft`, {
           method: 'POST',
-          // No Content-Type header — the browser sets the multipart boundary itself.
-          headers: { Authorization: `Bearer ${getToken()}` },
-          body: formData,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${getToken()}`,
+          },
+          body: JSON.stringify(adData),
         });
         const data = await res.json();
         if (data.success) {

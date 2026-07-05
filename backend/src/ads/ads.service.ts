@@ -428,20 +428,97 @@ export class AdsService {
     return { success: true, message: 'Anzeige wurde gelöscht' };
   }
 
-  async saveDraft(userId: string, adData: SaveDraftDto) {
+  async saveDraft(userId: string, adData: SaveDraftDto, files: any[] = []) {
     const db = this.firebaseService.firestore;
     const adId = adData.id || `draft_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const adRef = db.collection('users').doc(userId).collection('ads').doc(adId);
 
-    const newAd = {
-      ...adData,
+    const images = await this.uploadDraftImages(userId, adId, files);
+
+    let keyFeatures: string[] | undefined;
+    try { keyFeatures = adData.keyFeatures ? JSON.parse(adData.keyFeatures) : undefined; } catch { keyFeatures = undefined; }
+    let vinted: any;
+    try { vinted = adData.vinted ? JSON.parse(adData.vinted) : undefined; } catch { vinted = undefined; }
+
+    const { keyFeatures: _kf, vinted: _v, ...rest } = adData;
+
+    const newAd: Record<string, any> = {
+      ...rest,
       id: adId,
       status: AdStatus.PENDING,
       createdAt: new Date().toISOString(),
+      date: new Date().toLocaleDateString('de-DE'),
+      views: 0,
+      favorites: 0,
+      messages: 0,
     };
+    if (keyFeatures) newAd.keyFeatures = keyFeatures;
+    if (vinted) newAd.vinted = vinted;
+    // Only overwrite images if new ones were uploaded — re-saving an existing draft
+    // without touching photos shouldn't wipe out its previously stored images.
+    if (images.length > 0) {
+      newAd.images = images;
+      newAd.image = images[0];
+    }
 
     await adRef.set(newAd, { merge: true });
     return { success: true, ad: newAd };
+  }
+
+  /** Uploads draft photo buffers to Firebase Storage under drafts/<userId>/<adId>/
+   *  and returns their public URLs. Returns [] (skips persistence) if Storage
+   *  isn't configured — callers must not treat that as a hard failure since a
+   *  draft's text fields should still save even without image support. */
+  private async uploadDraftImages(userId: string, adId: string, files: any[]): Promise<string[]> {
+    if (!files || files.length === 0) return [];
+    const bucket = this.firebaseService.storageBucket;
+    if (!bucket) return [];
+
+    const urls: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const ext = (file.mimetype || 'image/jpeg').split('/')[1] || 'jpg';
+      const destination = `drafts/${userId}/${adId}/${i}.${ext}`;
+      const blob = bucket.file(destination);
+      await blob.save(file.buffer, { contentType: file.mimetype });
+      try {
+        // Works on buckets with fine-grained (legacy ACL) access.
+        await blob.makePublic();
+        urls.push(`https://storage.googleapis.com/${bucket.name}/${destination}`);
+      } catch {
+        // Uniform bucket-level access (the modern GCS default) rejects
+        // per-object ACLs — fall back to a long-lived signed URL instead.
+        const [signedUrl] = await blob.getSignedUrl({ action: 'read', expires: '01-01-2100' });
+        urls.push(signedUrl);
+      }
+    }
+    return urls;
+  }
+
+  async deleteDraft(userId: string, adId: string) {
+    const db = this.firebaseService.firestore;
+    const adRef = db.collection('users').doc(userId).collection('ads').doc(adId);
+    const doc = await adRef.get();
+    if (!doc.exists) {
+      return { success: true }; // already gone
+    }
+    const data = doc.data() as any;
+    if (data?.status !== AdStatus.PENDING) {
+      throw new InternalServerErrorException('Nur Entwürfe können auf diesem Weg gelöscht werden.');
+    }
+
+    await adRef.delete();
+
+    const bucket = this.firebaseService.storageBucket;
+    if (bucket) {
+      try {
+        await bucket.deleteFiles({ prefix: `drafts/${userId}/${adId}/` });
+      } catch (err: any) {
+        this.logger.warn(`Failed to delete draft images for ${adId}: ${err.message}`);
+      }
+    }
+
+    return { success: true };
   }
 
   async updateAd(userId: string, adId: string, updateData: UpdateAdDto) {

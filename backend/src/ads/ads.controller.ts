@@ -1,8 +1,10 @@
-import { Controller, Get, Post, Param, Body, UseGuards, Req, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, UseGuards, UseInterceptors, UploadedFiles, Req, Patch } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { AdsService } from './ads.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UpdateAdDto } from './dto/update-ad.dto';
 import { SaveDraftDto } from './dto/save-draft.dto';
+import { MAX_PHOTOS, MAX_PHOTO_BYTES } from '../common/constants/upload.constants';
 
 @UseGuards(JwtAuthGuard)
 @Controller('api/ads')
@@ -95,8 +97,20 @@ export class AdsController {
   }
 
   @Post('draft')
-  async saveDraft(@Req() req: any, @Body() adData: SaveDraftDto) {
-    return this.adsService.saveDraft(req.user.userId, adData);
+  @UseInterceptors(FilesInterceptor('images', MAX_PHOTOS, {
+    limits: { fileSize: MAX_PHOTO_BYTES },
+  }))
+  async saveDraft(
+    @Req() req: any,
+    @Body() adData: SaveDraftDto,
+    @UploadedFiles() images: any[],
+  ) {
+    return this.adsService.saveDraft(req.user.userId, adData, images || []);
+  }
+
+  @Post('draft/:id/delete')
+  async deleteDraft(@Req() req: any, @Param('id') adId: string) {
+    return this.adsService.deleteDraft(req.user.userId, adId);
   }
 
   @Patch(':id')

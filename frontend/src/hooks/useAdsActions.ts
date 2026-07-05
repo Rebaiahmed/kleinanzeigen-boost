@@ -28,7 +28,8 @@ export interface AdsActionsReturn {
   handlePriceCheck: (adId: string, title: string) => Promise<{ suggestedPrice: number; reasoning: string } | null>;
   handleVintedCrossPost: (adId: string) => Promise<{ success: boolean; url?: string; error?: string }>;
   handleEbayCrossPost: (adId: string) => Promise<{ success: boolean; url?: string; error?: string }>;
-  saveDraft: (adData: any) => Promise<any>;
+  saveDraft: (formData: FormData) => Promise<any>;
+  deleteDraft: (adId: string) => Promise<boolean>;
   optimizeExistingAd: (title: string, description: string, category: string, price: string | number) => Promise<any>;
   updateAdFields: (adId: string, fields: { title?: string; description?: string; status?: string; repostIntervalMinutes?: number; nextRepostAt?: string; autoRepost?: boolean }) => Promise<boolean>;
   fetchSchedulerStatus: () => Promise<string | null>;
@@ -392,15 +393,13 @@ export function useAdsActions(): AdsActionsReturn {
   );
 
   const saveDraft = useCallback(
-    async (adData: any): Promise<any> => {
+    async (formData: FormData): Promise<any> => {
       try {
         const res = await fetch(`${API_URL}/ads/draft`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${getToken()}`,
-          },
-          body: JSON.stringify(adData),
+          // No Content-Type header — the browser sets the multipart boundary itself.
+          headers: { Authorization: `Bearer ${getToken()}` },
+          body: formData,
         });
         const data = await res.json();
         if (data.success) {
@@ -413,6 +412,29 @@ export function useAdsActions(): AdsActionsReturn {
       } catch {
         showToast('Fehler beim Speichern des Entwurfs', 'error');
         return null;
+      }
+    },
+    [showToast],
+  );
+
+  const deleteDraft = useCallback(
+    async (adId: string): Promise<boolean> => {
+      try {
+        const res = await fetch(`${API_URL}/ads/draft/${adId}/delete`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${getToken()}` },
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Entwurf wurde gelöscht', 'success');
+          return true;
+        } else {
+          showToast(data.message || 'Fehler beim Löschen des Entwurfs', 'error');
+          return false;
+        }
+      } catch {
+        showToast('Fehler beim Löschen des Entwurfs', 'error');
+        return false;
       }
     },
     [showToast],
@@ -512,6 +534,7 @@ export function useAdsActions(): AdsActionsReturn {
     handleVintedCrossPost,
     handleEbayCrossPost,
     saveDraft,
+    deleteDraft,
     optimizeExistingAd,
     updateAdFields,
     fetchSchedulerStatus,

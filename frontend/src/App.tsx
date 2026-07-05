@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Auth } from './pages/Auth';
 import { Ads } from './pages/Ads';
+import { MeineEntwuerfe } from './pages/MeineEntwuerfe';
 import { CreateWithAi } from './pages/CreateWithAi';
 import { Settings } from './pages/Settings';
 import { AppShell } from './components/layout/AppShell';
@@ -27,6 +28,7 @@ function App() {
         <Route path="/ebay/callback/success" element={<EbaySuccess />} />
         {/* Authenticated Routes — guarded, then wrapped in AppShell */}
         <Route path="/meine-anzeigen" element={<ProtectedRoute><AppShell><Ads /></AppShell></ProtectedRoute>} />
+        <Route path="/meine-entwuerfe" element={<ProtectedRoute><AppShell><MeineEntwuerfe /></AppShell></ProtectedRoute>} />
         <Route path="/neue-anzeige-mit-ki-erstellen" element={<ProtectedRoute><AppShell><CreateWithAi /></AppShell></ProtectedRoute>} />
         <Route path="/einstellungen" element={<ProtectedRoute><AppShell><Settings /></AppShell></ProtectedRoute>} />
         <Route path="/vorlagen" element={<ProtectedRoute><AppShell><ReplyTemplatesList /></AppShell></ProtectedRoute>} />

@@ -146,8 +146,9 @@ export function Ads() {
   const showBanner = EBAY_ENABLED && !isBannerDismissed && !isEbayConnected && !isLoading;
 
   // Always hide deleted ads (removed from Kleinanzeigen but kept in DB for history).
-  // Users don't need to see deleted listings.
-  const visibleAds = ads.filter((a: any) => a.listingState !== 'deleted');
+  // Users don't need to see deleted listings. Drafts now live on their own
+  // "Meine Entwürfe" page/tab, so exclude them here too.
+  const visibleAds = ads.filter((a: any) => a.listingState !== 'deleted' && a.status !== 'pending');
 
   // Title search — matters more than paging at high ad counts. Case-insensitive
   // substring match on the title.

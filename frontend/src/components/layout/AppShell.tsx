@@ -83,6 +83,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             📄 Meine Anzeigen
           </NavLink>
           <NavLink
+            to="/meine-entwuerfe"
+            className={({ isActive }) =>
+              `px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
+                isActive
+                  ? 'border-[#A8C300] text-[#A8C300]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`
+            }
+          >
+            📝 Meine Entwürfe
+          </NavLink>
+          <NavLink
             to="/vorlagen"
             className={({ isActive }) =>
               `px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${

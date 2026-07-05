@@ -1,4 +1,22 @@
-import { IsString, IsBoolean, IsNumber, IsOptional, IsISO8601, Min } from 'class-validator';
+import { IsString, IsBoolean, IsNumber, IsOptional, IsISO8601, Min, IsIn, ValidateNested, IsArray, Max } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class SmartVariationDto {
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  titleVariants?: string[];
+
+  @IsOptional()
+  @IsBoolean()
+  rotatePhotos?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(90)
+  priceStepPercent?: number;
+}
 
 export class UpdateAdDto {
   @IsOptional()
@@ -25,4 +43,18 @@ export class UpdateAdDto {
   @IsOptional()
   @IsBoolean()
   autoRepost?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  trackedRepostsCount?: number;
+
+  @IsOptional()
+  @IsIn(['smart', 'manual'])
+  repostMode?: 'smart' | 'manual';
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => SmartVariationDto)
+  smartVariation?: SmartVariationDto;
 }

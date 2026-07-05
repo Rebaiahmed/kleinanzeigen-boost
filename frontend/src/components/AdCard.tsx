@@ -15,6 +15,7 @@ import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { PhotoFeedbackModal } from './PhotoFeedbackModal';
 import { SuggestPriceButton } from './SuggestPriceButton';
 import { isGiveAwayAd } from '../lib/adPrice';
+import { computeNextSmartRepost } from '../lib/smart-repost';
 
 export interface AdCardProps {
   ad: any;
@@ -63,14 +64,11 @@ const DE_DAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Fre
 
 // Recurring repost intervals (minutes). Runs again every interval — client-side
 // when the browser is open, server-side fallback when it's closed.
-const INTERVAL_OPTIONS = [
-  { label: '5 Min', value: 5 },
-  { label: '10 Min', value: 10 },
-  { label: '30 Min', value: 30 },
-  { label: '1 Std', value: 60 },
-  { label: '12 Std', value: 720 },
+// Manual mode intervals (5/10min removed — ineffective + bot-like). Smart Repost
+// is the recommended default; these are the "advanced" fallback.
+const MANUAL_INTERVAL_OPTIONS = [
   { label: '24 Std', value: 1440 },
-  { label: '2 Tage', value: 2880 },
+  { label: '3 Tage', value: 4320 },
   { label: '7 Tage', value: 10080 },
 ];
 
@@ -213,27 +211,53 @@ export function AdCard({
   // open, server-side fallback when it's closed. The one-time button above is
   // independent (immediate, doesn't touch the schedule).
   const [scheduleOpen, setScheduleOpen] = useState(false);
-  const [selectedInterval, setSelectedInterval] = useState<number>(ad.repostIntervalMinutes || 1440);
+  const [repostMode, setRepostMode] = useState<'smart' | 'manual'>(ad.repostMode || 'smart');
+  const [selectedInterval, setSelectedInterval] = useState<number>(
+    [1440, 4320, 10080].includes(ad.repostIntervalMinutes) ? ad.repostIntervalMinutes : 1440,
+  );
+  const [titleA, setTitleA] = useState<string>(ad.smartVariation?.titleVariants?.[0] ?? (ad.title || ''));
+  const [titleB, setTitleB] = useState<string>(ad.smartVariation?.titleVariants?.[1] ?? '');
+  const [rotatePhotos, setRotatePhotos] = useState<boolean>(!!ad.smartVariation?.rotatePhotos);
+  const [priceStep, setPriceStep] = useState<number>(ad.smartVariation?.priceStepPercent ?? 0);
   const [isSavingSchedule, setIsSavingSchedule] = useState(false);
   const [localAutoRepost, setLocalAutoRepost] = useState<boolean>(!!ad.autoRepost);
   const [localNextRepostAt, setLocalNextRepostAt] = useState<string | null>(ad.nextRepostAt || null);
+  // One-time "what changed" callout for users who already had a schedule.
+  const [showSmartCallout, setShowSmartCallout] = useState<boolean>(
+    () => localStorage.getItem('ab_smart_repost_seen') !== '1',
+  );
+
+  const hasVariation = [titleA, titleB].filter((s) => s.trim()).length >= 2 || rotatePhotos || priceStep > 0;
 
   const handleSaveSchedule = async () => {
     if (!onUpdateFields) return;
     setIsSavingSchedule(true);
     try {
-      const next = new Date(Math.ceil((Date.now() + selectedInterval * 60000) / 60000) * 60000).toISOString();
-      const ok = await onUpdateFields(ad.id, {
-        status: 'active',
-        autoRepost: true,
-        repostIntervalMinutes: selectedInterval,
-        nextRepostAt: next,
-      });
+      let payload: any;
+      let next: string;
+      if (repostMode === 'smart') {
+        const titleVariants = [titleA, titleB].map((s) => s.trim()).filter(Boolean);
+        next = computeNextSmartRepost(Date.now());
+        payload = {
+          status: 'active', autoRepost: true, repostMode: 'smart', nextRepostAt: next,
+          smartVariation: {
+            ...(titleVariants.length >= 2 ? { titleVariants } : {}),
+            rotatePhotos,
+            priceStepPercent: priceStep || 0,
+          },
+        };
+      } else {
+        next = new Date(Math.ceil((Date.now() + selectedInterval * 60000) / 60000) * 60000).toISOString();
+        payload = { status: 'active', autoRepost: true, repostMode: 'manual', repostIntervalMinutes: selectedInterval, nextRepostAt: next };
+      }
+      const ok = await onUpdateFields(ad.id, payload);
       if (ok) { setLocalAutoRepost(true); setLocalNextRepostAt(next); setScheduleOpen(false); }
     } finally {
       setIsSavingSchedule(false);
     }
   };
+
+  const dismissSmartCallout = () => { localStorage.setItem('ab_smart_repost_seen', '1'); setShowSmartCallout(false); };
 
   const handleClearSchedule = async () => {
     if (!onUpdateFields) return;
@@ -445,52 +469,86 @@ export function AdCard({
             </button>
 
             {scheduleOpen && (
-              <div className="absolute right-0 top-full mt-1 w-72 bg-white border border-[#d4d4d4] shadow-lg rounded-sm p-3 z-40 text-left">
+              <div className="absolute right-0 top-full mt-1 w-[19rem] bg-white border border-[#d4d4d4] shadow-lg rounded-sm p-3 z-40 text-left">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wide">Wiederhol-Intervall</span>
+                  <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wide">Repost-Modus</span>
                   <button type="button" onClick={() => setScheduleOpen(false)} className="text-gray-400 hover:text-gray-600">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
-                <div className="grid grid-cols-4 gap-1 mb-3">
-                  {INTERVAL_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setSelectedInterval(opt.value)}
-                      className={`py-1 text-[10px] font-semibold rounded-sm border transition-colors ${
-                        selectedInterval === opt.value
-                          ? 'bg-[#A8C300] text-white border-[#A8C300]'
-                          : 'bg-white text-gray-600 border-gray-200 hover:border-[#A8C300]'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
+
+                {/* One-time "what changed" callout */}
+                {showSmartCallout && (
+                  <div className="relative bg-[#f2f7e6] border border-[#d4e39a] rounded-sm px-2.5 py-2 mb-3 text-[11px] text-[#5a6e00] leading-snug">
+                    <button type="button" onClick={dismissSmartCallout} aria-label="Schließen" className="absolute top-1 right-1 text-[#7a9000] hover:text-[#5a6e00]"><X className="w-3 h-3" /></button>
+                    <span className="font-semibold">Neu: Smart Repost.</span> Statt fester Intervalle
+                    postet AnzeigenBoost jetzt zur besten Uhrzeit und mit echten Änderungen. Feste
+                    Intervalle findest du weiterhin unter „Manuell".
+                  </div>
+                )}
+
+                {/* Mode toggle */}
+                <div className="grid grid-cols-2 gap-1 mb-2">
+                  {([['smart', 'Smart (empfohlen)'], ['manual', 'Manuell']] as const).map(([m, lbl]) => (
+                    <button key={m} type="button" onClick={() => setRepostMode(m)}
+                      className={`py-1.5 text-[11px] font-semibold rounded-sm border transition-colors ${
+                        repostMode === m ? 'bg-[#A8C300] text-white border-[#A8C300]' : 'bg-white text-gray-600 border-gray-200 hover:border-[#A8C300]'
+                      }`}>{lbl}</button>
                   ))}
                 </div>
-                <div className="text-[11px] text-gray-500 bg-gray-50 border border-gray-200 rounded-sm px-2.5 py-1.5 mb-3">
-                  Nächster Repost: <span className="font-semibold text-gray-700">
-                    {formatNextRepostGerman(new Date(Date.now() + selectedInterval * 60000).toISOString(), true)}
-                  </span>
-                </div>
+
+                {repostMode === 'smart' ? (
+                  <div className="space-y-2 mb-3">
+                    <p className="text-[11px] text-gray-500 leading-snug">
+                      Postet zur besten Uhrzeit und mit echten Änderungen — so wie es der Algorithmus belohnt.
+                    </p>
+                    {/* Variations */}
+                    <div className="space-y-1.5 border border-gray-100 rounded-sm p-2">
+                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Variationen (optional)</span>
+                      <input value={titleA} onChange={(e) => setTitleA(e.target.value)} placeholder="Titel-Variante A" className="w-full border border-gray-200 rounded-sm px-2 py-1 text-[11px] focus:outline-none focus:border-[#A8C300]" />
+                      <input value={titleB} onChange={(e) => setTitleB(e.target.value)} placeholder="Titel-Variante B (wechselt sich ab)" className="w-full border border-gray-200 rounded-sm px-2 py-1 text-[11px] focus:outline-none focus:border-[#A8C300]" />
+                      <label className="flex items-center gap-2 text-[11px] text-gray-600">
+                        <input type="checkbox" checked={rotatePhotos} onChange={(e) => setRotatePhotos(e.target.checked)} className="h-3.5 w-3.5" />
+                        Fotos rotieren (1. & 2. tauschen)
+                      </label>
+                      <label className="flex items-center gap-2 text-[11px] text-gray-600">
+                        Preis senken um
+                        <input type="number" min={0} max={90} value={priceStep} onChange={(e) => setPriceStep(Math.max(0, Math.min(90, Number(e.target.value) || 0)))} className="w-14 border border-gray-200 rounded-sm px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-[#A8C300]" />
+                        % pro Repost
+                      </label>
+                    </div>
+                    {!hasVariation && (
+                      <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-2 py-1 leading-snug">
+                        Tipp: Ohne Variation wird der Repost oft nicht als „neu" gewertet. Aktiviere mindestens eine.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mb-3">
+                    <div className="grid grid-cols-3 gap-1 mb-2">
+                      {MANUAL_INTERVAL_OPTIONS.map((opt) => (
+                        <button key={opt.value} type="button" onClick={() => setSelectedInterval(opt.value)}
+                          className={`py-1 text-[11px] font-semibold rounded-sm border transition-colors ${
+                            selectedInterval === opt.value ? 'bg-[#A8C300] text-white border-[#A8C300]' : 'bg-white text-gray-600 border-gray-200 hover:border-[#A8C300]'
+                          }`}>{opt.label}</button>
+                      ))}
+                    </div>
+                    <div className="text-[11px] text-gray-500 bg-gray-50 border border-gray-200 rounded-sm px-2.5 py-1.5">
+                      Nächster Repost: <span className="font-semibold text-gray-700">{formatNextRepostGerman(new Date(Date.now() + selectedInterval * 60000).toISOString(), true)}</span>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex justify-between gap-2">
                   {localAutoRepost && (
-                    <button
-                      type="button"
-                      onClick={handleClearSchedule}
-                      disabled={isSavingSchedule}
-                      className="px-3 py-1.5 text-[11px] font-semibold text-red-600 hover:bg-red-50 rounded-sm transition-colors"
-                    >
+                    <button type="button" onClick={handleClearSchedule} disabled={isSavingSchedule}
+                      className="px-3 py-1.5 text-[11px] font-semibold text-red-600 hover:bg-red-50 rounded-sm transition-colors">
                       Zeitplan entfernen
                     </button>
                   )}
-                  <button
-                    type="button"
-                    onClick={handleSaveSchedule}
-                    disabled={isSavingSchedule}
-                    className="ml-auto px-3 py-1.5 bg-[#A8C300] hover:bg-[#96ae00] disabled:bg-gray-300 text-white font-bold rounded-sm text-[11px] transition-colors"
-                  >
-                    {isSavingSchedule ? 'Speichern…' : 'Zeitplan speichern'}
+                  <button type="button" onClick={handleSaveSchedule} disabled={isSavingSchedule}
+                    className="ml-auto px-3 py-1.5 bg-[#A8C300] hover:bg-[#96ae00] disabled:bg-gray-300 text-white font-bold rounded-sm text-[11px] transition-colors">
+                    {isSavingSchedule ? 'Speichern…' : 'Speichern'}
                   </button>
                 </div>
               </div>

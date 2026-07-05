@@ -6,6 +6,7 @@ import { SessionService } from '../auth/session.service';
 import { AdStatus } from '../ads/dto/ad-status.enum';
 import { AdData } from '../ads/dto/ad-data.interface';
 import { SCHEDULER_CONFIG } from '../config/scheduler.constants';
+import { applySmartVariation, computeNextSmartRepost } from '../config/smart-repost';
 import { classifyRepostError } from '../common/repost-error.util';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -382,7 +383,17 @@ export class SchedulerService {
       //    worker's [repost-diag] logging captures the 403 cause. callAutomationWorker
       //    throws on failure, which the catch block below classifies + logs.
       try {
-        const result = await this.automationService.callAutomationWorker('repost', { userId, adId, adData, cookies });
+        // Smart Repost: apply ONE real micro-variation (title/photo/price) so the
+        // refresh registers as a genuine change. The engine is unchanged — it just
+        // receives the varied copy. Manual mode posts the ad as-is.
+        const isSmart = adData.repostMode === 'smart';
+        const repostCount = Number(adData.trackedRepostsCount) || 0;
+        const varied = isSmart
+          ? applySmartVariation(adData, adData.smartVariation, repostCount)
+          : { adData, applied: 'none' as const };
+        if (isSmart) this.logger.log(`${logCtx(userId, adId, runId)} Smart Repost — variation applied: ${varied.applied}`);
+
+        const result = await this.automationService.callAutomationWorker('repost', { userId, adId, adData: varied.adData, cookies });
         this.logger.log(`${logCtx(userId, adId, runId)} Automation worker result: ${JSON.stringify(result)}`);
 
         // 4. On success, update state and create log.
@@ -390,8 +401,11 @@ export class SchedulerService {
         // reposting on its schedule. (The client runs it first when the browser is
         // open; the server only reaches here as the closed-browser fallback.)
         if (result.success) {
-          const intervalMin = Number(adData.repostIntervalMinutes) || SCHEDULER_CONFIG.defaultRepostIntervalMinutes;
-          const next = new Date(Date.now() + intervalMin * 60 * 1000).toISOString();
+          // Smart mode: next repost lands before a browsing peak, ≥7 days out
+          // (free-refresh limit). Manual mode: now + chosen interval.
+          const next = isSmart
+            ? computeNextSmartRepost(Date.now())
+            : new Date(Date.now() + (Number(adData.repostIntervalMinutes) || SCHEDULER_CONFIG.defaultRepostIntervalMinutes) * 60 * 1000).toISOString();
           await db.collection('users').doc(userId).collection('ads').doc(adId).update({
             status: AdStatus.ACTIVE,
             lastPostedAt: new Date().toISOString(),
@@ -400,7 +414,7 @@ export class SchedulerService {
             pendingRepostSince: null,
             repostFailureCount: 0,        // reset on success
             repostDisabledReason: null,
-            // Verification: the id/url of the freshly-published listing (from the worker).
+            trackedRepostsCount: repostCount + 1,   // drives variation rotation
             ...(result.newAdId ? { lastRepostNewAdId: result.newAdId } : {}),
             ...(result.newAdUrl ? { lastRepostNewAdUrl: result.newAdUrl } : {}),
           });
@@ -415,10 +429,12 @@ export class SchedulerService {
             runId: runId || null,
             newAdId: result.newAdId || null,
             newAdUrl: result.newAdUrl || null,
+            repostMode: isSmart ? 'smart' : 'manual',
+            variationApplied: varied.applied,
           });
 
           if (stats) stats.succeeded++;
-          this.logger.log(`${logCtx(userId, adId, runId)} ✓ Repost ok — rescheduled next for ${next}`);
+          this.logger.log(`${logCtx(userId, adId, runId)} ✓ Repost ok (${isSmart ? 'smart/' + varied.applied : 'manual'}) — next ${next}`);
         }
       } catch (error: any) {
         const errorCode = classifyRepostError(error.message);

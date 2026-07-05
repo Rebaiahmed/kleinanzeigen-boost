@@ -8,6 +8,7 @@ import { EbayService } from '../ebay/ebay.service';
 import { VintedService } from '../vinted/vinted.service';
 import { classifyRepostError } from '../common/repost-error.util';
 import { SessionService } from '../auth/session.service';
+import { applySmartVariation, computeNextSmartRepost } from '../config/smart-repost';
 @Injectable()
 export class AdsService {
   private readonly logger = new Logger(AdsService.name);
@@ -162,6 +163,23 @@ export class AdsService {
       this.logger.log(`importAds: purged ${stale.length} ad(s) soft-deleted >30 days ago`);
     }
 
+    // Migrate the removed 5min/10min intervals to Smart Repost (one-time, idempotent).
+    const toSmart = existingSnap.docs.filter(d => {
+      const data: any = d.data();
+      return !data.repostMode && (data.repostIntervalMinutes === 5 || data.repostIntervalMinutes === 10);
+    });
+    if (toSmart.length > 0) {
+      const migBatch = db.batch();
+      const nextRepostAt = computeNextSmartRepost(Date.now());
+      toSmart.forEach(d => migBatch.update(d.ref, {
+        repostMode: 'smart',
+        repostIntervalMinutes: null,
+        ...(d.data().autoRepost ? { nextRepostAt } : {}),
+      }));
+      await migBatch.commit();
+      this.logger.log(`importAds: migrated ${toSmart.length} ad(s) from 5/10min to Smart Repost`);
+    }
+
     const snap = await adsCol.get();
     const allAds = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     return { success: true, ads: allAds };
@@ -233,14 +251,21 @@ export class AdsService {
       // login page and throws a false SESSION_EXPIRED.
       const cookies = await this.sessionService.getDecryptedCookies(userId);
       this.logger.warn(`[repost-debug] userId=${userId} → ${cookies.length} session cookie(s) found${cookies.length ? ` (names: ${cookies.slice(0, 8).map((c: any) => c.name).join(',')})` : ' — NONE: cookies are stored under a different id or missing → re-run Verbinden'}`);
-      const result = await this.automationService.callAutomationWorker('repost', { userId, adId, adData, cookies });
+      // Smart mode: apply one micro-variation + schedule the next repost before a
+      // peak (≥7 days out). Manual mode: post as-is, reschedule by interval.
+      const isSmart = adData.repostMode === 'smart';
+      const repostCount = Number(adData.trackedRepostsCount) || 0;
+      const varied = isSmart ? applySmartVariation(adData, adData.smartVariation, repostCount) : { adData, applied: 'none' as const };
+      const result = await this.automationService.callAutomationWorker('repost', { userId, adId, adData: varied.adData, cookies });
       if (result.success) {
-        const repostIntervalMinutes: number = adData.repostIntervalMinutes ?? 1440;
-        const nextRepostAt = new Date(Date.now() + repostIntervalMinutes * 60 * 1000).toISOString();
+        const nextRepostAt = isSmart
+          ? computeNextSmartRepost(Date.now())
+          : new Date(Date.now() + (adData.repostIntervalMinutes ?? 1440) * 60 * 1000).toISOString();
         await adRef.update({
           status: AdStatus.ACTIVE,
           lastPostedAt: new Date().toISOString(),
           nextRepostAt,
+          trackedRepostsCount: repostCount + 1,
           ...(result.newAdId ? { lastRepostNewAdId: result.newAdId } : {}),
           ...(result.newAdUrl ? { lastRepostNewAdUrl: result.newAdUrl } : {}),
         });
@@ -431,6 +456,14 @@ export class AdsService {
     if (updateData.repostIntervalMinutes !== undefined) payload.repostIntervalMinutes = updateData.repostIntervalMinutes;
     if (updateData.nextRepostAt !== undefined) payload.nextRepostAt = updateData.nextRepostAt;
     if (updateData.autoRepost !== undefined) payload.autoRepost = updateData.autoRepost;
+    if (updateData.trackedRepostsCount !== undefined) payload.trackedRepostsCount = updateData.trackedRepostsCount;
+    // Smart Repost config
+    if (updateData.repostMode !== undefined) payload.repostMode = updateData.repostMode;
+    if (updateData.smartVariation !== undefined) payload.smartVariation = updateData.smartVariation;
+    // When switching to smart mode, schedule the next repost at a peak window.
+    if (updateData.repostMode === 'smart' && updateData.autoRepost !== false) {
+      payload.nextRepostAt = computeNextSmartRepost(Date.now());
+    }
 
     // Auto-set status to ACTIVE when enabling auto-repost (if not explicitly set and not mid-repost).
     // Frontend should explicitly set status='active' when scheduling to guarantee scheduler finds it.

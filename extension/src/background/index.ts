@@ -4,6 +4,7 @@
 import { ENDPOINTS } from '../config/endpoints';
 import { executeRepostFullFlow, registerOverlayScript, unregisterOverlayScript } from './repost-engine';
 import { collectAdPages } from './sync-pagination';
+import { computeNextSmartRepost, applySmartVariation } from '../config/smart-repost';
 
 const API_URL = ENDPOINTS.API_BASE;
 
@@ -94,11 +95,17 @@ async function runDueClientReposts(verbose = false): Promise<void> {
     // claimed ads are reposted; a failed claim is skipped (avoids a double post).
     const claimed: any[] = [];
     for (const ad of due) {
-      const interval = Number(ad.repostIntervalMinutes) || 1440;
-      const claimedNext = new Date(Date.now() + interval * 60000).toISOString();
+      // Smart mode: claim the next slot before a peak (≥7 days out) and bump the
+      // variation counter. Manual: interval.
+      const smart = ad.repostMode === 'smart';
+      const claimedNext = smart
+        ? computeNextSmartRepost(Date.now())
+        : new Date(Date.now() + (Number(ad.repostIntervalMinutes) || 1440) * 60000).toISOString();
+      const claimBody: any = { nextRepostAt: claimedNext };
+      if (smart) claimBody.trackedRepostsCount = (Number(ad.trackedRepostsCount) || 0) + 1;
       try {
         const claimRes = await fetch(`${API_URL}/ads/${ad.id}`, {
-          method: 'PATCH', headers: authHeaders, body: JSON.stringify({ nextRepostAt: claimedNext }),
+          method: 'PATCH', headers: authHeaders, body: JSON.stringify(claimBody),
         });
         if (claimRes.ok) claimed.push(ad);
         else console.warn(`[BG][sched] claim failed for ${ad.id} (HTTP ${claimRes.status}) — skipping to avoid double post`);
@@ -110,7 +117,13 @@ async function runDueClientReposts(verbose = false): Promise<void> {
     // Now repost the claimed ads one at a time, jittered (human-like, lowers risk).
     for (let i = 0; i < claimed.length; i++) {
       const ad = claimed[i];
-      const result = await performRepost(String(ad.id), ad);
+      // Smart mode: apply one micro-variation to what gets posted (engine unchanged).
+      const repostCount = Number(ad.trackedRepostsCount) || 0;
+      const varied = ad.repostMode === 'smart'
+        ? applySmartVariation(ad, ad.smartVariation, repostCount)
+        : { adData: ad, applied: 'none' as const };
+      if (ad.repostMode === 'smart') console.log(`[BG][sched] smart variation for ${ad.id}: ${varied.applied}`);
+      const result = await performRepost(String(ad.id), varied.adData);
 
       // On failure, pull nextRepostAt back to a short retry window (not the full
       // interval) so it retries soon — but not on the immediate next tick. The

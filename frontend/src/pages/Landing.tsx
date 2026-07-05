@@ -93,15 +93,15 @@ export function Landing() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-10 items-center">
             <div>
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-slate-200 bg-slate-50 text-[12px] font-semibold text-slate-600 mb-5">
-                <Zap className="w-3.5 h-3.5 text-[#A8C300]" /> Mehr verkaufen auf Kleinanzeigen
+                <Zap className="w-3.5 h-3.5 text-[#A8C300]" /> PRO-Sichtbarkeit ohne PRO-Preis
               </div>
               <h1 className="text-3xl sm:text-[40px] font-bold tracking-tight text-slate-900 mb-4 leading-[1.15]">
-                Deine Anzeigen mit einem Klick wieder ganz nach oben
+                Smart Repost — postet zur besten Uhrzeit, mit echten Änderungen
               </h1>
               <p className="text-lg text-slate-600 mb-7 leading-relaxed">
-                AnzeigenBoost stellt deine Kleinanzeigen neu ein, damit sie wieder oben in den
-                Suchergebnissen erscheinen – per Klick oder nach Zeitplan. Dazu Anzeigen per Foto mit KI
-                erstellen, Texte optimieren und schneller auf Nachrichten antworten. Mehr Aufrufe, weniger Klickarbeit.
+                AnzeigenBoost stellt deine Kleinanzeigen automatisch neu ein – zur besten Uhrzeit und mit
+                echten Änderungen, so wie es der Algorithmus belohnt. Dazu Anzeigen per Foto mit KI erstellen,
+                Texte optimieren und schneller auf Nachrichten antworten. Mehr Aufrufe, weniger Klickarbeit.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Link to="/login" className="inline-flex items-center justify-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] text-white font-bold py-3 px-7 rounded-full text-[15px] shadow-sm transition-all hover:-translate-y-0.5">
@@ -131,8 +131,8 @@ export function Landing() {
                     <div className="inline-flex items-center gap-1 text-[11px] font-bold text-[#7a9000] bg-[#A8C300]/10 rounded-full px-2.5 py-1"><ArrowUp className="w-3 h-3" /> Jetzt oder per Zeitplan</div>
                   </div>
                 </div>
-                <h3 className="text-[17px] font-bold text-slate-900 flex items-center gap-2"><Clock className="w-4 h-4 text-[#A8C300]" /> Wieder ganz nach oben</h3>
-                <p className="text-[14px] text-slate-600 mt-1.5">Per Klick oder automatisch nach Zeitplan neu einstellen.</p>
+                <h3 className="text-[17px] font-bold text-slate-900 flex items-center gap-2"><Clock className="w-4 h-4 text-[#A8C300]" /> Smart Repost</h3>
+                <p className="text-[14px] text-slate-600 mt-1.5">Automatisch zur besten Uhrzeit neu einstellen – mit echten Änderungen.</p>
               </div>
               <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col">
                 <div className="h-32 flex items-center justify-center mb-5">
@@ -169,6 +169,43 @@ export function Landing() {
                 <h3 className="text-[17px] font-bold text-slate-900 flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-[#A8C300]" /> Sicher verbinden</h3>
                 <p className="text-[14px] text-slate-600 mt-1.5">Dein Kleinanzeigen-Passwort bleibt bei dir – wir sehen es nie.</p>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Smart Repost — mechanics + price anchor */}
+        <section id="smart-repost" className="py-16">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6">
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#A8C300]/10 text-[#7a9000] text-[12px] font-bold mb-4">
+                <Sparkles className="w-3.5 h-3.5" /> Smart Repost
+              </div>
+              <h2 className="text-2xl sm:text-[28px] font-bold text-slate-900">Postet so, wie der Algorithmus es belohnt</h2>
+            </div>
+            <div className="grid md:grid-cols-3 gap-6">
+              <div className="bg-white border border-slate-200 rounded-2xl p-6">
+                <Clock className="w-8 h-8 text-[#A8C300] mb-3" />
+                <h3 className="text-[16px] font-bold text-slate-900">Beste Uhrzeit</h3>
+                <p className="text-[14px] text-slate-600 mt-1.5">Reposts landen genau vor den Browsing-Peaks der Käufer – nicht nachts um drei.</p>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-2xl p-6">
+                <Sparkles className="w-8 h-8 text-[#A8C300] mb-3" />
+                <h3 className="text-[16px] font-bold text-slate-900">Echte Änderungen</h3>
+                <p className="text-[14px] text-slate-600 mt-1.5">Titel-Variante, Foto-Reihenfolge oder Preis-Schritt – Änderungen, die der Algorithmus als frisch wertet.</p>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-2xl p-6">
+                <ShieldCheck className="w-8 h-8 text-[#A8C300] mb-3" />
+                <h3 className="text-[16px] font-bold text-slate-900">7-Tage-Limit respektiert</h3>
+                <p className="text-[14px] text-slate-600 mt-1.5">Kleinanzeigen erlaubt eine kostenlose Auffrischung pro Woche – Smart Repost hält sich automatisch daran.</p>
+              </div>
+            </div>
+
+            {/* Price anchor */}
+            <div className="mt-8 bg-[#A8C300]/10 border border-[#A8C300]/30 rounded-2xl p-6 text-center">
+              <p className="text-[15px] sm:text-[17px] text-slate-800 leading-relaxed">
+                „Hochschieben" auf Kleinanzeigen kostet <span className="font-bold text-slate-900">3,99 € pro Tag und Anzeige</span>.
+                AnzeigenBoost automatisiert die kostenlose Alternative – <span className="font-bold text-[#7a9000]">PRO-Sichtbarkeit ohne PRO-Preis</span>.
+              </p>
             </div>
           </div>
         </section>
@@ -283,6 +320,7 @@ export function Landing() {
           <div className="flex flex-col md:flex-row justify-between items-center gap-3">
             <div className="flex items-center"><Zap className="h-4 w-4 text-[#A8C300] mr-1.5" /><span className="font-bold text-slate-700">Anzeigen</span><span className="text-[13px]">Boost</span></div>
             <nav className="flex items-center gap-4 text-[13px]">
+              <a href="#smart-repost" className="hover:text-slate-800">Smart Repost</a>
               <a href="#so-gehts" className="hover:text-slate-800">So funktioniert's</a>
               <a href="#faq" className="hover:text-slate-800">FAQ</a>
               <Link to="/datenschutz" className="hover:text-slate-800">Datenschutz</Link>

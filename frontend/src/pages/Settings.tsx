@@ -272,6 +272,7 @@ export function Settings() {
             // Use the 'unlimited' flag from backend (limit will be null when unlimited)
             const isUnlimited = unlimited === true || limit === null;
             const pct = isUnlimited ? 0 : Math.min(100, Math.round((callsCount / (limit || 1)) * 100));
+            const remaining = isUnlimited ? 0 : Math.max(0, (limit || 0) - callsCount);
 
             // Color selection based on percentage
             let barColor = 'bg-[#0064d2]'; // Default: blue
@@ -304,7 +305,7 @@ export function Settings() {
                     </p>
                   ) : (
                     <p className="font-semibold text-gray-800">
-                      {callsCount} von {(limit || 0).toLocaleString('de-DE')} KI-Optimierungen verfügbar diesen Monat.
+                      {remaining} von {(limit || 0).toLocaleString('de-DE')} KI-Optimierungen verfügbar diesen Monat.
                     </p>
                   )}
                 </div>

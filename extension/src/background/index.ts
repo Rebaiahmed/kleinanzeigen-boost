@@ -497,6 +497,42 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
         console.warn('[BG] failed to fetch ad data:', err.message);
       }
       const result = await performRepost(adId, adData);
+
+      // Carry the recurring auto-repost schedule forward onto the newly
+      // created ad. The instant "Jetzt" repost deletes the old Kleinanzeigen
+      // ad and creates a new one under a different id — without this, the
+      // schedule stays attached to a Firestore doc for an ad that no longer
+      // exists, and the next sync creates a fresh doc for the new ad with no
+      // schedule at all, silently dropping Smart Repost / auto-repost.
+      if (result.ok && adData?.autoRepost && result.finalUrl) {
+        const newAdId = (String(result.finalUrl).match(/[?&]adId=(\d+)/) || [])[1];
+        if (newAdId && newAdId !== adId) {
+          try {
+            const isSmart = adData.repostMode === 'smart';
+            const nextRepostAt = isSmart
+              ? computeNextSmartRepost(Date.now())
+              : new Date(Date.now() + (Number(adData.repostIntervalMinutes) || 1440) * 60000).toISOString();
+            const patch: any = {
+              autoRepost: true,
+              status: 'active',
+              repostMode: adData.repostMode,
+              smartVariation: adData.smartVariation,
+              nextRepostAt,
+              trackedRepostsCount: (Number(adData.trackedRepostsCount) || 0) + 1,
+            };
+            if (adData.repostIntervalMinutes) patch.repostIntervalMinutes = adData.repostIntervalMinutes;
+            await fetch(`${API_URL}/ads/${newAdId}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              body: JSON.stringify(patch),
+            });
+            console.log(`[BG] carried auto-repost schedule forward: ${adId} → ${newAdId}`);
+          } catch (e: any) {
+            console.warn('[BG] failed to carry schedule to new ad id:', e.message);
+          }
+        }
+      }
+
       sendResponse(result);
     });
     return true;

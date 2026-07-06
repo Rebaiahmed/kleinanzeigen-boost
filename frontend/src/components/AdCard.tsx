@@ -9,7 +9,8 @@ import {
   PauseCircle,
   X,
   Loader2,
-  Lock
+  Lock,
+  AlertTriangle
 } from 'lucide-react';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { PhotoFeedbackModal } from './PhotoFeedbackModal';
@@ -229,7 +230,19 @@ export function AdCard({
 
   const hasVariation = [titleA, titleB].filter((s) => s.trim()).length >= 2 || rotatePhotos || priceStep > 0;
 
-  const handleSaveSchedule = async () => {
+  // Reposting deletes the listing and recreates it — views/favorites/messages
+  // reset to zero on the new one. Warn before that happens, but only when
+  // there's actually something to lose, and only at the human decision point:
+  // the instant "Jetzt" click, or the FIRST time a listing's auto-repost is
+  // switched on (subsequent scheduled reposts already had this trade-off
+  // accepted, and there's no user present to confirm an unattended cron run).
+  const statViews = Number(ad.views) || 0;
+  const statFavorites = Number(ad.favorites) || 0;
+  const statMessages = Number(ad.messages) || 0;
+  const hasStatsToLose = statViews > 0 || statFavorites > 0 || statMessages > 0;
+  const [confirmRepostAction, setConfirmRepostAction] = useState<null | 'instant' | 'schedule'>(null);
+
+  const doSaveSchedule = async () => {
     if (!onUpdateFields) return;
     setIsSavingSchedule(true);
     try {
@@ -255,6 +268,21 @@ export function AdCard({
     } finally {
       setIsSavingSchedule(false);
     }
+  };
+
+  /** Button handler: only warn when this is the FIRST time auto-repost is
+   *  switched on for this listing — editing an already-active schedule's
+   *  variation settings doesn't need re-confirming. */
+  const handleSaveSchedule = () => {
+    if (!localAutoRepost && hasStatsToLose) { setConfirmRepostAction('schedule'); return; }
+    void doSaveSchedule();
+  };
+
+  const confirmRepostWarning = () => {
+    const action = confirmRepostAction;
+    setConfirmRepostAction(null);
+    if (action === 'instant') onAction('repost', ad.id, 'Repost wird ausgeführt…');
+    else if (action === 'schedule') void doSaveSchedule();
   };
 
   const dismissSmartCallout = () => { localStorage.setItem('ab_smart_repost_seen', '1'); setShowSmartCallout(false); };
@@ -392,7 +420,11 @@ export function AdCard({
               // while running/queued; unchecks (resets to idle) when done.
               checked={repostState === 'running' || repostState === 'queued'}
               disabled={repostLocked || repostState === 'running' || repostState === 'queued'}
-              onChange={() => { if (repostState === 'idle' && !repostLocked) onAction('repost', ad.id, 'Repost wird ausgeführt…'); }}
+              onChange={() => {
+                if (repostState !== 'idle' || repostLocked) return;
+                if (hasStatsToLose) setConfirmRepostAction('instant');
+                else onAction('repost', ad.id, 'Repost wird ausgeführt…');
+              }}
             />
             <div className="text-[12px]">
               <span className={`block font-semibold transition-colors ${repostLocked ? 'text-gray-400' : 'text-[#333] group-hover:text-ka-green'}`}>Jetzt neu einstellen</span>
@@ -825,6 +857,44 @@ export function AdCard({
                 className="px-3 py-1.5 text-[12px] font-bold bg-[#A8C300] hover:bg-[#96ae00] text-white rounded-sm transition-colors"
               >
                 Bestätigen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Repost stats-loss warning — instant repost, or first-time schedule enable */}
+      {confirmRepostAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xxs">
+          <div className="bg-white rounded-sm border border-gray-200 shadow-2xl p-5 w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <h4 className="text-[15px] font-bold text-gray-800 flex items-center gap-1.5 mb-2">
+              <AlertTriangle className="w-4 h-4 text-orange-500" /> Neu einstellen bestätigen
+            </h4>
+            <p className="text-[13px] text-gray-600 mb-3 leading-normal">
+              Beim Neu-Einstellen wird deine Anzeige als neue Anzeige erstellt. Bisherige Aufrufe, Merklisten und Nachrichten gehen dabei verloren.
+            </p>
+            <div className="bg-orange-50 border border-orange-100 rounded-sm p-2.5 text-[12px] text-gray-700 mb-4 leading-relaxed">
+              <div className="font-semibold text-gray-800 mb-1">Aktuelle Statistik:</div>
+              <ul className="space-y-0.5">
+                <li>- {statViews} Aufrufe</li>
+                <li>- {statFavorites} Merklisten</li>
+                <li>- {statMessages} Nachrichten</li>
+              </ul>
+            </div>
+            <p className="text-[13px] text-gray-700 font-medium mb-4">Trotzdem neu einstellen?</p>
+            <div className="flex justify-end gap-2">
+              <button
+                autoFocus
+                onClick={() => setConfirmRepostAction(null)}
+                className="px-3 py-1.5 text-[12px] font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-sm transition-colors"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={confirmRepostWarning}
+                className="px-3 py-1.5 text-[12px] font-bold bg-[#A8C300] hover:bg-[#96ae00] text-white rounded-sm transition-colors"
+              >
+                Ja, neu einstellen
               </button>
             </div>
           </div>

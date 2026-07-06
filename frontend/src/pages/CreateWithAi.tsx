@@ -1243,12 +1243,30 @@ export function CreateWithAi() {
               <p className="text-[11px] text-gray-500 mt-2">📷 Die Fotos lädst du bei Vinted selbst hoch – Vinted erlaubt kein automatisches Übertragen von Bildern.</p>
             </div>
 
-            <button
-              onClick={resetFlow}
-              className="text-xs text-gray-500 hover:text-gray-800 hover:underline font-semibold block mx-auto"
-            >
-              Zurück zum Foto-Upload
-            </button>
+            {/* SAVE AS DRAFT & RESET ACTIONS — same draft (both platform formats) as the Kleinanzeigen tab */}
+            <div className="border-t border-gray-100 pt-6 flex flex-col items-center gap-4">
+              <button
+                onClick={handleSaveDraft}
+                disabled={title.length === 0 || description.length < 80 || title.length > 60 || isSaving}
+                className="w-full flex items-center justify-center bg-[#09B1BA] hover:bg-[#079aa2] disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded transition-colors text-sm shadow-sm"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                    <span>Speichere Entwurf...</span>
+                  </>
+                ) : (
+                  <span>Als Anzeige speichern (Entwurf)</span>
+                )}
+              </button>
+
+              <button
+                onClick={resetFlow}
+                className="text-xs text-gray-500 hover:text-gray-800 hover:underline font-semibold"
+              >
+                Zurück zum Foto-Upload
+              </button>
+            </div>
           </div>
           )}
         </div>

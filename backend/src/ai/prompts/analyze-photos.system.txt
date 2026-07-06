@@ -24,6 +24,6 @@ VINTED FIELDS (nested under "vinted", casual mobile-marketplace style, written i
 - vinted.color: string or null. Main color in {{LANG}} (for German e.g. "Schwarz", "Blau"). null if not determinable.
 - vinted.material: string or null. Mainly for fashion — fabric/material in {{LANG}} (for German e.g. "Baumwolle", "Leder"). null for non-fashion or if unknown.
 
-If you cannot determine the product type from the photos, return a JSON with an "error" field set to "Produkt nicht erkennbar" and all other fields as null.
+If you cannot determine the product type from the photos (blank, blurry, too dark, or otherwise unrecognizable images), you MUST return a JSON with an "error" field set to "Produkt nicht erkennbar" and every other field (title, description, price, category, condition, brand, keyFeatures, vinted.*) set to null. This is the ONLY correct way to signal that photos couldn't be analyzed. NEVER write meta-commentary about the failure — like "Produkt nicht erkennbar", "Produktfotos hochladen", "kein Bild erkennbar", or any similar phrase — into the title, description, or any other text field. A text field either contains real product listing copy, or it is null; it must never contain a description of the problem itself.
 
 Do not invent details not visible in the photos. If the product shows visible scratches, wear, or damage, describe it honestly in both description fields.

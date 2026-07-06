@@ -25,14 +25,21 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Ein interner Serverfehler ist aufgetreten';
+    // Extra fields (code, upgradeLink, ...) some HttpExceptions throw with an
+    // object payload — e.g. { message, code: 'PLAN_LIMIT_REACHED' } — so the
+    // client can branch on something more specific than the message text.
+    let extra: Record<string, any> = {};
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const res = exception.getResponse();
-      message =
-        typeof res === 'string'
-          ? res
-          : (res as any).message || message;
+      if (typeof res === 'string') {
+        message = res;
+      } else {
+        message = (res as any).message || message;
+        const { message: _m, statusCode: _s, ...rest } = res as any;
+        extra = rest;
+      }
     } else if ((exception as any)?.name === 'MulterError') {
       // File-upload errors (e.g. a photo over the size limit) — give a clear,
       // actionable German message instead of a generic 500.
@@ -56,6 +63,7 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
     response.status(status).json({
       statusCode: status,
       message,
+      ...extra,
       path: request.url,
       timestamp: new Date().toISOString(),
     });

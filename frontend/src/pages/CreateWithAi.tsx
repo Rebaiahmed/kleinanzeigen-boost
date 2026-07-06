@@ -367,6 +367,16 @@ export function CreateWithAi() {
         return;
       }
 
+      if (data.code === 'PHOTOS_NOT_RECOGNIZED') {
+        // The AI couldn't identify a product in the photos (or returned an
+        // unusable result) — show a clear error instead of populating the
+        // form with placeholder/garbage text. No credit was charged for this.
+        setErrorMessage('Konnte Fotos nicht analysieren — bitte erneut versuchen.');
+        setUpgradeLink(null);
+        setIsLoading(false);
+        return;
+      }
+
       if (!res.ok) {
         throw new Error(data.message || 'Die Analyse ist fehlgeschlagen.');
       }

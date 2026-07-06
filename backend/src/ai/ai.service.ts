@@ -478,7 +478,34 @@ export class AiService {
       }
     }
 
-    // 6. Record usage — metered (counts toward the limit) + model/cost/lastActive tracking
+    // 5b. The prompt instructs the model to set `error` (with all other fields
+    // null) when it can't identify a product from the photos — e.g. blank,
+    // unrecognizable, or otherwise unusable images. Nothing enforced this
+    // before: a flagged-as-unrecognizable response (or one with no usable
+    // title at all) was returned to the client as if it were a real result,
+    // and the metered credit was charged regardless. Both are genuine
+    // analysis failures — surface them as such, and charge nothing.
+    //
+    // The model doesn't reliably use the `error` field even when told to —
+    // observed in testing writing the failure message itself (e.g. "Produkt
+    // nicht erkennbar", "Produktfotos hochladen") directly into `title`
+    // instead. Since no real product name would ever contain these phrases,
+    // matching them is a safe, low-false-positive second line of defense.
+    const metaFailurePattern = /nicht erkennbar|nicht erkennen|produktfotos?\s*hochladen|foto(s)?\s*hochladen|kein\s*(produkt|bild)\s*erkennbar/i;
+    const looksLikeMetaFailure = typeof parsedJson?.title === 'string' && metaFailurePattern.test(parsedJson.title);
+    if (parsedJson?.error || !parsedJson?.title || typeof parsedJson.title !== 'string' || !parsedJson.title.trim() || looksLikeMetaFailure) {
+      this.logger.warn(`[analyze-photos] unusable AI result, not charging credit: ${JSON.stringify(parsedJson)}`);
+      throw new HttpException(
+        {
+          message: 'Die KI konnte auf den Fotos kein Produkt erkennen. Bitte lade deutlichere Fotos hoch und versuche es erneut.',
+          code: 'PHOTOS_NOT_RECOGNIZED',
+        },
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
+
+    // 6. Record usage — metered (counts toward the limit) + model/cost/lastActive tracking.
+    // Only reached once we know the result is actually usable (see check above).
     await this.logUsage(userId, modelUsed, promptTokenCount, candidatesTokenCount, true);
 
     const remainingCallsThisMonth = limit === Infinity ? -1 : Math.max(0, limit - (callsCount + 1));

@@ -8,6 +8,20 @@ import { computeNextSmartRepost, applySmartVariation } from '../config/smart-rep
 
 const API_URL = ENDPOINTS.API_BASE;
 
+// Self-heal a stuck overlay registration. registerOverlayScript()/
+// unregisterOverlayScript() are only ever paired inside performRepost()'s
+// callback chain (see below) — if the MV3 service worker is killed mid-repost
+// (Chrome can terminate it during a long-running flow with many sequential
+// awaits), unregisterOverlayScript() never runs. The MAIN-world 'ab-overlay-
+// paint' content script then stays registered on every kleinanzeigen.de page
+// for the rest of the browser session (persistAcrossSessions:false only
+// clears it on a full Chrome restart), breaking every subsequent repost and
+// any other MAIN-world script injection on that origin. The service worker
+// restarts frequently under MV3, so running this at top-level module scope
+// clears any orphaned registration shortly after the failure, without
+// requiring the user to restart their browser.
+unregisterOverlayScript().catch(() => {});
+
 // Cross-tab safety net: only ONE instant repost may run at a time. The frontend
 // queue normally serializes clicks, but this guard prevents a second parallel
 // repost (e.g. from a second dashboard tab) from ever starting.

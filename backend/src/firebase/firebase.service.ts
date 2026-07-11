@@ -87,7 +87,7 @@ export class FirebaseService implements OnModuleInit {
           .map(k => {
             const data = inMemoryStore[k];
             const id = k.slice(prefix.length);
-            return { id, exists: true, data: () => data };
+            return { id, exists: true, data: () => data, ref: makeDocRef(k) };
           })
           .filter(doc => filterFns.every(fn => fn(doc.data())));
         return { docs, empty: docs.length === 0 };

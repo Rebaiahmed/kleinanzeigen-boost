@@ -17,6 +17,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
 import { ConfigController } from './config/config.controller';
 import { HealthController } from './health/health.controller';
+import { WettbewerbModule } from './wettbewerb/wettbewerb.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { HealthController } from './health/health.controller';
     AdminModule,
     NotificationsModule,
     MonitoringModule,
+    WettbewerbModule,
     // TODO: Import Users Modules
   ],
   controllers: [ConfigController, HealthController],

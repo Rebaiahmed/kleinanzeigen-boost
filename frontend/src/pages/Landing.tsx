@@ -1,335 +1,211 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Zap, Clock, Camera, MessageSquare, Puzzle, ShieldCheck, ArrowRight, ArrowUp, Check, Sparkles } from 'lucide-react';
+import { RefreshCw, Sparkles, Clock } from 'lucide-react';
+import { SupportMe } from '../components/SupportMe';
 
-/* ── Schematic 1: your ad rises to the top ───────────────────────── */
-function RepostSchematic() {
+/* ────────────────────────────────────────────────────────────────────────
+ * Things to swap
+ * ──────────────────────────────────────────────────────────────────────── */
+
+// TODO: replace with the real demo video ID tomorrow
+const YOUTUBE_VIDEO_ID = 'dQw4w9WgXcQ';
+
+// TODO: fill in the real profile URLs
+const SOCIAL_LINKS = {
+  tiktok: '#',
+  instagram: '#',
+  youtube: '#',
+};
+
+const CHROME_STORE_URL = 'https://chromewebstore.google.com/detail/noagiapohlenpolcbeghlmngalapbobe';
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Icons (inline SVG — no icon font, no external asset requests)
+ * ──────────────────────────────────────────────────────────────────────── */
+
+/** Official multicolor Chrome logo (circle). */
+function ChromeIcon({ className }: { className?: string }) {
   return (
-    <div className="relative rounded-2xl border border-slate-200 bg-white p-5 shadow-sm w-full max-w-sm mx-auto">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">Suchergebnisse</div>
-      <div className="space-y-2">
-        {/* Your ad — animated to the top */}
-        <div className="ab-rise flex items-center gap-3 rounded-lg border-2 border-[#A8C300] bg-[#A8C300]/10 p-2.5">
-          <div className="w-10 h-10 rounded bg-[#A8C300]/20 flex items-center justify-center shrink-0">
-            <ArrowUp className="w-5 h-5 text-[#7a9000]" />
-          </div>
-          <div className="flex-1">
-            <div className="h-2.5 w-24 rounded bg-[#A8C300]/60 mb-1.5" />
-            <div className="h-2 w-16 rounded bg-[#A8C300]/30" />
-          </div>
-          <span className="text-[10px] font-bold text-white bg-[#A8C300] rounded-full px-2 py-0.5 shrink-0">Deine Anzeige</span>
-        </div>
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="flex items-center gap-3 rounded-lg border border-slate-150 bg-slate-50 p-2.5 opacity-80">
-            <div className="w-10 h-10 rounded bg-slate-200 shrink-0" />
-            <div className="flex-1">
-              <div className="h-2.5 w-28 rounded bg-slate-200 mb-1.5" />
-              <div className="h-2 w-20 rounded bg-slate-150" />
-            </div>
-          </div>
-        ))}
-      </div>
-      <style>{`
-        @keyframes abRise { 0%,15% { transform: translateY(150px); opacity:.4 } 45%,100% { transform: translateY(0); opacity:1 } }
-        .ab-rise { animation: abRise 3.2s ease-in-out infinite; }
-      `}</style>
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <path d="M12 12 L1.61 6.0 A12 12 0 0 1 22.39 6.0 Z" fill="#EA4335" />
+      <path d="M12 12 L22.39 6.0 A12 12 0 0 1 12 24 Z" fill="#34A853" />
+      <path d="M12 12 L12 24 A12 12 0 0 1 1.61 6.0 Z" fill="#FBBC05" />
+      <circle cx="12" cy="12" r="8" fill="#fff" />
+      <circle cx="12" cy="12" r="5.5" fill="#4285F4" />
+    </svg>
+  );
+}
+
+function TikTokIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M16.5 3c.3 1.9 1.5 3.4 3.4 3.9.4.1.8.2 1.1.2v3a7 7 0 0 1-4.4-1.6v6.6a5.9 5.9 0 1 1-5.9-5.9c.2 0 .4 0 .6.1v3.1a2.8 2.8 0 1 0 2.2 2.7V3h3z" />
+    </svg>
+  );
+}
+
+function InstagramIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4.2" />
+      <circle cx="17.2" cy="6.8" r="0.9" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function YouTubeIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <rect x="2" y="5" width="20" height="14" rx="4" fill="currentColor" />
+      <path d="M10 9.2 15.5 12 10 14.8Z" fill="#fff" />
+    </svg>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Video — click-to-load facade so the YouTube player/JS only loads on
+ * interaction (page stays fast even though the video sits above the fold).
+ * ──────────────────────────────────────────────────────────────────────── */
+
+function YouTubeEmbed({ videoId }: { videoId: string }) {
+  const [loaded, setLoaded] = useState(false);
+
+  return (
+    <div className="relative w-full max-w-[800px] mx-auto aspect-video rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+      {loaded ? (
+        <iframe
+          src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
+          title="So funktioniert's – in 60 Sekunden"
+          className="absolute inset-0 w-full h-full"
+          loading="lazy"
+          allow="accelerated-video; encrypted-media"
+          allowFullScreen
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setLoaded(true)}
+          className="absolute inset-0 w-full h-full group"
+          aria-label="Video abspielen"
+        >
+          <img
+            src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
+            alt="Vorschaubild: So funktioniert's"
+            loading="lazy"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <span className="absolute inset-0 bg-black/25 group-hover:bg-black/35 transition-colors" />
+          <span className="absolute inset-0 flex items-center justify-center">
+            <span className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
+              <span className="ml-1 w-0 h-0 border-y-[12px] border-y-transparent border-l-[20px] border-l-[#A8C300]" />
+            </span>
+          </span>
+        </button>
+      )}
     </div>
   );
 }
 
-/* ── Schematic 2: photo → AI listing ─────────────────────────────── */
-function PhotoToListingSchematic() {
-  return (
-    <div className="flex items-center justify-center gap-3 sm:gap-4">
-      <div className="w-24 h-24 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center text-slate-400 shrink-0">
-        <Camera className="w-7 h-7 mb-1" />
-        <span className="text-[10px] font-medium">Foto</span>
-      </div>
-      <div className="flex flex-col items-center text-[#A8C300]">
-        <Sparkles className="w-5 h-5 mb-0.5" />
-        <ArrowRight className="w-6 h-6" />
-        <span className="text-[10px] font-bold">KI</span>
-      </div>
-      <div className="w-44 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-        <div className="h-2.5 w-28 rounded bg-slate-800/80 mb-2" />
-        <div className="h-2 w-full rounded bg-slate-150 mb-1.5" />
-        <div className="h-2 w-3/4 rounded bg-slate-150 mb-3" />
-        <span className="inline-block text-[11px] font-bold text-white bg-[#A8C300] rounded px-2 py-0.5">120 €</span>
-      </div>
-    </div>
-  );
-}
-
-/* ── Schematic 3: reply templates ────────────────────────────────── */
-function TemplatesSchematic() {
-  return (
-    <div className="w-full max-w-[240px] mx-auto space-y-2">
-      <div className="flex justify-start"><div className="rounded-2xl rounded-bl-sm bg-slate-100 px-3 py-2 text-[12px] text-slate-600">Ist das noch verfügbar?</div></div>
-      <div className="flex justify-end"><div className="rounded-2xl rounded-br-sm bg-[#A8C300]/15 border border-[#A8C300]/30 px-3 py-2 text-[12px] text-slate-700">Ja, noch verfügbar! 🙂</div></div>
-      <div className="flex justify-center pt-1"><span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#7a9000] bg-[#A8C300]/10 rounded-full px-2.5 py-1"><MessageSquare className="w-3 h-3" /> 1-Klick-Vorlage</span></div>
-    </div>
-  );
-}
+/* ────────────────────────────────────────────────────────────────────────
+ * Page
+ * ──────────────────────────────────────────────────────────────────────── */
 
 export function Landing() {
   return (
-    <div className="min-h-screen bg-white font-sans text-slate-700">
-      <header className="border-b border-slate-200 bg-white sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex justify-between items-center h-16">
-          <div className="flex items-center text-[20px] tracking-tight">
-            <Zap className="h-5 w-5 text-[#A8C300] mr-1.5" />
-            <span className="font-bold text-slate-800">Anzeigen</span><span className="text-slate-500">Boost</span>
-          </div>
-          <div className="flex items-center gap-5">
-            <a href="#so-gehts" className="text-[13px] font-medium text-slate-500 hover:text-slate-800 hidden sm:block">So funktioniert's</a>
-            <Link to="/login" className="bg-transparent hover:bg-slate-50 text-slate-700 font-semibold py-1.5 px-4 rounded-md border border-slate-300 text-[14px] transition-colors">Einloggen</Link>
-          </div>
-        </div>
-      </header>
-
+    <div className="min-h-screen bg-white font-sans text-slate-700 text-[18px] leading-relaxed">
       <main>
-        {/* Hero — copy left, schematic right */}
-        <section className="pt-14 pb-16 lg:pt-20">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-10 items-center">
+        {/* 1. HERO */}
+        <section className="pt-14 pb-12 px-4 sm:px-6 text-center">
+          <div className="max-w-2xl mx-auto">
+            <div className="flex items-center justify-center gap-1.5 mb-8">
+              <span className="font-bold text-slate-900">Anzeigen</span>
+              <span className="font-bold text-[#A8C300]">Boost</span>
+            </div>
+
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-slate-900 mb-5 leading-[1.15]">
+              Ihre Kleinanzeigen. Automatisch immer oben.
+            </h1>
+
+            <p className="text-lg sm:text-xl text-slate-600 mb-8 leading-relaxed">
+              AnzeigenBoost veröffentlicht Ihre Anzeigen neu und schreibt bessere Texte mit KI – mit einem Klick.
+            </p>
+
+            <a
+              href={CHROME_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-3 bg-[#A8C300] hover:bg-[#96ae00] text-white font-bold py-4 px-8 rounded-full text-lg shadow-sm transition-colors"
+            >
+              <ChromeIcon className="w-6 h-6 shrink-0" />
+              Kostenlos im Chrome Web Store
+            </a>
+
+            <p className="text-base text-slate-400 mt-4">Kostenlos starten · Keine Kreditkarte nötig</p>
+          </div>
+        </section>
+
+        {/* 2. VIDEO */}
+        <section className="pb-16 px-4 sm:px-6">
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 text-center mb-6">
+            So funktioniert's – in 60 Sekunden
+          </h2>
+          <YouTubeEmbed videoId={YOUTUBE_VIDEO_ID} />
+        </section>
+
+        {/* 3. THREE BENEFITS */}
+        <section className="py-16 bg-slate-50 border-y border-slate-200 px-4 sm:px-6">
+          <div className="max-w-4xl mx-auto grid sm:grid-cols-3 gap-8 text-center">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-slate-200 bg-slate-50 text-[12px] font-semibold text-slate-600 mb-5">
-                <Zap className="w-3.5 h-3.5 text-[#A8C300]" /> PRO-Sichtbarkeit ohne PRO-Preis
+              <div className="w-14 h-14 rounded-full bg-[#A8C300]/10 text-[#A8C300] flex items-center justify-center mx-auto mb-4">
+                <RefreshCw className="w-7 h-7" />
               </div>
-              <h1 className="text-3xl sm:text-[40px] font-bold tracking-tight text-slate-900 mb-4 leading-[1.15]">
-                Smart Repost — postet zur besten Uhrzeit, mit echten Änderungen
-              </h1>
-              <p className="text-lg text-slate-600 mb-7 leading-relaxed">
-                AnzeigenBoost stellt deine Kleinanzeigen automatisch neu ein – zur besten Uhrzeit und mit
-                echten Änderungen, so wie es der Algorithmus belohnt. Dazu Anzeigen per Foto mit KI erstellen,
-                Texte optimieren und schneller auf Nachrichten antworten. Mehr Aufrufe, weniger Klickarbeit.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Link to="/login" className="inline-flex items-center justify-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] text-white font-bold py-3 px-7 rounded-full text-[15px] shadow-sm transition-all hover:-translate-y-0.5">
-                  Kostenlos starten <ArrowRight className="w-4 h-4" />
-                </Link>
-                <a href="#so-gehts" className="inline-flex items-center justify-center border border-slate-300 hover:border-slate-400 text-slate-700 font-semibold py-3 px-7 rounded-full text-[15px]">So funktioniert's</a>
-              </div>
-              <p className="text-[13px] text-slate-400 mt-3">Kostenlos · Keine Kreditkarte</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Anzeigen neu veröffentlichen</h3>
+              <p className="text-slate-600">Wieder ganz oben in den Suchergebnissen.</p>
             </div>
-            <RepostSchematic />
-          </div>
-        </section>
-
-        {/* Features — visual cards, minimal text */}
-        <section id="funktionen" className="py-16 bg-slate-50 border-y border-slate-200">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6">
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col">
-                <div className="h-32 flex items-center justify-center mb-5"><PhotoToListingSchematic /></div>
-                <h3 className="text-[17px] font-bold text-slate-900 flex items-center gap-2"><Camera className="w-4 h-4 text-[#A8C300]" /> Foto → fertige Anzeige</h3>
-                <p className="text-[14px] text-slate-600 mt-1.5">Titel, Beschreibung & Preis in Sekunden – aus deinen Fotos.</p>
+            <div>
+              <div className="w-14 h-14 rounded-full bg-[#A8C300]/10 text-[#A8C300] flex items-center justify-center mx-auto mb-4">
+                <Sparkles className="w-7 h-7" />
               </div>
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col">
-                <div className="h-32 flex items-center justify-center mb-5">
-                  <div className="text-center">
-                    <Clock className="w-14 h-14 text-[#A8C300] mx-auto mb-2" />
-                    <div className="inline-flex items-center gap-1 text-[11px] font-bold text-[#7a9000] bg-[#A8C300]/10 rounded-full px-2.5 py-1"><ArrowUp className="w-3 h-3" /> Jetzt oder per Zeitplan</div>
-                  </div>
-                </div>
-                <h3 className="text-[17px] font-bold text-slate-900 flex items-center gap-2"><Clock className="w-4 h-4 text-[#A8C300]" /> Smart Repost</h3>
-                <p className="text-[14px] text-slate-600 mt-1.5">Automatisch zur besten Uhrzeit neu einstellen – mit echten Änderungen.</p>
-              </div>
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col">
-                <div className="h-32 flex items-center justify-center mb-5">
-                  <div className="text-center">
-                    <Sparkles className="w-14 h-14 text-[#A8C300] mx-auto mb-2" />
-                    <div className="inline-flex items-center gap-1 text-[11px] font-bold text-[#7a9000] bg-[#A8C300]/10 rounded-full px-2.5 py-1"><Sparkles className="w-3 h-3" /> Mehr Aufrufe</div>
-                  </div>
-                </div>
-                <h3 className="text-[17px] font-bold text-slate-900 flex items-center gap-2"><Sparkles className="w-4 h-4 text-[#A8C300]" /> KI-Optimierung</h3>
-                <p className="text-[14px] text-slate-600 mt-1.5">Bestehende Titel & Beschreibungen mit KI verbessern.</p>
-              </div>
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col">
-                <div className="h-32 flex items-center justify-center mb-5">
-                  <div className="text-center">
-                    <Camera className="w-14 h-14 text-[#A8C300] mx-auto mb-2" />
-                    <div className="inline-flex items-center gap-1 text-[11px] font-bold text-[#7a9000] bg-[#A8C300]/10 rounded-full px-2.5 py-1"><Check className="w-3 h-3" /> Foto-Tipps</div>
-                  </div>
-                </div>
-                <h3 className="text-[17px] font-bold text-slate-900 flex items-center gap-2"><Camera className="w-4 h-4 text-[#A8C300]" /> Foto-Check</h3>
-                <p className="text-[14px] text-slate-600 mt-1.5">KI bewertet deine Fotos und sagt, was besser geht.</p>
-              </div>
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col">
-                <div className="h-32 flex items-center justify-center mb-5"><TemplatesSchematic /></div>
-                <h3 className="text-[17px] font-bold text-slate-900 flex items-center gap-2"><MessageSquare className="w-4 h-4 text-[#A8C300]" /> Antwort-Vorlagen</h3>
-                <p className="text-[14px] text-slate-600 mt-1.5">Häufige Fragen mit einem Klick beantworten.</p>
-              </div>
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col">
-                <div className="h-32 flex items-center justify-center mb-5">
-                  <div className="text-center">
-                    <ShieldCheck className="w-14 h-14 text-[#A8C300] mx-auto mb-2" />
-                    <div className="inline-flex items-center gap-1 text-[11px] font-bold text-[#7a9000] bg-[#A8C300]/10 rounded-full px-2.5 py-1"><Check className="w-3 h-3" /> Ohne Passwort</div>
-                  </div>
-                </div>
-                <h3 className="text-[17px] font-bold text-slate-900 flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-[#A8C300]" /> Sicher verbinden</h3>
-                <p className="text-[14px] text-slate-600 mt-1.5">Dein Kleinanzeigen-Passwort bleibt bei dir – wir sehen es nie.</p>
-              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">KI schreibt Ihre Texte</h3>
+              <p className="text-slate-600">Bessere Beschreibungen auf Deutsch, automatisch.</p>
             </div>
-          </div>
-        </section>
-
-        {/* Smart Repost — mechanics + price anchor */}
-        <section id="smart-repost" className="py-16">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6">
-            <div className="text-center mb-10">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#A8C300]/10 text-[#7a9000] text-[12px] font-bold mb-4">
-                <Sparkles className="w-3.5 h-3.5" /> Smart Repost
+            <div>
+              <div className="w-14 h-14 rounded-full bg-[#A8C300]/10 text-[#A8C300] flex items-center justify-center mx-auto mb-4">
+                <Clock className="w-7 h-7" />
               </div>
-              <h2 className="text-2xl sm:text-[28px] font-bold text-slate-900">Postet so, wie der Algorithmus es belohnt</h2>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Zeit sparen</h3>
+              <p className="text-slate-600">Was früher 30 Minuten dauerte, dauert jetzt 1 Klick.</p>
             </div>
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="bg-white border border-slate-200 rounded-2xl p-6">
-                <Clock className="w-8 h-8 text-[#A8C300] mb-3" />
-                <h3 className="text-[16px] font-bold text-slate-900">Beste Uhrzeit</h3>
-                <p className="text-[14px] text-slate-600 mt-1.5">Reposts landen genau vor den Browsing-Peaks der Käufer – nicht nachts um drei.</p>
-              </div>
-              <div className="bg-white border border-slate-200 rounded-2xl p-6">
-                <Sparkles className="w-8 h-8 text-[#A8C300] mb-3" />
-                <h3 className="text-[16px] font-bold text-slate-900">Echte Änderungen</h3>
-                <p className="text-[14px] text-slate-600 mt-1.5">Titel-Variante, Foto-Reihenfolge oder Preis-Schritt – Änderungen, die der Algorithmus als frisch wertet.</p>
-              </div>
-              <div className="bg-white border border-slate-200 rounded-2xl p-6">
-                <ShieldCheck className="w-8 h-8 text-[#A8C300] mb-3" />
-                <h3 className="text-[16px] font-bold text-slate-900">7-Tage-Limit respektiert</h3>
-                <p className="text-[14px] text-slate-600 mt-1.5">Kleinanzeigen erlaubt eine kostenlose Auffrischung pro Woche – Smart Repost hält sich automatisch daran.</p>
-              </div>
-            </div>
-
-            {/* Price anchor */}
-            <div className="mt-8 bg-[#A8C300]/10 border border-[#A8C300]/30 rounded-2xl p-6 text-center">
-              <p className="text-[15px] sm:text-[17px] text-slate-800 leading-relaxed">
-                „Hochschieben" auf Kleinanzeigen kostet <span className="font-bold text-slate-900">3,99 € pro Tag und Anzeige</span>.
-                AnzeigenBoost automatisiert die kostenlose Alternative – <span className="font-bold text-[#7a9000]">PRO-Sichtbarkeit ohne PRO-Preis</span>.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* How it works — 3 visual steps */}
-        <section id="so-gehts" className="py-16">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6">
-            <h2 className="text-2xl sm:text-[28px] font-bold text-slate-900 text-center mb-10">In 3 Schritten startklar</h2>
-            <div className="grid md:grid-cols-3 gap-6">
-              {[
-                { n: '1', icon: <Puzzle className="w-7 h-7" />, t: 'Chrome-Erweiterung installieren' },
-                { n: '2', icon: <Zap className="w-7 h-7" />, t: 'Konto verbinden (kein Passwort)' },
-                { n: '3', icon: <Clock className="w-7 h-7" />, t: 'Zurücklehnen & verkaufen' },
-              ].map((s) => (
-                <div key={s.n} className="text-center">
-                  <div className="relative w-20 h-20 mx-auto mb-4 rounded-2xl bg-[#A8C300]/10 text-[#A8C300] flex items-center justify-center">
-                    {s.icon}
-                    <span className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-[#A8C300] text-white text-sm font-bold flex items-center justify-center">{s.n}</span>
-                  </div>
-                  <p className="text-[15px] font-semibold text-slate-800">{s.t}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-10 flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#A8C300]/10 border border-[#A8C300]/30 rounded-2xl p-5">
-              <div className="flex items-center gap-3">
-                <Puzzle className="w-8 h-8 text-[#A8C300] shrink-0" />
-                <p className="font-semibold text-slate-900">Du brauchst die Chrome-Erweiterung <span className="font-normal text-slate-600">(Chrome, Edge oder Brave).</span></p>
-              </div>
-              <a href="https://chromewebstore.google.com/" target="_blank" rel="noopener noreferrer" className="shrink-0 inline-flex items-center gap-2 bg-white border border-[#A8C300] text-[#7a9000] font-semibold py-2.5 px-5 rounded-full text-[14px] hover:bg-[#A8C300] hover:text-white transition-colors">
-                <Puzzle className="w-4 h-4" /> Erweiterung holen
-              </a>
-            </div>
-          </div>
-        </section>
-
-        {/* Security — compact */}
-        <section className="py-14 bg-slate-50 border-y border-slate-200">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6">
-            <div className="flex items-center gap-2 justify-center mb-6">
-              <ShieldCheck className="w-6 h-6 text-[#A8C300]" />
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Sicher & verschlüsselt</h2>
-            </div>
-            <div className="grid sm:grid-cols-3 gap-4 text-center">
-              {['Zugangsdaten AES-256 verschlüsselt', 'Isolierte Browser-Instanzen', 'Natürliches Klickverhalten'].map((t) => (
-                <div key={t} className="bg-white border border-slate-200 rounded-xl p-4">
-                  <Check className="w-5 h-5 text-[#A8C300] mx-auto mb-2" />
-                  <p className="text-[13px] text-slate-600">{t}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* FAQ — captures long-tail German search queries + FAQPage rich snippets */}
-        <section id="faq" className="py-16">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6">
-            <h2 className="text-2xl sm:text-[28px] font-bold text-slate-900 text-center mb-10">Häufige Fragen</h2>
-            <div className="space-y-6">
-              {[
-                {
-                  q: 'Wie bringe ich meine Kleinanzeigen wieder nach oben?',
-                  a: 'Auf Kleinanzeigen rutschen ältere Inserate mit der Zeit nach unten. Mit AnzeigenBoost stellst du eine Anzeige mit einem Klick neu ein – Titel, Beschreibung, Preis, Kategorie und Fotos werden übernommen, und die Anzeige erscheint wieder ganz oben in den Suchergebnissen.',
-                },
-                {
-                  q: 'Kann man Anzeigen automatisch neu einstellen?',
-                  a: 'Ja. Du kannst pro Anzeige ein Intervall festlegen, in dem sie automatisch wieder nach oben geschoben wird – auch wenn dein Browser geschlossen ist. Alternativ stellst du jederzeit manuell mit einem Klick neu ein.',
-                },
-                {
-                  q: 'Was kostet AnzeigenBoost?',
-                  a: 'AnzeigenBoost ist aktuell kostenlos – keine Kreditkarte nötig. Du verbindest dein Konto und legst direkt los.',
-                },
-                {
-                  q: 'Kann ich Anzeigen per Foto mit KI erstellen?',
-                  a: 'Ja. Lade ein Foto deines Artikels hoch, und die KI schlägt dir einen passenden Titel, eine Beschreibung und eine Kategorie vor. Du prüfst alles und veröffentlichst mit einem Klick.',
-                },
-                {
-                  q: 'Brauche ich einen bestimmten Browser?',
-                  a: 'AnzeigenBoost läuft als Browser-Erweiterung in Chrome sowie in Chromium-Browsern wie Edge, Brave oder Opera. In Firefox und Safari ist die Erweiterung nicht verfügbar.',
-                },
-                {
-                  q: 'Ist das sicher? Seht ihr mein Passwort?',
-                  a: 'Nein. Dein Kleinanzeigen-Passwort sehen oder speichern wir nie. Die Verbindung läuft über deine bestehende Browser-Sitzung; Zugangsdaten werden verschlüsselt verarbeitet.',
-                },
-                {
-                  q: 'Ist AnzeigenBoost offiziell von Kleinanzeigen?',
-                  a: 'Nein. AnzeigenBoost ist ein unabhängiges Projekt und steht in keiner Verbindung zur Kleinanzeigen GmbH. Es ist ein Hilfswerkzeug, das deine eigenen Anzeigen verwaltet.',
-                },
-              ].map((item) => (
-                <div key={item.q} className="border border-slate-200 rounded-2xl p-5">
-                  <h3 className="text-[16px] font-bold text-slate-900">{item.q}</h3>
-                  <p className="text-[14px] text-slate-600 mt-2 leading-relaxed">{item.a}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Final CTA */}
-        <section className="py-16 text-center">
-          <div className="max-w-2xl mx-auto px-4 sm:px-6">
-            <h2 className="text-2xl sm:text-[30px] font-bold text-slate-900 mb-6">Weniger klicken. Mehr verkaufen.</h2>
-            <Link to="/login" className="inline-flex items-center justify-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] text-white font-bold py-3.5 px-8 rounded-full text-[16px] shadow-sm transition-all hover:-translate-y-0.5">
-              Jetzt kostenlos starten <ArrowRight className="w-4 h-4" />
-            </Link>
           </div>
         </section>
       </main>
 
-      <footer className="bg-white py-8 border-t border-slate-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col gap-4 text-slate-500">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-3">
-            <div className="flex items-center"><Zap className="h-4 w-4 text-[#A8C300] mr-1.5" /><span className="font-bold text-slate-700">Anzeigen</span><span className="text-[13px]">Boost</span></div>
-            <nav className="flex items-center gap-4 text-[13px]">
-              <a href="#smart-repost" className="hover:text-slate-800">Smart Repost</a>
-              <a href="#so-gehts" className="hover:text-slate-800">So funktioniert's</a>
-              <a href="#faq" className="hover:text-slate-800">FAQ</a>
-              <Link to="/datenschutz" className="hover:text-slate-800">Datenschutz</Link>
-              <Link to="/impressum" className="hover:text-slate-800">Impressum</Link>
-            </nav>
+      {/* 4. FOOTER */}
+      <footer className="py-10 px-4 sm:px-6 border-t border-slate-200">
+        <div className="max-w-4xl mx-auto flex flex-col items-center gap-6 text-center">
+          <div className="flex items-center gap-5">
+            <a href={SOCIAL_LINKS.tiktok} target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="text-slate-400 hover:text-slate-900 transition-colors">
+              <TikTokIcon className="w-5 h-5" />
+            </a>
+            <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="text-slate-400 hover:text-[#E1306C] transition-colors">
+              <InstagramIcon className="w-5 h-5" />
+            </a>
+            <a href={SOCIAL_LINKS.youtube} target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="text-slate-400 hover:text-[#FF0000] transition-colors">
+              <YouTubeIcon className="w-5 h-5" />
+            </a>
           </div>
-          <p className="text-[12px] text-slate-400 text-center md:text-left leading-relaxed">
+
+          <SupportMe />
+
+          <nav className="flex items-center gap-4 text-sm text-slate-500">
+            <Link to="/impressum" className="hover:text-slate-800">Impressum</Link>
+            <span className="text-slate-300">·</span>
+            <Link to="/datenschutz" className="hover:text-slate-800">Datenschutz</Link>
+          </nav>
+
+          <p className="text-xs text-slate-400 max-w-md leading-relaxed">
             AnzeigenBoost ist ein unabhängiges Projekt und steht in keiner Verbindung zur Kleinanzeigen GmbH.
-            „Kleinanzeigen" wird ausschließlich beschreibend verwendet, um die Kompatibilität des Werkzeugs zu erklären.
           </p>
         </div>
       </footer>

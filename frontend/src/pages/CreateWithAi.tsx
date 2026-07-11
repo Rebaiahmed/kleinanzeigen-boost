@@ -13,9 +13,22 @@ import {
 import { useAdsActions } from '../hooks/useAdsActions';
 import { useAds } from '../hooks/useAds';
 import { useAiUsage } from '../hooks/useAiUsage';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { saveDraftPhotos, loadDraftPhotos } from '../lib/draftPhotoStore';
 import { PriceSuggestion } from '../components/ads/PriceSuggestion';
 import { compressImage } from '../utils/compressImage';
+import {
+  DISCLAIMER_TEXT,
+  DISCLAIMER_LEARN_MORE_URL,
+  formatVerifiedDateLabel,
+} from '../config/legalDisclaimer';
+
+// Appended verbatim to the end of the description. The leading separator
+// keeps it visually distinct from the user's own text in the raw textarea
+// content (which is what actually gets posted to Kleinanzeigen — a plain
+// textarea can't render partial rich-text styling, so this plus the amber
+// preview block below are the two ways this stays "visually set apart").
+const DISCLAIMER_BLOCK = `\n\n---\n${DISCLAIMER_TEXT}`;
 
 const CATEGORIES = [
   "Auto, Rad & Boot",
@@ -97,6 +110,7 @@ export function CreateWithAi() {
   const { ads } = useAds();
   const { saveDraft, handleEbayCrossPost, handlePriceCheck } = useAdsActions();
   const { callsCount, limit, remaining, pct, isWarning, isBlocked, unlimited, incrementUsage } = useAiUsage();
+  const { enableDisclaimer } = useFeatureFlags();
 
   // Navigation step
   const [step, setStep] = useState<'upload' | 'result'>('upload');
@@ -175,6 +189,15 @@ export function CreateWithAi() {
         : <Copy className="w-3.5 h-3.5" />}
     </button>
   );
+
+  // Legal disclaimer insert (Gewährleistungsausschluss). This is a FREE
+  // trust/safety feature, not a premium convenience one — it must never be
+  // wired into useAiUsage / credit deduction. Detection is a plain string
+  // match against the current placeholder/verified text; insert/remove just
+  // append/strip DISCLAIMER_BLOCK from the raw description.
+  const disclaimerInserted = description.includes(DISCLAIMER_TEXT);
+  const insertDisclaimer = () => setDescription((prev) => prev.trimEnd() + DISCLAIMER_BLOCK);
+  const removeDisclaimer = () => setDescription((prev) => prev.replace(DISCLAIMER_BLOCK, '').trimEnd());
 
   // Load platform connection status on mount
   useEffect(() => {
@@ -921,11 +944,68 @@ export function CreateWithAi() {
                 onChange={(e) => setDescription(e.target.value)}
                 rows={5}
                 className={`w-full border rounded px-3 py-2 text-sm focus:outline-none transition-colors ${
-                  description.length < 80 
-                    ? "border-red-300 focus:border-red-400 bg-red-50/5" 
+                  description.length < 80
+                    ? "border-red-300 focus:border-red-400 bg-red-50/5"
                     : "border-gray-300 focus:border-[#A8C300]"
                 }`}
               />
+
+              {/* Legal disclaimer insert — free trust/safety feature, never
+                  credit-gated. Flag-gated because the shipped text is a
+                  placeholder until legally verified (see legalDisclaimer.ts). */}
+              {enableDisclaimer && (
+                <div className="mt-2">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    {!disclaimerInserted ? (
+                      <button
+                        type="button"
+                        onClick={insertDisclaimer}
+                        className="inline-flex items-center gap-1 bg-[#f2f2f2] hover:bg-[#e6e6e6] border border-[#ccc] text-[#333] font-medium py-1 px-2.5 rounded-sm text-[12px] transition-colors"
+                      >
+                        🛡️ Rechtstext einfügen
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center text-[11px] font-bold bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full">
+                          EINGEFÜGT
+                        </span>
+                        <button
+                          type="button"
+                          onClick={removeDisclaimer}
+                          className="text-[12px] text-gray-500 hover:text-red-600 font-medium underline hover:no-underline"
+                        >
+                          Entfernen
+                        </button>
+                      </div>
+                    )}
+                    <span className="text-[11px] text-gray-400">
+                      Geprüft: {formatVerifiedDateLabel()}
+                    </span>
+                  </div>
+
+                  {/* Distinct preview block — the raw textarea already has this
+                      exact text appended (that's what actually gets posted);
+                      this is purely the "visually set apart" affordance a
+                      plain textarea can't render inline. */}
+                  {disclaimerInserted && (
+                    <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-sm text-[12px] text-amber-900 whitespace-pre-wrap">
+                      {DISCLAIMER_TEXT}
+                    </div>
+                  )}
+
+                  <p className="mt-1.5 text-[11px] text-gray-400 leading-snug">
+                    Dieser Text wird regelmäßig von uns überprüft. Ersetzt keine individuelle Rechtsberatung.{' '}
+                    <a
+                      href={DISCLAIMER_LEARN_MORE_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline hover:no-underline"
+                    >
+                      Mehr erfahren
+                    </a>
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Key Features pills */}

@@ -44,7 +44,17 @@ async function fetchWettbewerbUsage(): Promise<WettbewerbUsage> {
 export function useWettbewerbUsage(enabled: boolean = true) {
   const queryClient = useQueryClient();
 
-  const { data = DEFAULT_USAGE, isLoading } = useQuery({
+  // NOTE: neither `isLoading` nor `isFetching` reliably signals "is this
+  // real data yet" here. `isLoading` reports false immediately once
+  // placeholderData exists, before the real fetch even starts. `isFetching`
+  // is false both before enabled flips true AND after a real fetch
+  // completes — indistinguishable states. `isPlaceholderData` is the
+  // correct primitive: true whenever the returned data is still the
+  // placeholder (disabled OR in-flight), false only once real data has
+  // arrived. Callers that must not act on stale/default data (e.g. the
+  // guide-modal auto-open effect, which would otherwise reopen for a
+  // returning user) should gate on `!isPlaceholderData`.
+  const { data = DEFAULT_USAGE, isPlaceholderData } = useQuery({
     queryKey: ['wettbewerb-usage'],
     queryFn: fetchWettbewerbUsage,
     staleTime: 1000 * 60,
@@ -57,5 +67,5 @@ export function useWettbewerbUsage(enabled: boolean = true) {
     queryClient.invalidateQueries({ queryKey: ['wettbewerb-usage'] });
   }, [queryClient]);
 
-  return { ...data, isLoading, refetchUsage };
+  return { ...data, isPlaceholderData, refetchUsage };
 }

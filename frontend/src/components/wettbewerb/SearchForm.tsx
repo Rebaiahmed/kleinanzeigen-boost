@@ -26,9 +26,11 @@ export function SearchForm({ onSubmit, isSubmitting }: SearchFormProps) {
   const [checkIntervalDays, setCheckIntervalDays] = useState<number>(DEFAULT_CHECK_INTERVAL_DAYS);
 
   const trimmedKeyword = keyword.trim();
+  const keywordTouched = keyword.length > 0;
 
-  const keywordError = trimmedKeyword.length === 0 ? 'Bitte einen Suchbegriff eingeben' : null;
+  const keywordError = keywordTouched && trimmedKeyword.length === 0 ? 'Bitte einen Suchbegriff eingeben' : null;
   const keywordWarning =
+    keywordTouched &&
     !keywordError &&
     (trimmedKeyword.length < MIN_KEYWORD_LENGTH || GENERIC_KEYWORD_DENYLIST.includes(trimmedKeyword.toLowerCase()))
       ? GENERIC_KEYWORD_WARNING

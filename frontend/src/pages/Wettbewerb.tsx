@@ -13,9 +13,9 @@ import { Toast } from '../components/Toast';
 import type { ToastType } from '../hooks/useAdsActions';
 
 export function Wettbewerb() {
-  const { enableWettbewerb } = useFeatureFlags();
+  const { enableWettbewerb, isLoaded: flagsLoaded } = useFeatureFlags();
   const { searches, isLoading } = useWettbewerbSearches(enableWettbewerb);
-  const { freeSearchUsed, freeLimit, additionalCost, hasSeenWettbewerb, isLoading: usageLoading } =
+  const { freeSearchUsed, freeLimit, additionalCost, hasSeenWettbewerb, isPlaceholderData: usageIsPlaceholder } =
     useWettbewerbUsage(enableWettbewerb);
   const { createSavedSearch, deleteSavedSearch, applySuggestedPrice, triggerRepost, markGuideSeen, isCreating } =
     useWettbewerbActions();
@@ -27,15 +27,21 @@ export function Wettbewerb() {
   const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (usageLoading || hasAutoOpened) return;
+    // Must wait for real (non-placeholder) usage data — acting on the
+    // placeholder default (hasSeenWettbewerb: false) would reopen the guide
+    // for a returning user on every page load, before the real value loads.
+    if (usageIsPlaceholder || hasAutoOpened) return;
     setHasAutoOpened(true);
     if (!hasSeenWettbewerb) {
       setGuideOpen(true);
       void markGuideSeen();
     }
-  }, [usageLoading, hasSeenWettbewerb, hasAutoOpened, markGuideSeen]);
+  }, [usageIsPlaceholder, hasSeenWettbewerb, hasAutoOpened, markGuideSeen]);
 
-  if (!enableWettbewerb) {
+  // Wait for the real flag value before deciding to redirect — flags start
+  // at all-false defaults until fetchFeatureFlags() resolves, so bouncing
+  // on that first render would wrongly redirect away a flag-ON user too.
+  if (flagsLoaded && !enableWettbewerb) {
     return <Navigate to="/meine-anzeigen" replace />;
   }
 

@@ -9,6 +9,7 @@ import helmet from 'helmet';
 import * as cookieParser from 'cookie-parser';
 import { ALLOWED_ORIGINS } from './common/constants/cors.constants';
 import { GlobalHttpExceptionFilter } from './common/filters/http-exception.filter';
+import { FEATURE_FLAGS } from './config/feature-flags';
 
 /**
  * Validates critical environment configuration before the app starts.
@@ -38,6 +39,9 @@ function validateEnv() {
   if (!process.env.AUTOMATION_WORKER_URL) {
     warnings.push('AUTOMATION_WORKER_URL not set — defaulting to http://localhost:3001.');
   }
+  if (FEATURE_FLAGS.enableCredits && (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET)) {
+    critical.push('ENABLE_CREDITS=true but STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET are missing — deduct/refund would work but checkout/webhook would fail.');
+  }
 
   for (const w of warnings) console.warn(`[env] WARN: ${w}`);
 
@@ -53,7 +57,12 @@ function validateEnv() {
 
 async function bootstrap() {
   validateEnv();
-  const app = await NestFactory.create(AppModule);
+  // rawBody: true exposes req.rawBody (Buffer) on every request alongside the
+  // normal parsed req.body — needed for Stripe webhook signature verification
+  // (backend/src/credits/credits.controller.ts#webhook), which reads the raw
+  // bytes directly rather than a @Body() DTO, so the global ValidationPipe
+  // below never touches that route.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   // Security
   app.use(helmet());

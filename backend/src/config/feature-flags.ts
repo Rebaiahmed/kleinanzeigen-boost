@@ -12,6 +12,7 @@ export interface FeatureFlags {
   enableAnalytics: boolean;
   enablePhotoFeedback: boolean;
   enablePriceSuggestion: boolean;
+  enableDisclaimer: boolean;
 }
 
 function parseEnvBool(value: string | undefined, defaultVal: boolean): boolean {
@@ -31,6 +32,11 @@ export const FEATURE_FLAGS: FeatureFlags = {
   // Price suggestion — default ON (Preis button on priced ads; the AdCard already
   // hides it for "Zu verschenken" give-aways). Set ENABLE_PRICE_SUGGESTION=false to disable.
   enablePriceSuggestion: parseEnvBool(process.env.ENABLE_PRICE_SUGGESTION, true),
+  // Legal disclaimer insert (Gewährleistungsausschluss) — default OFF. The
+  // shipped text is a PLACEHOLDER until a qualified legal source verifies it —
+  // see frontend/src/config/legalDisclaimer.ts. Do not enable in production
+  // before that's replaced.
+  enableDisclaimer: parseEnvBool(process.env.FEATURE_DISCLAIMER_ENABLED, false),
 };
 
 /**

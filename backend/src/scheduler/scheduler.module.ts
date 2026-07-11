@@ -5,9 +5,10 @@ import { AutomationModule } from '../automation/automation.module';
 import { AuthModule } from '../auth/auth.module';
 import { FirebaseModule } from '../firebase/firebase.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { WettbewerbModule } from '../wettbewerb/wettbewerb.module';
 
 @Module({
-  imports: [AutomationModule, AuthModule, FirebaseModule, NotificationsModule],
+  imports: [AutomationModule, AuthModule, FirebaseModule, NotificationsModule, WettbewerbModule],
   controllers: [SchedulerController],
   providers: [SchedulerService],
   exports: [SchedulerService],

@@ -14,9 +14,9 @@ import type { ToastType } from '../hooks/useAdsActions';
 
 export function Wettbewerb() {
   const { enableWettbewerb } = useFeatureFlags();
-  const { searches, isLoading } = useWettbewerbSearches();
+  const { searches, isLoading } = useWettbewerbSearches(enableWettbewerb);
   const { freeSearchUsed, freeLimit, additionalCost, hasSeenWettbewerb, isLoading: usageLoading } =
-    useWettbewerbUsage();
+    useWettbewerbUsage(enableWettbewerb);
   const { createSavedSearch, deleteSavedSearch, applySuggestedPrice, triggerRepost, markGuideSeen, isCreating } =
     useWettbewerbActions();
 

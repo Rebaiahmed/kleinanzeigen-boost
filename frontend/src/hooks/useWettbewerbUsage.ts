@@ -35,8 +35,13 @@ async function fetchWettbewerbUsage(): Promise<WettbewerbUsage> {
  * Single shared query for both the usage pill (Wettbewerb.tsx) and the
  * "NEU" tab badge (AppShell.tsx via useWettbewerbSeen) — one cached fetch,
  * no race between the two.
+ *
+ * `enabled` defaults to true for the Wettbewerb page itself, but AppShell
+ * (which mounts on every authenticated page) passes the feature flag so
+ * this query never fires at all while Wettbewerb is off — keeping the
+ * flag-off guarantee real rather than "fires and gets a harmless 404".
  */
-export function useWettbewerbUsage() {
+export function useWettbewerbUsage(enabled: boolean = true) {
   const queryClient = useQueryClient();
 
   const { data = DEFAULT_USAGE, isLoading } = useQuery({
@@ -45,6 +50,7 @@ export function useWettbewerbUsage() {
     staleTime: 1000 * 60,
     gcTime: 1000 * 60 * 10,
     placeholderData: DEFAULT_USAGE,
+    enabled,
   });
 
   const refetchUsage = useCallback(() => {

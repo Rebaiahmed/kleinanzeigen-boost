@@ -50,7 +50,7 @@ async function fetchSavedSearches(): Promise<WettbewerbSearch[]> {
   return data.searches || [];
 }
 
-export function useWettbewerbSearches() {
+export function useWettbewerbSearches(enabled: boolean = true) {
   const queryClient = useQueryClient();
 
   const { data: searches = [], isLoading, isError, error } = useQuery({
@@ -59,6 +59,7 @@ export function useWettbewerbSearches() {
     placeholderData: (prev) => prev,
     retry: 1,
     retryDelay: 2000,
+    enabled,
   });
 
   const invalidateSearches = useCallback(() => {

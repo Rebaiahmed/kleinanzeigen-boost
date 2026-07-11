@@ -12,6 +12,7 @@ export interface FeatureFlags {
   enableAnalytics: boolean;
   enablePhotoFeedback: boolean;
   enablePriceSuggestion: boolean;
+  enableWettbewerb: boolean;
 }
 
 function parseEnvBool(value: string | undefined, defaultVal: boolean): boolean {
@@ -31,6 +32,10 @@ export const FEATURE_FLAGS: FeatureFlags = {
   // Price suggestion — default ON (Preis button on priced ads; the AdCard already
   // hides it for "Zu verschenken" give-aways). Set ENABLE_PRICE_SUGGESTION=false to disable.
   enablePriceSuggestion: parseEnvBool(process.env.ENABLE_PRICE_SUGGESTION, true),
+  // Wettbewerb (competitor tracker) tab — default OFF until verified end-to-end.
+  // Credit-check calls are stubbed (feature/credits-stripe isn't merged yet) —
+  // see backend/src/wettbewerb/wettbewerb-credits.stub.ts.
+  enableWettbewerb: parseEnvBool(process.env.FEATURE_WETTBEWERB_ENABLED, false),
 };
 
 /**

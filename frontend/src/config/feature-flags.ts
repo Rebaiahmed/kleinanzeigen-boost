@@ -11,6 +11,7 @@ export interface FeatureFlags {
   enableAnalytics: boolean;
   enablePhotoFeedback: boolean;
   enablePriceSuggestion: boolean;
+  enableWettbewerb: boolean;
 }
 
 const DEFAULTS: FeatureFlags = {
@@ -20,6 +21,7 @@ const DEFAULTS: FeatureFlags = {
   enableAnalytics: false,
   enablePhotoFeedback: false,
   enablePriceSuggestion: false,
+  enableWettbewerb: false,
 };
 
 let cachedFlags: FeatureFlags = DEFAULTS;

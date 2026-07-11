@@ -147,15 +147,67 @@ function NotConnected() {
 
 /* ── State 3: connected → full access ───────────────────────────────────── */
 function Connected() {
+  // null balance = still loading, or credits feature is off — either way,
+  // render nothing new until we know it's actually enabled. The backend is
+  // the single source of truth for the flag (see GET_CREDITS_BALANCE).
+  const [balance, setBalance] = useState<number | null>(null);
+  const [creditsEnabled, setCreditsEnabled] = useState(false);
+  const [buying, setBuying] = useState(false);
+
+  useEffect(() => {
+    chrome.runtime.sendMessage({ type: 'GET_CREDITS_BALANCE' }, (resp) => {
+      if (chrome.runtime.lastError || !resp?.ok || !resp.enabled) return;
+      setCreditsEnabled(true);
+      setBalance(typeof resp.balance === 'number' ? resp.balance : 0);
+    });
+  }, []);
+
+  const buyCredits = () => {
+    setBuying(true);
+    chrome.runtime.sendMessage({ type: 'CREATE_CREDITS_CHECKOUT', packId: 'pack_100' }, (resp) => {
+      setBuying(false);
+      if (!chrome.runtime.lastError && resp?.ok && resp.url) {
+        openUrl(resp.url);
+      }
+    });
+  };
+
+  const zeroBalance = creditsEnabled && balance === 0;
+
   return (
     <div style={{ padding: '12px 12px' }}>
+      {creditsEnabled && balance !== null && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '6px 2px 10px', marginBottom: 4, borderBottom: '1px solid #eee',
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: balance < 5 ? '#e53e3e' : '#666' }}>
+            💳 {balance} Credits{balance < 5 ? ' — niedrig' : ''}
+          </span>
+          <button
+            onClick={buyCredits}
+            disabled={buying}
+            style={{
+              fontSize: 11, fontWeight: 700, color: GREEN, background: 'none', border: 'none',
+              cursor: buying ? 'default' : 'pointer', padding: 0, opacity: buying ? 0.6 : 1,
+            }}
+          >
+            {buying ? '…' : 'Aufladen'}
+          </button>
+        </div>
+      )}
+
       <p style={{ fontSize: 11, color: '#999', margin: '0 0 8px 2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         Schnellzugriff
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <QuickRow icon="📄" label="Meine Anzeigen" onClick={() => openTab('/meine-anzeigen')} />
         <QuickRow icon="📋" label="Antwort-Vorlagen" onClick={() => openTab('/vorlagen')} />
-        <QuickRow icon="🤖" label="Mit KI erstellen" onClick={() => openTab('/neue-anzeige-mit-ki-erstellen')} />
+        {zeroBalance ? (
+          <QuickRow icon="💳" label="Credits aufladen" onClick={buyCredits} />
+        ) : (
+          <QuickRow icon="🤖" label="Mit KI erstellen" onClick={() => openTab('/neue-anzeige-mit-ki-erstellen')} />
+        )}
       </div>
     </div>
   );

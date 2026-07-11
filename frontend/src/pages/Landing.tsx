@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { RefreshCw, Sparkles, Clock } from 'lucide-react';
+import { RefreshCw, Sparkles, Clock, ShieldCheck } from 'lucide-react';
 import { SupportMe } from '../components/SupportMe';
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -178,6 +178,11 @@ export function Landing() {
               <p className="text-slate-600">Was früher 30 Minuten dauerte, dauert jetzt 1 Klick.</p>
             </div>
           </div>
+
+          <p className="flex items-center justify-center gap-2 text-base text-slate-400 mt-10">
+            <ShieldCheck className="w-4 h-4 shrink-0" />
+            Ihr Kleinanzeigen-Passwort sehen wir nie.
+          </p>
         </section>
       </main>
 

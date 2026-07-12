@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { RefreshCw, Sparkles, Clock, ShieldCheck } from 'lucide-react';
+import { RefreshCw, Camera, Wallet, Clock, ShieldCheck } from 'lucide-react';
 import { SupportMe } from '../components/SupportMe';
+import { useTranslation } from 'react-i18next';
 
 /* ────────────────────────────────────────────────────────────────────────
  * Things to swap
@@ -11,11 +11,10 @@ import { SupportMe } from '../components/SupportMe';
 // TODO: replace with the real demo video ID tomorrow
 const YOUTUBE_VIDEO_ID = 'dQw4w9WgXcQ';
 
-// TODO: fill in the real profile URLs
+// YouTube not live yet — omit that icon until there's a real channel to link.
 const SOCIAL_LINKS = {
-  tiktok: '#',
-  instagram: '#',
-  youtube: '#',
+  tiktok: 'https://www.tiktok.com/@ahmed.rebai6',
+  instagram: 'https://www.instagram.com/anzeigenboost/',
 };
 
 const CHROME_STORE_URL = 'https://chromewebstore.google.com/detail/noagiapohlenpolcbeghlmngalapbobe';
@@ -51,15 +50,6 @@ function InstagramIcon({ className }: { className?: string }) {
       <rect x="3" y="3" width="18" height="18" rx="5" />
       <circle cx="12" cy="12" r="4.2" />
       <circle cx="17.2" cy="6.8" r="0.9" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
-function YouTubeIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-      <rect x="2" y="5" width="20" height="14" rx="4" fill="currentColor" />
-      <path d="M10 9.2 15.5 12 10 14.8Z" fill="#fff" />
     </svg>
   );
 }
@@ -156,35 +146,51 @@ export function Landing() {
           <YouTubeEmbed videoId={YOUTUBE_VIDEO_ID} />
         </section>
 
-        {/* 3. THREE BENEFITS */}
+        {/* 3. FEATURES */}
         <section className="py-16 bg-slate-50 border-y border-slate-200 px-4 sm:px-6">
           <div className="max-w-4xl mx-auto grid sm:grid-cols-3 gap-8 text-center">
             <div>
               <div className="w-14 h-14 rounded-full bg-[#A8C300]/10 text-[#A8C300] flex items-center justify-center mx-auto mb-4">
                 <RefreshCw className="w-7 h-7" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">{t('landing.benefit1Title')}</h3>
-              <p className="text-slate-600">{t('landing.benefit1Text')}</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Smart Repost</h3>
+              <p className="text-slate-600">
+                Deine Anzeige wird automatisch zur besten Uhrzeit neu veröffentlicht, mit echten Änderungen —
+                wieder ganz oben in den Suchergebnissen.
+              </p>
             </div>
             <div>
               <div className="w-14 h-14 rounded-full bg-[#A8C300]/10 text-[#A8C300] flex items-center justify-center mx-auto mb-4">
-                <Sparkles className="w-7 h-7" />
+                <Camera className="w-7 h-7" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">{t('landing.benefit2Title')}</h3>
-              <p className="text-slate-600">{t('landing.benefit2Text')}</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">KI-Texterstellung per Foto</h3>
+              <p className="text-slate-600">
+                Lade ein Foto hoch, AnzeigenBoost schreibt Titel und Beschreibung automatisch auf Deutsch.
+              </p>
             </div>
             <div>
               <div className="w-14 h-14 rounded-full bg-[#A8C300]/10 text-[#A8C300] flex items-center justify-center mx-auto mb-4">
-                <Clock className="w-7 h-7" />
+                <Wallet className="w-7 h-7" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">{t('landing.benefit3Title')}</h3>
-              <p className="text-slate-600">{t('landing.benefit3Text')}</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Kein Abo — nur zahlen, was du nutzt</h3>
+              <p className="text-slate-600">
+                50 Credits kostenlos zum Start. Danach zahlst du nur für das, was du wirklich nutzt — keine
+                monatliche Kündigung nötig.
+              </p>
             </div>
           </div>
 
-          <p className="flex items-center justify-center gap-2 text-base text-slate-400 mt-10">
+          <p className="flex items-center justify-center gap-2 text-base text-slate-500 mt-10">
+            <Clock className="w-4 h-4 shrink-0" />
+            Was früher 30 Minuten dauerte, dauert jetzt 1 Klick.
+          </p>
+
+          <p className="flex items-center justify-center gap-2 text-base text-slate-400 mt-3">
             <ShieldCheck className="w-4 h-4 shrink-0" />
             {t('landing.passwordNote')}
+          </p>
+          <p className="text-center text-sm text-slate-400 mt-1.5">
+            DSGVO-konform · Kein riskantes Bot-Verhalten
           </p>
         </section>
       </main>
@@ -198,9 +204,6 @@ export function Landing() {
             </a>
             <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="text-slate-400 hover:text-[#E1306C] transition-colors">
               <InstagramIcon className="w-5 h-5" />
-            </a>
-            <a href={SOCIAL_LINKS.youtube} target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="text-slate-400 hover:text-[#FF0000] transition-colors">
-              <YouTubeIcon className="w-5 h-5" />
             </a>
           </div>
 

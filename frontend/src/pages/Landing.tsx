@@ -160,27 +160,29 @@ export function Landing() {
               AnzeigenBoost veröffentlicht Ihre Anzeigen neu und schreibt bessere Texte mit KI – mit einem Klick.
             </p>
 
-            <a
-              href={CHROME_STORE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-3 bg-[#A8C300] hover:bg-[#96ae00] text-white font-bold py-4 px-8 rounded-full text-lg shadow-sm transition-colors"
-            >
-              <ChromeIcon className="w-6 h-6 shrink-0" />
-              Kostenlos im Chrome Web Store
-            </a>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <a
+                href={CHROME_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-3 bg-[#A8C300] hover:bg-[#96ae00] text-white font-bold py-4 px-8 rounded-full text-lg shadow-sm transition-colors"
+              >
+                <ChromeIcon className="w-6 h-6 shrink-0" />
+                Kostenlos im Chrome Web Store
+              </a>
+
+              <a
+                href={EDGE_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-slate-800 font-bold py-4 px-8 rounded-full text-lg shadow-sm border border-slate-200 transition-colors"
+              >
+                <EdgeIcon className="w-6 h-6 shrink-0" />
+                Kostenlos für Microsoft Edge
+              </a>
+            </div>
 
             <p className="text-base text-slate-400 mt-4">Kostenlos starten · Keine Kreditkarte nötig</p>
-
-            <a
-              href={EDGE_STORE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mt-3 transition-colors"
-            >
-              <EdgeIcon className="w-4 h-4 shrink-0" />
-              Auch für Microsoft Edge verfügbar
-            </a>
           </div>
         </section>
 

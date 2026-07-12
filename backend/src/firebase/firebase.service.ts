@@ -12,6 +12,9 @@ function saveStore(store: Record<string, any>) {
   try { fs.writeFileSync(STORE_FILE, JSON.stringify(store, null, 2)); } catch {}
 }
 const inMemoryStore: Record<string, any> = loadStore();
+function generateMockId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+}
 
 @Injectable()
 export class FirebaseService implements OnModuleInit {
@@ -84,12 +87,13 @@ export class FirebaseService implements OnModuleInit {
           .map(k => {
             const data = inMemoryStore[k];
             const id = k.slice(prefix.length);
-            return { id, exists: true, data: () => data };
+            return { id, exists: true, data: () => data, ref: makeDocRef(k) };
           })
           .filter(doc => filterFns.every(fn => fn(doc.data())));
         return { docs, empty: docs.length === 0 };
       },
-      doc: (docPath: string) => makeDocRef(`${prefix}${docPath}`),
+      // No arg → auto-generated id, mirroring real Firestore's collection.doc().
+      doc: (docPath?: string) => makeDocRef(`${prefix}${docPath || generateMockId()}`),
     });
 
     const makeDocRef = (fullPath: string): any => ({
@@ -171,9 +175,11 @@ export class FirebaseService implements OnModuleInit {
       runTransaction: async (cb: any) => {
         const t = {
           get: async (ref: any) => ref.get(),
+          set: (ref: any, data: any, options?: any) => { ref.set(data, options); },
           update: (ref: any, data: any) => { ref.update(data); },
+          delete: (ref: any) => { ref.delete(); },
         };
-        await cb(t);
+        return await cb(t);
       },
     } as any;
 

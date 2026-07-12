@@ -12,6 +12,7 @@ export interface FeatureFlags {
   enableAnalytics: boolean;
   enablePhotoFeedback: boolean;
   enablePriceSuggestion: boolean;
+  enableCredits: boolean;
 }
 
 function parseEnvBool(value: string | undefined, defaultVal: boolean): boolean {
@@ -31,6 +32,14 @@ export const FEATURE_FLAGS: FeatureFlags = {
   // Price suggestion — default ON (Preis button on priced ads; the AdCard already
   // hides it for "Zu verschenken" give-aways). Set ENABLE_PRICE_SUGGESTION=false to disable.
   enablePriceSuggestion: parseEnvBool(process.env.ENABLE_PRICE_SUGGESTION, true),
+  // Pay-as-you-go credits wallet (Stripe one-time purchases) — default OFF until
+  // verified end-to-end. Independent of MONETIZATION_ENABLED (backend/src/config/
+  // ai-limits.constants.ts), which gates the older monthly-quota tier system —
+  // the two are orthogonal and BOTH apply to AI generation when both are on
+  // (quota checked first, cheap; credits deducted second, only if quota passes).
+  // Flipping this on while MONETIZATION_ENABLED stays off is a valid soft-launch
+  // state (unlimited monthly quota, but credits still meter/charge per action).
+  enableCredits: parseEnvBool(process.env.ENABLE_CREDITS, false),
 };
 
 /**

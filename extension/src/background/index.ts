@@ -8,6 +8,50 @@ import { computeNextSmartRepost, applySmartVariation } from '../config/smart-rep
 
 const API_URL = ENDPOINTS.API_BASE;
 
+// ─── Credits (feature-flagged; backend is the source of truth) ───────────────
+// Both helpers are safe to call unconditionally — when ENABLE_CREDITS is off,
+// the backend returns CREDITS_DISABLED and reserveCredits treats that as "not
+// gated, proceed" rather than a real insufficient-balance block, so callers
+// never need to check the flag themselves.
+
+/** Reserves (deducts) credits for one repost before it runs. Returns
+ *  ok:true if the repost should proceed (either credits were reserved, or
+ *  the feature is disabled and nothing is gated); ok:false + a user-facing
+ *  error only for a genuine insufficient-balance block. */
+async function reserveCredits(
+  token: string,
+  actionType: 'repost' | 'smart_repost',
+  relatedActionId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API_URL}/credits/reserve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ actionType, relatedActionId }),
+    });
+    if (res.ok) return { ok: true };
+    const data = await res.json().catch(() => ({}));
+    if (data.code === 'CREDITS_DISABLED') return { ok: true }; // flag off — not gated
+    if (data.code === 'INSUFFICIENT_CREDITS') return { ok: false, error: 'Nicht genügend Credits. Bitte Credits aufladen.' };
+    console.warn('[BG][credits] reserve failed:', data.message || res.status);
+    return { ok: true }; // fail open — a credits-plumbing error must never block a real repost
+  } catch (e: any) {
+    console.warn('[BG][credits] reserve error:', e.message);
+    return { ok: true }; // fail open (network hiccup etc.)
+  }
+}
+
+/** Reports how the reserved repost turned out. Best-effort — if this never
+ *  arrives (extension crash), the backend's stale-reservation cleanup cron
+ *  auto-refunds within 10 minutes. */
+function confirmCredits(token: string, relatedActionId: string, success: boolean): void {
+  fetch(`${API_URL}/credits/confirm`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ relatedActionId, success }),
+  }).catch((e) => console.warn('[BG][credits] confirm error:', e.message));
+}
+
 // Self-heal a stuck overlay registration. registerOverlayScript()/
 // unregisterOverlayScript() are only ever paired inside performRepost()'s
 // callback chain (see below) — if the MV3 service worker is killed mid-repost
@@ -79,7 +123,7 @@ function performRepost(adId: string, adData: any): Promise<{ ok: boolean; step?:
  */
 async function runDueClientReposts(verbose = false): Promise<void> {
   if (!CLIENT_SCHEDULER_ENABLED || clientSchedulerRunning) return;
-  const { token } = await chrome.storage.session.get(['token']);
+  const { token } = (await chrome.storage.session.get(['token'])) as { token?: string };
   if (!token) { if (verbose) console.warn('[BG][sched] no token — not connected'); return; }
 
   let ads: any[] = [];
@@ -131,13 +175,26 @@ async function runDueClientReposts(verbose = false): Promise<void> {
     // Now repost the claimed ads one at a time, jittered (human-like, lowers risk).
     for (let i = 0; i < claimed.length; i++) {
       const ad = claimed[i];
+      const isSmart = ad.repostMode === 'smart';
+
+      // Credits: reserve before running this ad's repost. Insufficient balance
+      // skips just this ad (like the backend cron's equivalent skip) — the
+      // rest of the batch still runs.
+      const creditActionId = crypto.randomUUID();
+      const reservation = await reserveCredits(token, isSmart ? 'smart_repost' : 'repost', creditActionId);
+      if (!reservation.ok) {
+        console.warn(`[BG][sched] skipping ${ad.id} — ${reservation.error}`);
+        continue;
+      }
+
       // Smart mode: apply one micro-variation to what gets posted (engine unchanged).
       const repostCount = Number(ad.trackedRepostsCount) || 0;
-      const varied = ad.repostMode === 'smart'
+      const varied = isSmart
         ? applySmartVariation(ad, ad.smartVariation, repostCount)
         : { adData: ad, applied: 'none' as const };
-      if (ad.repostMode === 'smart') console.log(`[BG][sched] smart variation for ${ad.id}: ${varied.applied}`);
+      if (isSmart) console.log(`[BG][sched] smart variation for ${ad.id}: ${varied.applied}`);
       const result = await performRepost(String(ad.id), varied.adData);
+      confirmCredits(token, creditActionId, result.ok);
 
       // On failure, pull nextRepostAt back to a short retry window (not the full
       // interval) so it retries soon — but not on the immediate next tick. The
@@ -496,7 +553,21 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
       } catch (err: any) {
         console.warn('[BG] failed to fetch ad data:', err.message);
       }
+
+      const isSmart = adData?.repostMode === 'smart';
+
+      // Credits: reserve before running the repost. Insufficient balance
+      // blocks it outright and reports back so the dashboard toast can show
+      // "Credits aufladen" instead of a generic failure.
+      const creditActionId = crypto.randomUUID();
+      const reservation = await reserveCredits(token, isSmart ? 'smart_repost' : 'repost', creditActionId);
+      if (!reservation.ok) {
+        sendResponse({ ok: false, error: reservation.error });
+        return;
+      }
+
       const result = await performRepost(adId, adData);
+      confirmCredits(token, creditActionId, result.ok);
 
       // Carry the recurring auto-repost schedule forward onto the newly
       // created ad. The instant "Jetzt" repost deletes the old Kleinanzeigen
@@ -508,7 +579,6 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
         const newAdId = (String(result.finalUrl).match(/[?&]adId=(\d+)/) || [])[1];
         if (newAdId && newAdId !== adId) {
           try {
-            const isSmart = adData.repostMode === 'smart';
             const nextRepostAt = isSmart
               ? computeNextSmartRepost(Date.now())
               : new Date(Date.now() + (Number(adData.repostIntervalMinutes) || 1440) * 60000).toISOString();
@@ -534,6 +604,43 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
       }
 
       sendResponse(result);
+    });
+    return true;
+  }
+
+  // Popup credits balance display. Backend returns {enabled:false} when
+  // ENABLE_CREDITS is off — the popup uses that to decide whether to render
+  // the balance UI at all, so no separate flag-fetch is needed here.
+  if (message.type === 'GET_CREDITS_BALANCE') {
+    chrome.storage.session.get(['token'], async ({ token }: any) => {
+      if (!token) { sendResponse({ ok: false, error: 'no session token' }); return; }
+      try {
+        const res = await fetch(`${API_URL}/credits/balance`, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        sendResponse({ ok: res.ok, enabled: data.enabled, balance: data.balance });
+      } catch (e: any) {
+        sendResponse({ ok: false, error: e.message });
+      }
+    });
+    return true;
+  }
+
+  // Popup "Credits aufladen" button — creates a Stripe Checkout session and
+  // returns its hosted URL for the popup to open via chrome.tabs.create.
+  if (message.type === 'CREATE_CREDITS_CHECKOUT') {
+    chrome.storage.session.get(['token'], async ({ token }: any) => {
+      if (!token) { sendResponse({ ok: false, error: 'no session token' }); return; }
+      try {
+        const res = await fetch(`${API_URL}/credits/checkout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ packId: message.packId }),
+        });
+        const data = await res.json();
+        sendResponse({ ok: res.ok, url: data.url, error: data.message });
+      } catch (e: any) {
+        sendResponse({ ok: false, error: e.message });
+      }
     });
     return true;
   }

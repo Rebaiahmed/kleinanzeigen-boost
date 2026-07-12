@@ -3,6 +3,10 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { FirebaseService } from '../firebase/firebase.service';
 import { getEffectiveLimit, estimateCostUsd } from '../config/ai-limits.constants';
 import { AI_CONFIG } from '../config/ai.constants';
+import { CreditsService } from '../credits/credits.service';
+import { getCreditCost } from '../config/credit-costs.constants';
+import { FEATURE_FLAGS } from '../config/feature-flags';
+import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import axios from 'axios';
@@ -15,7 +19,10 @@ export class AiService {
   private optimizeAdPrompt: string;
   private priceCheckPrompt: string;
 
-  constructor(private readonly firebaseService: FirebaseService) {
+  constructor(
+    private readonly firebaseService: FirebaseService,
+    private readonly creditsService: CreditsService,
+  ) {
     // Construct the Gemini client only when a key is actually configured.
     // If absent, genAI stays null and the model fallback chain skips Gemini and
     // uses OpenRouter. (App-level startup validation already fails fast when
@@ -393,6 +400,18 @@ export class AiService {
     // 4. Pre-check API Key configuration
     this.assertAiConfigured();
 
+    // Credits: deduct up-front, refund on any of the 3 failure exits below.
+    // Deliberately deduct-first-then-refund (not deduct-only-on-success) —
+    // the deduct's own Firestore transaction is the enforcement point, so
+    // this closes a check-then-act race under concurrent requests. This is
+    // independent of and additional to the quota check above (§3) — quota
+    // stays the cheaper, unchanged first gate; credits is a second, separate
+    // gate that only runs once quota already passed.
+    const creditActionId = randomUUID();
+    if (FEATURE_FLAGS.enableCredits) {
+      await this.creditsService.deduct(userId, getCreditCost('ai_generation'), 'ai_generation', creditActionId);
+    }
+
     const imageParts = files.map((file) => ({
       inlineData: {
         data: file.buffer.toString('base64'),
@@ -434,6 +453,10 @@ export class AiService {
       promptTokenCount = fallbackResult.promptTokenCount;
       candidatesTokenCount = fallbackResult.candidatesTokenCount;
     } catch (error: any) {
+      if (FEATURE_FLAGS.enableCredits) {
+        await this.creditsService.refund(userId, getCreditCost('ai_generation'), 'ai_generation_failed', creditActionId)
+          .catch((e: any) => this.logger.error(`credit refund failed: ${e.message}`));
+      }
       if (error instanceof HttpException) throw error;
       const errMsg = error.message || '';
       if (errMsg.includes('API key not valid') || errMsg.includes('API_KEY_INVALID')) {
@@ -471,6 +494,10 @@ export class AiService {
       } catch (retryError) {
         this.logger.error('Failed to parse Gemini response on second attempt. Raw response:', responseText);
         this.logger.error('Retry parse error:', retryError);
+        if (FEATURE_FLAGS.enableCredits) {
+          await this.creditsService.refund(userId, getCreditCost('ai_generation'), 'ai_generation_failed', creditActionId)
+            .catch((e: any) => this.logger.error(`credit refund failed: ${e.message}`));
+        }
         throw new HttpException(
           'Die KI-Antwort konnte nicht als valides JSON verarbeitet werden. Bitte lade die Seite neu und versuche es erneut.',
           HttpStatus.UNPROCESSABLE_ENTITY,
@@ -495,6 +522,10 @@ export class AiService {
     const looksLikeMetaFailure = typeof parsedJson?.title === 'string' && metaFailurePattern.test(parsedJson.title);
     if (parsedJson?.error || !parsedJson?.title || typeof parsedJson.title !== 'string' || !parsedJson.title.trim() || looksLikeMetaFailure) {
       this.logger.warn(`[analyze-photos] unusable AI result, not charging credit: ${JSON.stringify(parsedJson)}`);
+      if (FEATURE_FLAGS.enableCredits) {
+        await this.creditsService.refund(userId, getCreditCost('ai_generation'), 'ai_generation_failed', creditActionId)
+          .catch((e: any) => this.logger.error(`credit refund failed: ${e.message}`));
+      }
       throw new HttpException(
         {
           message: 'Die KI konnte auf den Fotos kein Produkt erkennen. Bitte lade deutlichere Fotos hoch und versuche es erneut.',

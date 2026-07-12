@@ -15,8 +15,10 @@ import { ReplyTemplatesModule } from './reply-templates/reply-templates.module';
 import { AdminModule } from './admin/admin.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
+import { CreditsModule } from './credits/credits.module';
 import { ConfigController } from './config/config.controller';
 import { HealthController } from './health/health.controller';
+import { WettbewerbModule } from './wettbewerb/wettbewerb.module';
 
 @Module({
   imports: [
@@ -37,6 +39,8 @@ import { HealthController } from './health/health.controller';
     AdminModule,
     NotificationsModule,
     MonitoringModule,
+    WettbewerbModule,
+    CreditsModule,
     // TODO: Import Users Modules
   ],
   controllers: [ConfigController, HealthController],

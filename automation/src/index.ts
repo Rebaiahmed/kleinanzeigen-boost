@@ -261,6 +261,19 @@ app.post('/repost', async (req, res) => {
   }
 });
 
+// ─── Wettbewerb (competitor tracker) ────────────────────────────────────────
+app.post('/scrape-search', async (req, res) => {
+  const { keyword, plz, radiusKm } = req.body;
+  if (!keyword || !plz) return res.status(400).json({ error: 'Missing keyword or plz' });
+  try {
+    const { executeSearchScrape } = await import('./wettbewerb-search');
+    const result = await executeSearchScrape(keyword, plz, radiusKm);
+    return res.json(result);
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Automation service listening on port ${port}`);
 });

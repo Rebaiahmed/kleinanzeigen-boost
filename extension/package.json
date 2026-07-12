@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "build:dev": "tsc && vite build --mode development && node scripts/patch-dev-manifest.mjs",
+    "package:zip": "node scripts/package-zip.mjs",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },

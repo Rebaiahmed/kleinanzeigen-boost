@@ -9,6 +9,10 @@ import { SCHEDULER_CONFIG } from '../config/scheduler.constants';
 import { applySmartVariation, computeNextSmartRepost } from '../config/smart-repost';
 import { classifyRepostError } from '../common/repost-error.util';
 import { NotificationsService } from '../notifications/notifications.service';
+import { WettbewerbService } from '../wettbewerb/wettbewerb.service';
+import { CreditsService } from '../credits/credits.service';
+import { getCreditCost } from '../config/credit-costs.constants';
+import { FEATURE_FLAGS } from '../config/feature-flags';
 
 /** Consistent context prefix for scheduler logs: "[run=… user=… ad=…]". */
 function logCtx(userId?: string, adId?: string, runId?: string): string {
@@ -35,11 +39,16 @@ export class SchedulerService {
   /** Guards against overlapping runs when a cron tick takes longer than the interval. */
   private isRunning = false;
 
+  /** Separate mutex for the Wettbewerb recheck cron — independent run cadence from repost. */
+  private wettbewerbCronRunning = false;
+
   constructor(
     private readonly firebaseService: FirebaseService,
     private readonly automationService: AutomationService,
     private readonly sessionService: SessionService,
     private readonly notificationsService: NotificationsService,
+    private readonly wettbewerbService: WettbewerbService,
+    private readonly creditsService: CreditsService,
   ) {}
 
   async triggerNow() {
@@ -376,6 +385,28 @@ export class SchedulerService {
         viewsBefore = await this.scrapeViewsWithRetry(userId, cookies, adId, 'viewsBefore');
       }
 
+      const isSmart = adData.repostMode === 'smart';
+
+      // Credits: deduct before attempting the repost (not a reservation — this
+      // whole flow is synchronous server-side, so a direct deduct/refund pair
+      // around the try/catch below is enough, no crash-safety gap to close).
+      // Insufficient credits skips this ad (not the whole cron run) and moves on.
+      if (FEATURE_FLAGS.enableCredits) {
+        try {
+          await this.creditsService.deduct(userId, getCreditCost(isSmart ? 'smart_repost' : 'repost'), isSmart ? 'smart_repost' : 'repost', adId);
+        } catch {
+          this.logger.warn(`${logCtx(userId, adId, runId)} Skipped — insufficient credits`);
+          if (stats) stats.skippedUsers++;
+          await adRef.update({ status: AdStatus.ACTIVE, pendingRepostSince: null }).catch(() => {});
+          await this.notificationsService.emit(userId, {
+            type: 'credits_insufficient',
+            message: 'Nicht genügend Credits für den automatischen Repost. Bitte Credits aufladen.',
+            adId,
+          }).catch(() => {});
+          continue;
+        }
+      }
+
       const startTime = Date.now();
 
       // 3. Run the server-side repost via the automation worker.
@@ -386,7 +417,6 @@ export class SchedulerService {
         // Smart Repost: apply ONE real micro-variation (title/photo/price) so the
         // refresh registers as a genuine change. The engine is unchanged — it just
         // receives the varied copy. Manual mode posts the ad as-is.
-        const isSmart = adData.repostMode === 'smart';
         const repostCount = Number(adData.trackedRepostsCount) || 0;
         const varied = isSmart
           ? applySmartVariation(adData, adData.smartVariation, repostCount)
@@ -443,6 +473,12 @@ export class SchedulerService {
           stats.errorsByCode[errorCode] = (stats.errorsByCode[errorCode] || 0) + 1;
         }
         this.logger.error(`${logCtx(userId, adId, runId)} ✗ Repost failed [${errorCode}]: ${error.message}`);
+
+        if (FEATURE_FLAGS.enableCredits) {
+          const cost = getCreditCost(isSmart ? 'smart_repost' : 'repost');
+          await this.creditsService.refund(userId, cost, `${isSmart ? 'smart_repost' : 'repost'}_failed`, adId)
+            .catch((e: any) => this.logger.error(`${logCtx(userId, adId, runId)} credit refund failed: ${e.message}`));
+        }
 
         // adRef is declared at the top of this loop iteration.
         // Always record the failure in the ad's repostLogs for traceability.
@@ -621,6 +657,92 @@ export class SchedulerService {
       }
     } catch (error: any) {
       this.logger.error(`View tracking cron failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Wettbewerb (competitor tracker) recheck cron. @nestjs/schedule only
+   * supports one fixed expression per method — it can't natively run "this
+   * specific search every N days from when it was created." So, mirroring
+   * how handleRepostCron finds due ads via nextRepostAt <= now rather than
+   * per-item cron jobs: this coarse 30-minute tick queries for anything
+   * whose own nextCheckAt has passed, and performCheck() itself advances
+   * that timestamp by the search's own checkIntervalDays afterwards. A
+   * 30-minute granularity is more than precise enough for day-scale
+   * intervals (daily/every-2-days/weekly).
+   */
+  @Cron(process.env.WETTBEWERB_SIMULATE === 'true' ? '*/1 * * * *' : '*/30 * * * *')
+  async handleWettbewerbRecheckCron() {
+    if (!FEATURE_FLAGS.enableWettbewerb) return; // flag-off = instant no-op, no Firestore/worker calls
+    if (this.wettbewerbCronRunning) {
+      this.logger.warn('Wettbewerb recheck run skipped — previous run still in progress');
+      return;
+    }
+    this.wettbewerbCronRunning = true;
+
+    const runId = (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`).slice(0, 8);
+    const ctx = `[wettbewerb run=${runId}]`;
+
+    try {
+      if (await this.wettbewerbService.isGloballyPaused()) {
+        this.logger.log(`${ctx} Skipped — global scrape cooldown active (recent IP block)`);
+        return;
+      }
+
+      const db = this.firebaseService.firestore;
+      const nowIso = new Date().toISOString();
+      const dueSnap = await db.collectionGroup('wettbewerbSearches')
+        .where('status', '==', 'active')
+        .where('nextCheckAt', '<=', nowIso)
+        .get();
+
+      if (dueSnap.empty) {
+        this.logger.log(`${ctx} No due searches this run`);
+        return;
+      }
+
+      this.logger.log(`${ctx} Processing ${dueSnap.size} due search(es)`);
+
+      for (const doc of dueSnap.docs) {
+        const userId = doc.ref.parent?.parent?.id;
+        if (!userId) continue;
+
+        // A block detected mid-run should stop the rest of this tick rather
+        // than hammering an already-blocked shared IP for every remaining item.
+        if (await this.wettbewerbService.isGloballyPaused()) {
+          this.logger.warn(`${ctx} Global cooldown triggered mid-run — stopping remaining checks`);
+          break;
+        }
+
+        try {
+          await this.wettbewerbService.performCheck(userId, doc.id, doc.data(), runId);
+        } catch (e: any) {
+          // performCheck already handles scrape failures internally (writes
+          // lastCheckError, advances nextCheckAt) — this only catches truly
+          // unexpected errors (e.g. a Firestore write failure) so one bad
+          // search can never abort the whole run.
+          this.logger.error(`${ctx} user=${userId} search=${doc.id} unexpected error: ${e.message}`, e.stack);
+        }
+      }
+    } catch (error: any) {
+      this.logger.error(`${ctx} Cron iteration failed: ${error.message}`, error.stack);
+    } finally {
+      this.wettbewerbCronRunning = false;
+    }
+  }
+
+  /** Crash-safety net for the credits reservation pattern (extension-side
+   *  repost paths deduct via reserve() before the DOM automation runs, but
+   *  may never call confirm() back if the browser crashes mid-repost). Sweeps
+   *  and auto-refunds any reservation older than 10 minutes. No-ops entirely
+   *  when the credits flag is off. */
+  @Cron('*/10 * * * *') // Runs every 10 minutes
+  async cleanupStaleCreditReservations() {
+    if (!FEATURE_FLAGS.enableCredits) return;
+    try {
+      await this.creditsService.cleanupStaleReservations();
+    } catch (error: any) {
+      this.logger.error(`Stale reservation cleanup failed: ${error.message}`);
     }
   }
 }

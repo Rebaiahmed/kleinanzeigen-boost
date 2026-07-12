@@ -12,6 +12,7 @@ export interface FeatureFlags {
   enablePhotoFeedback: boolean;
   enablePriceSuggestion: boolean;
   enableDisclaimer: boolean;
+  enableWettbewerb: boolean;
 }
 
 const DEFAULTS: FeatureFlags = {
@@ -22,6 +23,7 @@ const DEFAULTS: FeatureFlags = {
   enablePhotoFeedback: false,
   enablePriceSuggestion: false,
   enableDisclaimer: false,
+  enableWettbewerb: false,
 };
 
 let cachedFlags: FeatureFlags = DEFAULTS;

@@ -13,6 +13,7 @@ import { AuthCallback } from './pages/AuthCallback';
 import { EbaySuccess } from './pages/EbaySuccess';
 import { ReplyTemplatesList } from './components/reply-templates/ReplyTemplatesList';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { Wettbewerb } from './pages/Wettbewerb';
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
         <Route path="/neue-anzeige-mit-ki-erstellen" element={<ProtectedRoute><AppShell><CreateWithAi /></AppShell></ProtectedRoute>} />
         <Route path="/einstellungen" element={<ProtectedRoute><AppShell><Settings /></AppShell></ProtectedRoute>} />
         <Route path="/vorlagen" element={<ProtectedRoute><AppShell><ReplyTemplatesList /></AppShell></ProtectedRoute>} />
+        <Route path="/wettbewerb" element={<ProtectedRoute><AppShell><Wettbewerb /></AppShell></ProtectedRoute>} />
         {/* Catch-all redirect to ads for the simplified view */}
         <Route path="*" element={<Navigate to="/meine-anzeigen" replace />} />
       </Routes>

@@ -13,6 +13,7 @@ export interface FeatureFlags {
   enablePhotoFeedback: boolean;
   enablePriceSuggestion: boolean;
   enableWettbewerb: boolean;
+  enableCredits: boolean;
 }
 
 function parseEnvBool(value: string | undefined, defaultVal: boolean): boolean {
@@ -33,9 +34,18 @@ export const FEATURE_FLAGS: FeatureFlags = {
   // hides it for "Zu verschenken" give-aways). Set ENABLE_PRICE_SUGGESTION=false to disable.
   enablePriceSuggestion: parseEnvBool(process.env.ENABLE_PRICE_SUGGESTION, true),
   // Wettbewerb (competitor tracker) tab — default OFF until verified end-to-end.
-  // Credit-check calls are stubbed (feature/credits-stripe isn't merged yet) —
-  // see backend/src/wettbewerb/wettbewerb-credits.stub.ts.
+  // Credit-check calls go through WettbewerbCreditsStub — see
+  // backend/src/wettbewerb/wettbewerb-credits.stub.ts for the TODO to swap it
+  // for the real CreditsService now that credits-stripe is merged.
   enableWettbewerb: parseEnvBool(process.env.FEATURE_WETTBEWERB_ENABLED, false),
+  // Pay-as-you-go credits wallet (Stripe one-time purchases) — default OFF until
+  // verified end-to-end. Independent of MONETIZATION_ENABLED (backend/src/config/
+  // ai-limits.constants.ts), which gates the older monthly-quota tier system —
+  // the two are orthogonal and BOTH apply to AI generation when both are on
+  // (quota checked first, cheap; credits deducted second, only if quota passes).
+  // Flipping this on while MONETIZATION_ENABLED stays off is a valid soft-launch
+  // state (unlimited monthly quota, but credits still meter/charge per action).
+  enableCredits: parseEnvBool(process.env.ENABLE_CREDITS, false),
 };
 
 /**

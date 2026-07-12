@@ -487,7 +487,10 @@ export class AdsService {
     if (updateData.trackedRepostsCount !== undefined) payload.trackedRepostsCount = updateData.trackedRepostsCount;
     // Smart Repost config
     if (updateData.repostMode !== undefined) payload.repostMode = updateData.repostMode;
-    if (updateData.smartVariation !== undefined) payload.smartVariation = updateData.smartVariation;
+    // class-transformer's @Type() turns this into a real SmartVariationDto
+    // instance (custom prototype) — Firestore only accepts plain objects, so
+    // spread it into one before writing.
+    if (updateData.smartVariation !== undefined) payload.smartVariation = { ...updateData.smartVariation };
     // When switching to smart mode, schedule the next repost at a peak window.
     if (updateData.repostMode === 'smart' && updateData.autoRepost !== false) {
       payload.nextRepostAt = computeNextSmartRepost(Date.now());

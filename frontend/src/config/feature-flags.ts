@@ -11,6 +11,7 @@ export interface FeatureFlags {
   enableAnalytics: boolean;
   enablePhotoFeedback: boolean;
   enablePriceSuggestion: boolean;
+  enableDisclaimer: boolean;
   enableWettbewerb: boolean;
 }
 
@@ -21,6 +22,7 @@ const DEFAULTS: FeatureFlags = {
   enableAnalytics: false,
   enablePhotoFeedback: false,
   enablePriceSuggestion: false,
+  enableDisclaimer: false,
   enableWettbewerb: false,
 };
 

@@ -12,6 +12,7 @@ export interface FeatureFlags {
   enableAnalytics: boolean;
   enablePhotoFeedback: boolean;
   enablePriceSuggestion: boolean;
+  enableDisclaimer: boolean;
   enableWettbewerb: boolean;
   enableCredits: boolean;
 }
@@ -33,6 +34,11 @@ export const FEATURE_FLAGS: FeatureFlags = {
   // Price suggestion — default ON (Preis button on priced ads; the AdCard already
   // hides it for "Zu verschenken" give-aways). Set ENABLE_PRICE_SUGGESTION=false to disable.
   enablePriceSuggestion: parseEnvBool(process.env.ENABLE_PRICE_SUGGESTION, true),
+  // Legal disclaimer insert (Gewährleistungsausschluss) — default OFF. The
+  // shipped text is a PLACEHOLDER until a qualified legal source verifies it —
+  // see frontend/src/config/legalDisclaimer.ts. Do not enable in production
+  // before that's replaced.
+  enableDisclaimer: parseEnvBool(process.env.FEATURE_DISCLAIMER_ENABLED, false),
   // Wettbewerb (competitor tracker) tab — default OFF until verified end-to-end.
   // Credit-check calls go through WettbewerbCreditsStub — see
   // backend/src/wettbewerb/wettbewerb-credits.stub.ts for the TODO to swap it

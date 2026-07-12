@@ -4,6 +4,8 @@ import { TopBar } from './TopBar';
 import { BrowserSupportBanner } from '../BrowserSupportBanner';
 import { useExtension } from '../../hooks/useExtension';
 import { useRepostNotifications } from '../../hooks/useRepostNotifications';
+import { useFeatureFlags } from '../../hooks/useFeatureFlags';
+import { useWettbewerbSeen } from '../../hooks/useWettbewerbSeen';
 import { AlertCircle, MessageSquare } from 'lucide-react';
 
 const FEEDBACK_FORM_URL =
@@ -22,6 +24,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { isConnected, isChecking } = useExtension();
   // Poll for repost notifications (incl. simulated reposts) → show desktop notif.
   useRepostNotifications();
+
+  const { enableWettbewerb } = useFeatureFlags();
+  // enabled=enableWettbewerb: while the flag is off, this hook's query never
+  // fires at all (see useWettbewerbUsage) — flag-off stays a real no-op here,
+  // not just an empty render.
+  const hasSeenWettbewerb = useWettbewerbSeen(enableWettbewerb);
 
   // Only show the "not connected" banner when we're certain the extension is
   // missing — not while checking (avoids flash) and not if the user has a valid
@@ -106,6 +114,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             📋 Antwort-Vorlagen
           </NavLink>
+          {enableWettbewerb && (
+            <NavLink
+              to="/wettbewerb"
+              className={({ isActive }) =>
+                `px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
+                  isActive
+                    ? 'border-[#A8C300] text-[#A8C300]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`
+              }
+            >
+              📊 Wettbewerb
+              {!hasSeenWettbewerb && (
+                <span className="ml-1.5 inline-flex items-center text-[9px] font-bold bg-[#A8C300] text-white px-1.5 py-0.5 rounded-full align-middle">
+                  NEU
+                </span>
+              )}
+            </NavLink>
+          )}
         </div>
       </div>
 

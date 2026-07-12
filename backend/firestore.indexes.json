@@ -16,6 +16,14 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "pendingRepostSince", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "wettbewerbSearches",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "nextCheckAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

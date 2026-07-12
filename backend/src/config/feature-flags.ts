@@ -12,6 +12,7 @@ export interface FeatureFlags {
   enableAnalytics: boolean;
   enablePhotoFeedback: boolean;
   enablePriceSuggestion: boolean;
+  enableWettbewerb: boolean;
   enableCredits: boolean;
 }
 
@@ -32,6 +33,11 @@ export const FEATURE_FLAGS: FeatureFlags = {
   // Price suggestion — default ON (Preis button on priced ads; the AdCard already
   // hides it for "Zu verschenken" give-aways). Set ENABLE_PRICE_SUGGESTION=false to disable.
   enablePriceSuggestion: parseEnvBool(process.env.ENABLE_PRICE_SUGGESTION, true),
+  // Wettbewerb (competitor tracker) tab — default OFF until verified end-to-end.
+  // Credit-check calls go through WettbewerbCreditsStub — see
+  // backend/src/wettbewerb/wettbewerb-credits.stub.ts for the TODO to swap it
+  // for the real CreditsService now that credits-stripe is merged.
+  enableWettbewerb: parseEnvBool(process.env.FEATURE_WETTBEWERB_ENABLED, false),
   // Pay-as-you-go credits wallet (Stripe one-time purchases) — default OFF until
   // verified end-to-end. Independent of MONETIZATION_ENABLED (backend/src/config/
   // ai-limits.constants.ts), which gates the older monthly-quota tier system —

@@ -9,6 +9,7 @@ import { SCHEDULER_CONFIG } from '../config/scheduler.constants';
 import { applySmartVariation, computeNextSmartRepost } from '../config/smart-repost';
 import { classifyRepostError } from '../common/repost-error.util';
 import { NotificationsService } from '../notifications/notifications.service';
+import { WettbewerbService } from '../wettbewerb/wettbewerb.service';
 import { CreditsService } from '../credits/credits.service';
 import { getCreditCost } from '../config/credit-costs.constants';
 import { FEATURE_FLAGS } from '../config/feature-flags';
@@ -38,11 +39,15 @@ export class SchedulerService {
   /** Guards against overlapping runs when a cron tick takes longer than the interval. */
   private isRunning = false;
 
+  /** Separate mutex for the Wettbewerb recheck cron — independent run cadence from repost. */
+  private wettbewerbCronRunning = false;
+
   constructor(
     private readonly firebaseService: FirebaseService,
     private readonly automationService: AutomationService,
     private readonly sessionService: SessionService,
     private readonly notificationsService: NotificationsService,
+    private readonly wettbewerbService: WettbewerbService,
     private readonly creditsService: CreditsService,
   ) {}
 
@@ -652,6 +657,77 @@ export class SchedulerService {
       }
     } catch (error: any) {
       this.logger.error(`View tracking cron failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Wettbewerb (competitor tracker) recheck cron. @nestjs/schedule only
+   * supports one fixed expression per method — it can't natively run "this
+   * specific search every N days from when it was created." So, mirroring
+   * how handleRepostCron finds due ads via nextRepostAt <= now rather than
+   * per-item cron jobs: this coarse 30-minute tick queries for anything
+   * whose own nextCheckAt has passed, and performCheck() itself advances
+   * that timestamp by the search's own checkIntervalDays afterwards. A
+   * 30-minute granularity is more than precise enough for day-scale
+   * intervals (daily/every-2-days/weekly).
+   */
+  @Cron(process.env.WETTBEWERB_SIMULATE === 'true' ? '*/1 * * * *' : '*/30 * * * *')
+  async handleWettbewerbRecheckCron() {
+    if (!FEATURE_FLAGS.enableWettbewerb) return; // flag-off = instant no-op, no Firestore/worker calls
+    if (this.wettbewerbCronRunning) {
+      this.logger.warn('Wettbewerb recheck run skipped — previous run still in progress');
+      return;
+    }
+    this.wettbewerbCronRunning = true;
+
+    const runId = (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`).slice(0, 8);
+    const ctx = `[wettbewerb run=${runId}]`;
+
+    try {
+      if (await this.wettbewerbService.isGloballyPaused()) {
+        this.logger.log(`${ctx} Skipped — global scrape cooldown active (recent IP block)`);
+        return;
+      }
+
+      const db = this.firebaseService.firestore;
+      const nowIso = new Date().toISOString();
+      const dueSnap = await db.collectionGroup('wettbewerbSearches')
+        .where('status', '==', 'active')
+        .where('nextCheckAt', '<=', nowIso)
+        .get();
+
+      if (dueSnap.empty) {
+        this.logger.log(`${ctx} No due searches this run`);
+        return;
+      }
+
+      this.logger.log(`${ctx} Processing ${dueSnap.size} due search(es)`);
+
+      for (const doc of dueSnap.docs) {
+        const userId = doc.ref.parent?.parent?.id;
+        if (!userId) continue;
+
+        // A block detected mid-run should stop the rest of this tick rather
+        // than hammering an already-blocked shared IP for every remaining item.
+        if (await this.wettbewerbService.isGloballyPaused()) {
+          this.logger.warn(`${ctx} Global cooldown triggered mid-run — stopping remaining checks`);
+          break;
+        }
+
+        try {
+          await this.wettbewerbService.performCheck(userId, doc.id, doc.data(), runId);
+        } catch (e: any) {
+          // performCheck already handles scrape failures internally (writes
+          // lastCheckError, advances nextCheckAt) — this only catches truly
+          // unexpected errors (e.g. a Firestore write failure) so one bad
+          // search can never abort the whole run.
+          this.logger.error(`${ctx} user=${userId} search=${doc.id} unexpected error: ${e.message}`, e.stack);
+        }
+      }
+    } catch (error: any) {
+      this.logger.error(`${ctx} Cron iteration failed: ${error.message}`, error.stack);
+    } finally {
+      this.wettbewerbCronRunning = false;
     }
   }
 

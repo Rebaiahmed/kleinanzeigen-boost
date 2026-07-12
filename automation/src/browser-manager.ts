@@ -1,4 +1,4 @@
-import { chromium, BrowserContext } from 'playwright';
+import { chromium, Browser, BrowserContext } from 'playwright';
 import * as path from 'path';
 
 interface ContextEntry {
@@ -134,6 +134,32 @@ export async function getPersistentContext(userId: string): Promise<BrowserConte
   } finally {
     bootingLocks.delete(userId);
   }
+}
+
+/**
+ * Fresh, non-persistent, anonymous context — for scraping public pages that
+ * need no login (e.g. Kleinanzeigen search results for the Wettbewerb
+ * competitor tracker). Deliberately separate from getPersistentContext,
+ * which is per-user/cookie-bound for logged-in flows — reusing it here
+ * would misuse a disk-backed per-user profile for something that needs no
+ * identity. Caller owns the lifecycle: close both the context AND the
+ * browser when done (this isn't tracked in activeContexts / idle-cleaned).
+ */
+export async function getAnonymousContext(): Promise<{ browser: Browser; context: BrowserContext }> {
+  const isDebug = process.env.DEBUG_BROWSER === 'true';
+  const proxy = getProxyConfig();
+  const browser = await chromium.launch({
+    headless: !isDebug,
+    executablePath: process.env.CHROMIUM_PATH || undefined,
+    proxy,
+    args: ['--disable-blink-features=AutomationControlled'],
+  });
+  const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+
+  const blockResources = process.env.BLOCK_RESOURCES === 'true' || (!!proxy && process.env.BLOCK_RESOURCES !== 'false');
+  if (blockResources) await applyResourceBlocking(context);
+
+  return { browser, context };
 }
 
 /**

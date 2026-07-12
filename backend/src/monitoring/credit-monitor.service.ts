@@ -70,9 +70,15 @@ export class CreditMonitorService {
   /** Best-effort alert: posts to ALERT_WEBHOOK_URL (if set) + logs. De-duped to
    *  once/day unless `force` (e.g. an invalid-key error). Never throws. */
   private async alert(message: string, force: boolean): Promise<void> {
-    const now = Date.now();
-    if (!force && now - this.lastAlertAt < this.reAlertMs) return;
-    this.lastAlertAt = now;
+    // Forced alerts (e.g. invalid-key errors) always fire and must NOT touch
+    // lastAlertAt — that timer belongs solely to the low-credit de-dupe, and
+    // letting a forced alert reset it would delay the next legitimate
+    // low-credit alert by up to a full day.
+    if (!force) {
+      const now = Date.now();
+      if (now - this.lastAlertAt < this.reAlertMs) return;
+      this.lastAlertAt = now;
+    }
 
     this.logger.error(`[credit] ${message}`);
 

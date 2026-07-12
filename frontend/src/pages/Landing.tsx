@@ -20,6 +20,9 @@ const SOCIAL_LINKS = {
 
 const CHROME_STORE_URL = 'https://chromewebstore.google.com/detail/noagiapohlenpolcbeghlmngalapbobe';
 
+// TODO: replace with the real Microsoft Edge Add-ons listing URL once published
+const EDGE_STORE_URL = '#';
+
 /* ────────────────────────────────────────────────────────────────────────
  * Icons (inline SVG — no icon font, no external asset requests)
  * ──────────────────────────────────────────────────────────────────────── */
@@ -33,6 +36,32 @@ function ChromeIcon({ className }: { className?: string }) {
       <path d="M12 12 L12 24 A12 12 0 0 1 1.61 6.0 Z" fill="#FBBC05" />
       <circle cx="12" cy="12" r="8" fill="#fff" />
       <circle cx="12" cy="12" r="5.5" fill="#4285F4" />
+    </svg>
+  );
+}
+
+/** Simplified Microsoft Edge logo (swirl), brand teal/blue gradient. */
+function EdgeIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <defs>
+        <linearGradient id="edge-a" x1="2" y1="4" x2="20" y2="18" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#0C59A4" />
+          <stop offset="1" stopColor="#1B9DE2" />
+        </linearGradient>
+        <linearGradient id="edge-b" x1="6" y1="10" x2="22" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#35C1F1" />
+          <stop offset="1" stopColor="#28A8EA" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M12 2a10 10 0 0 0-9.8 12.1A9 9 0 0 1 11 6c3.4 0 6 1.7 7.3 4.2A10 10 0 0 0 12 2Z"
+        fill="url(#edge-a)"
+      />
+      <path
+        d="M22 12a10 10 0 0 1-19.6 3.3A7 7 0 0 0 9 18c4.5 0 7.7-2.7 8.6-6.3a5 5 0 0 0-3.4-5.2 8 8 0 0 1 7.8 5.5Z"
+        fill="url(#edge-b)"
+      />
     </svg>
   );
 }
@@ -144,7 +173,17 @@ export function Landing() {
               {t('landing.ctaButton')}
             </a>
 
-            <p className="text-base text-slate-400 mt-4">{t('landing.ctaSubtext')}</p>
+            <p className="text-base text-slate-400 mt-4">Kostenlos starten · Keine Kreditkarte nötig</p>
+
+            <a
+              href={EDGE_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mt-3 transition-colors"
+            >
+              <EdgeIcon className="w-4 h-4 shrink-0" />
+              Auch für Microsoft Edge verfügbar
+            </a>
           </div>
         </section>
 

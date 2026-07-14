@@ -1,8 +1,15 @@
 #!/bin/bash
 
+# Set TEST_EMAIL and TEST_PASSWORD in your shell before running, e.g.:
+#   TEST_EMAIL=you@example.com TEST_PASSWORD=yourpassword ./test_endpoints.sh
+if [ -z "$TEST_EMAIL" ] || [ -z "$TEST_PASSWORD" ]; then
+  echo "Set TEST_EMAIL and TEST_PASSWORD env vars before running this script." >&2
+  exit 1
+fi
+
 # 1. Login to get Cookie
 echo "1. Logging in..."
-curl -s -c cookie.txt -X POST http://localhost:3000/api/auth/login -H "Content-Type: application/json" -d '{"email":"rebai.ahmed@outlook.com","password":"Vsv%SbqY8nGnJ4S"}' > /dev/null
+curl -s -c cookie.txt -X POST http://localhost:3000/api/auth/login -H "Content-Type: application/json" -d '{"email":"'"$TEST_EMAIL"'","password":"'"$TEST_PASSWORD"'"}' > /dev/null
 
 echo "Got JWT Cookie."
 

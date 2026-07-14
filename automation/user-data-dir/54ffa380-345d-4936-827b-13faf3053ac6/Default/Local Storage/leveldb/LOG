@@ -1,5 +1,0 @@
-2026/06/04-20:20:11.875 1985020 Creating DB /Users/ahmed/Documents/me/kleinzeigen_project/automation/user-data-dir/54ffa380-345d-4936-827b-13faf3053ac6/Default/Local Storage/leveldb since it was missing.
-2026/06/04-20:20:11.883 1985020 Reusing MANIFEST /Users/ahmed/Documents/me/kleinzeigen_project/automation/user-data-dir/54ffa380-345d-4936-827b-13faf3053ac6/Default/Local Storage/leveldb/MANIFEST-000001
-2026/06/04-20:21:11.885 1985022 Level-0 table #5: started
-2026/06/04-20:21:11.887 1985022 Level-0 table #5: 17398 bytes OK
-2026/06/04-20:21:11.889 1985022 Delete type=0 #3

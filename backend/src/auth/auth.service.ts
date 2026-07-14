@@ -371,6 +371,26 @@ export class AuthService {
     }
   }
 
+  /**
+   * Local-dev-only shortcut used by POST /api/auth/dev-login. Mints a session
+   * for a fixed fake user so the dashboard can be reached without running the
+   * real Playwright login flow. Configurable via DEV_LOGIN_EMAIL; gated by
+   * NODE_ENV / DEV_LOGIN_ENABLED at the controller level.
+   */
+  async mockDevLogin() {
+    const email = process.env.DEV_LOGIN_EMAIL || 'dev@example.com';
+    const userId = this.deriveUserId(email);
+    const token = this.jwtService.sign({ email, sub: userId });
+
+    await this.firebaseService.firestore.collection('sessions').doc(userId).set({
+      status: 'active',
+      lastLogin: new Date().toISOString(),
+      isDevMock: true,
+    }, { merge: true });
+
+    return { accessToken: token, userId };
+  }
+
   async getStatus(userId: string) {
     const doc = await this.firebaseService.firestore.collection('sessions').doc(userId).get();
     if (doc.exists && doc.data()?.status === 'active') {

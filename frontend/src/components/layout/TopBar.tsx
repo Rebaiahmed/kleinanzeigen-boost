@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, LogOut, Settings, HelpCircle, ChevronDown, Moon, Sun, Languages } from 'lucide-react';
+import { User, LogOut, Settings, HelpCircle, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useDarkMode } from '../../hooks/useDarkMode';
-import { useFeatureFlags } from '../../hooks/useFeatureFlags';
 
 function getUserFromToken(): { email: string; initials: string; fullEmail: string } | null {
   try {
@@ -29,10 +27,7 @@ export function TopBar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [user, setUser] = useState(() => getUserFromToken());
-  const { isDark, toggle, isLoaded } = useDarkMode();
-  const { t, i18n } = useTranslation();
-  const { enableI18n } = useFeatureFlags();
-  const toggleLanguage = () => i18n.changeLanguage(i18n.language === 'de' ? 'en' : 'de');
+  const { t } = useTranslation();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -87,33 +82,8 @@ export function TopBar() {
             </Link>
           </div>
           
-          {/* Right: language toggle + dark mode toggle + account menu */}
+          {/* Right: account menu */}
           <div className="flex items-center gap-3 border-l border-[#d4d4d4] dark:border-[#3a3d42] pl-4 relative" ref={dropdownRef}>
-            {enableI18n && (
-              <button
-                type="button"
-                onClick={toggleLanguage}
-                aria-label={t('topbar.language')}
-                className="flex items-center gap-1 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-[11px] font-bold text-gray-600 dark:text-gray-300"
-              >
-                <Languages className="w-5 h-5" />
-                {i18n.language === 'de' ? 'DE' : 'EN'}
-              </button>
-            )}
-            {isLoaded && (
-              <button
-                type="button"
-                onClick={toggle}
-                aria-label={isDark ? t('topbar.toLightMode') : t('topbar.toDarkMode')}
-                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                {isDark ? (
-                  <Sun className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-                ) : (
-                  <Moon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-                )}
-              </button>
-            )}
             <button
               type="button"
               onClick={() => setIsDropdownOpen((o) => !o)}

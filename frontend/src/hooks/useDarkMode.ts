@@ -14,14 +14,15 @@ export function useDarkMode() {
     setIsLoaded(true);
   }, []);
 
-  const toggle = () => {
-    const newValue = !isDark;
-    setIsDark(newValue);
-    localStorage.setItem('theme', newValue ? 'dark' : 'light');
-    applyTheme(newValue);
+  const setDark = (value: boolean) => {
+    setIsDark(value);
+    localStorage.setItem('theme', value ? 'dark' : 'light');
+    applyTheme(value);
   };
 
-  return { isDark, toggle, isLoaded };
+  const toggle = () => setDark(!isDark);
+
+  return { isDark, toggle, setDark, isLoaded };
 }
 
 function applyTheme(isDark: boolean) {

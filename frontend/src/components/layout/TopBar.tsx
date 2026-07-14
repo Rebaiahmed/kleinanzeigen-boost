@@ -90,7 +90,7 @@ export function TopBar() {
               aria-haspopup="menu"
               aria-expanded={isDropdownOpen}
               aria-label={t('topbar.accountMenu')}
-              className="flex items-center gap-1.5 rounded-full pl-1 pr-2 py-1 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#A8C300] transition-colors"
+              className="flex items-center gap-1.5 rounded-full pl-1 pr-2 py-1.5 md:py-1 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#A8C300] transition-colors"
             >
               {user ? (
                 <span className="h-8 w-8 rounded-full bg-[#A8C300] flex items-center justify-center text-white text-[11px] font-bold">

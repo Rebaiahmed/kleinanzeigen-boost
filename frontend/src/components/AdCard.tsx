@@ -679,7 +679,7 @@ export function AdCard({
         <div className="flex md:hidden mt-auto w-full">
           <button
             onClick={() => setIsBottomSheetOpen(true)}
-            className="w-full flex justify-center items-center gap-1.5 text-[13px] font-semibold text-[#333] bg-[#f2f2f2] border border-[#ccc] hover:bg-[#e6e6e6] rounded-sm py-2 transition-colors"
+            className="w-full min-h-[44px] flex justify-center items-center gap-1.5 text-[13px] font-semibold text-[#333] bg-[#f2f2f2] border border-[#ccc] hover:bg-[#e6e6e6] rounded-sm py-2 transition-colors"
           >
             {t('adCard.actions')}
           </button>
@@ -780,9 +780,9 @@ export function AdCard({
 
             <div className="flex justify-between items-center mb-1">
               <h3 className="font-bold text-gray-800 text-[16px]">{t('adCard.adOptions')}</h3>
-              <button 
-                onClick={() => setIsBottomSheetOpen(false)} 
-                className="p-1 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+              <button
+                onClick={() => setIsBottomSheetOpen(false)}
+                className="p-3 -m-1.5 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -801,6 +801,36 @@ export function AdCard({
               <Sparkles className="w-4 h-4 text-green-600" />
               <span>{t('adCard.startAiOpt')}</span>
             </button>
+
+            {/* Photo Feedback — same handler as the desktop button, previously
+                unreachable on mobile since this sheet didn't include it. */}
+            <button
+              onClick={async () => {
+                setIsBottomSheetOpen(false);
+                setShowPhotoFeedbackModal(true);
+                setIsLoadingPhotoFeedback(true);
+                setPhotoFeedbackError(null);
+                setPhotoFeedback(null);
+                try {
+                  const result = await fetchPhotoFeedback(String(ad.id));
+                  setPhotoFeedback(result);
+                } catch (err: any) {
+                  setPhotoFeedbackError(err.message);
+                }
+                setIsLoadingPhotoFeedback(false);
+              }}
+              disabled={isLoadingPhotoFeedback}
+              className="flex items-center justify-center gap-2.5 w-full py-3 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-blue-50 hover:border-blue-500 hover:text-blue-600 font-semibold text-sm transition-colors disabled:opacity-50"
+            >
+              <span>📷</span>
+              <span>{isLoadingPhotoFeedback ? t('adCard.photoCheckAnalyzing') : t('adCard.photoCheck')}</span>
+            </button>
+
+            {/* Price Suggestion — same component as the desktop grid, previously
+                unreachable on mobile. Same feature-flag/give-away gating. */}
+            {flags.enablePriceSuggestion && !isGiveAwayAd(ad) && (
+              <SuggestPriceButton ad={ad} size="lg" />
+            )}
 
             {/* Vinted — coming soon */}
             <button

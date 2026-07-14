@@ -16,6 +16,7 @@ export interface FeatureFlags {
   enableWettbewerb: boolean;
   enableCredits: boolean;
   enableI18n: boolean;
+  enableCrossPosting: boolean;
 }
 
 function parseEnvBool(value: string | undefined, defaultVal: boolean): boolean {
@@ -57,6 +58,11 @@ export const FEATURE_FLAGS: FeatureFlags = {
   // default language regardless of this flag; this only gates whether the
   // DE|EN toggle UI is rendered at all.
   enableI18n: parseEnvBool(process.env.FEATURE_I18N_ENABLED, true),
+  // Cross-Posting section (Vinted/eBay) in the AI ad-editing flow — default OFF.
+  // Not a validated feature; both buttons there are inert placeholders, kept
+  // hidden until there's an actual decision to build it out. Unrelated to the
+  // enableVinted/enableEbay flags used by Settings' platform cards and AdCard.
+  enableCrossPosting: parseEnvBool(process.env.FEATURE_CROSSPOSTING_ENABLED, false),
 };
 
 /**

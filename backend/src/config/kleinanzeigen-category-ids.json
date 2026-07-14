@@ -1,0 +1,222 @@
+{
+  "_note": "Reference dataset with Kleinanzeigen's numeric category IDs, not currently consumed by any code path — AI generation only needs category/subcategory NAMES (see kleinanzeigen-categories.json), since the generated ad is manually copied by the user into Kleinanzeigen's own posting form rather than auto-submitted. Kept here for when/if a future feature needs the numeric IDs (e.g. deep-linking into Kleinanzeigen's category picker, or an automated ad-creation flow). duplicate_name/note fields flag subcategory names that repeat under a different parent — the IDs are distinct per parent, disambiguate by parent name, not by name alone.",
+  "Auto, Rad & Boot": {
+    "id": "210",
+    "subcategories": {
+      "Autos": { "id": "216" },
+      "Autoteile & Reifen": { "id": "223" },
+      "Boote & Bootszubehör": { "id": "211" },
+      "Fahrräder & Zubehör": { "id": "217" },
+      "Motorräder & Motorroller": { "id": "305" },
+      "Motorradteile & Zubehör": { "id": "306" },
+      "Nutzfahrzeuge & Anhänger": { "id": "276" },
+      "Reparaturen & Dienstleistungen": { "id": "280" },
+      "Wohnwagen & -mobile": { "id": "220" },
+      "Weiteres Auto, Rad & Boot": { "id": "241" }
+    }
+  },
+  "Dienstleistungen": {
+    "id": "297",
+    "subcategories": {
+      "Altenpflege": { "id": "288", "duplicate_name": true, "note": "Also id=236 under 'Familie, Kind & Baby'" },
+      "Auto, Rad & Boot": { "id": "289", "duplicate_name": true, "note": "Name collides with top-level 'Auto, Rad & Boot' (id=210); this is a service subcategory" },
+      "Babysitter/-in & Kinderbetreuung": { "id": "290", "duplicate_name": true, "note": "Also id=237 under 'Familie, Kind & Baby'" },
+      "Elektronik": { "id": "293", "duplicate_name": true, "note": "Name collides with top-level 'Elektronik' (id=161); this is a service subcategory" },
+      "Haus & Garten": { "id": "291", "duplicate_name": true, "note": "Name collides with top-level 'Haus & Garten' (id=80); this is a service subcategory" },
+      "Künstler/-in & Musiker/-in": { "id": "292", "duplicate_name": true, "note": "Also id=191 under 'Freizeit, Hobby & Nachbarschaft'" },
+      "Reise & Event": { "id": "294" },
+      "Tierbetreuung & Training": { "id": "295", "duplicate_name": true, "note": "Also id=133 under 'Haustiere'" },
+      "Umzug & Transport": { "id": "296", "duplicate_name": true, "note": "Also id=238 under 'Immobilien'" },
+      "Weitere Dienstleistungen": { "id": "298" }
+    }
+  },
+  "Eintrittskarten & Tickets": {
+    "id": "231",
+    "subcategories": {
+      "Bahn & ÖPNV": { "id": "286" },
+      "Comedy & Kabarett": { "id": "254" },
+      "Gutscheine": { "id": "287" },
+      "Kinder": { "id": "252" },
+      "Konzerte": { "id": "255" },
+      "Sport": { "id": "257" },
+      "Theater & Musical": { "id": "251" },
+      "Weitere Eintrittskarten & Tickets": { "id": "256" }
+    }
+  },
+  "Elektronik": {
+    "id": "161",
+    "subcategories": {
+      "Audio & Hifi": { "id": "172" },
+      "Dienstleistungen Elektronik": { "id": "226" },
+      "Foto": { "id": "245" },
+      "Handy & Telefon": { "id": "173" },
+      "Haushaltsgeräte": { "id": "176" },
+      "Konsolen": { "id": "279" },
+      "Notebooks": { "id": "278" },
+      "PCs": { "id": "228" },
+      "PC-Zubehör & Software": { "id": "225" },
+      "Tablets & Reader": { "id": "285" },
+      "TV & Video": { "id": "175" },
+      "Videospiele": { "id": "227" },
+      "Wearables": { "id": "405" },
+      "Wearables Zubehör": { "id": "406" },
+      "Weitere Elektronik": { "id": "168" }
+    }
+  },
+  "Familie, Kind & Baby": {
+    "id": "17",
+    "subcategories": {
+      "Altenpflege": { "id": "236", "duplicate_name": true, "note": "Also id=288 under 'Dienstleistungen'" },
+      "Baby- & Kinderkleidung": { "id": "22" },
+      "Baby- & Kinderschuhe": { "id": "19" },
+      "Baby-Ausstattung": { "id": "258" },
+      "Babyschalen & Kindersitze": { "id": "21" },
+      "Babysitter/-in & Kinderbetreuung": { "id": "237", "duplicate_name": true, "note": "Also id=290 under 'Dienstleistungen'" },
+      "Kinderwagen & Buggys": { "id": "25" },
+      "Kinderzimmermöbel": { "id": "20" },
+      "Spielzeug": { "id": "23" },
+      "Weiteres Familie, Kind & Baby": { "id": "18" }
+    }
+  },
+  "Freizeit, Hobby & Nachbarschaft": {
+    "id": "185",
+    "subcategories": {
+      "Esoterik & Spirituelles": { "id": "232", "duplicate_name": true, "note": "Also id=265 under 'Unterricht & Kurse'" },
+      "Essen & Trinken": { "id": "248" },
+      "Freizeitaktivitäten": { "id": "187" },
+      "Handarbeit, Basteln & Kunsthandwerk": { "id": "282" },
+      "Kunst & Antiquitäten": { "id": "240" },
+      "Künstler/-in & Musiker/-in": { "id": "191", "duplicate_name": true, "note": "Also id=292 under 'Dienstleistungen'" },
+      "Modellbau": { "id": "249" },
+      "Reise & Eventservices": { "id": "233" },
+      "Sammeln": { "id": "234" },
+      "Sport & Camping": { "id": "230" },
+      "Trödel": { "id": "250" },
+      "Verloren & Gefunden": { "id": "189" },
+      "Weiteres Freizeit, Hobby & Nachbarschaft": { "id": "242" }
+    }
+  },
+  "Haus & Garten": {
+    "id": "80",
+    "subcategories": {
+      "Badezimmer": { "id": "91" },
+      "Büro": { "id": "93" },
+      "Dekoration": { "id": "246" },
+      "Dienstleistungen Haus & Garten": { "id": "239" },
+      "Gartenzubehör & Pflanzen": { "id": "89" },
+      "Heimtextilien": { "id": "90" },
+      "Heimwerken": { "id": "84" },
+      "Küche & Esszimmer": { "id": "86" },
+      "Lampen & Licht": { "id": "82" },
+      "Schlafzimmer": { "id": "81" },
+      "Wohnzimmer": { "id": "88" },
+      "Weiteres Haus & Garten": { "id": "87" }
+    }
+  },
+  "Haustiere": {
+    "id": "130",
+    "subcategories": {
+      "Fische": { "id": "138" },
+      "Hunde": { "id": "134" },
+      "Katzen": { "id": "136" },
+      "Kleintiere": { "id": "132" },
+      "Nutztiere": { "id": "135" },
+      "Pferde": { "id": "139" },
+      "Tierbetreuung & Training": { "id": "133", "duplicate_name": true, "note": "Also id=295 under 'Dienstleistungen'" },
+      "Vermisste Tiere": { "id": "283" },
+      "Vögel": { "id": "243" },
+      "Zubehör": { "id": "313" }
+    }
+  },
+  "Immobilien": {
+    "id": "195",
+    "subcategories": {
+      "Auf Zeit & WG": { "id": "199" },
+      "Container": { "id": "402" },
+      "Eigentumswohnungen": { "id": "196" },
+      "Ferien- & Auslandsimmobilien": { "id": "275" },
+      "Garagen & Stellplätze": { "id": "197" },
+      "Gewerbeimmobilien": { "id": "277" },
+      "Grundstücke & Gärten": { "id": "207" },
+      "Häuser zum Kauf": { "id": "208" },
+      "Häuser zur Miete": { "id": "205" },
+      "Mietwohnungen": { "id": "203" },
+      "Neubauprojekte": { "id": "403" },
+      "Umzug & Transport": { "id": "238", "duplicate_name": true, "note": "Also id=296 under 'Dienstleistungen'" },
+      "Weitere Immobilien": { "id": "198" }
+    }
+  },
+  "Jobs": {
+    "id": "102",
+    "subcategories": {
+      "Ausbildung": { "id": "118" },
+      "Bau, Handwerk & Produktion": { "id": "111" },
+      "Büroarbeit & Verwaltung": { "id": "114" },
+      "Gastronomie & Tourismus": { "id": "110" },
+      "Kundenservice & Call Center": { "id": "105" },
+      "Mini- & Nebenjobs": { "id": "107" },
+      "Praktika": { "id": "125" },
+      "Sozialer Sektor & Pflege": { "id": "123" },
+      "Transport, Logistik & Verkehr": { "id": "247" },
+      "Vertrieb, Einkauf & Verkauf": { "id": "117" },
+      "Weitere Jobs": { "id": "109" }
+    }
+  },
+  "Mode & Beauty": {
+    "id": "153",
+    "subcategories": {
+      "Beauty & Gesundheit": { "id": "224", "duplicate_name": true, "note": "Also id=269 under 'Unterricht & Kurse'" },
+      "Damenbekleidung": { "id": "154" },
+      "Damenschuhe": { "id": "159" },
+      "Herrenbekleidung": { "id": "160" },
+      "Herrenschuhe": { "id": "158" },
+      "Taschen & Accessoires": { "id": "156" },
+      "Uhren & Schmuck": { "id": "157" },
+      "Weiteres Mode & Beauty": { "id": "155" }
+    }
+  },
+  "Musik, Filme & Bücher": {
+    "id": "73",
+    "subcategories": {
+      "Bücher & Zeitschriften": { "id": "76" },
+      "Büro & Schreibwaren": { "id": "281" },
+      "Comics": { "id": "284" },
+      "Fachbücher, Schule & Studium": { "id": "77" },
+      "Film & DVD": { "id": "79" },
+      "Musik & CDs": { "id": "78" },
+      "Musikinstrumente": { "id": "74" },
+      "Weitere Musik, Filme & Bücher": { "id": "75" }
+    }
+  },
+  "Nachbarschaftshilfe": {
+    "id": "400",
+    "subcategories": {
+      "Nachbarschaftshilfe": { "id": "401", "duplicate_name": true, "note": "Single subcategory identical in name to its parent (near-flat branch)" }
+    }
+  },
+  "Unterricht & Kurse": {
+    "id": "235",
+    "subcategories": {
+      "Beauty & Gesundheit": { "id": "269", "duplicate_name": true, "note": "Also id=224 under 'Mode & Beauty'" },
+      "Computerkurse": { "id": "260" },
+      "Esoterik & Spirituelles": { "id": "265", "duplicate_name": true, "note": "Also id=232 under 'Freizeit, Hobby & Nachbarschaft'" },
+      "Kochen & Backen": { "id": "263" },
+      "Kunst & Gestaltung": { "id": "264" },
+      "Musik & Gesang": { "id": "262" },
+      "Nachhilfe": { "id": "268" },
+      "Sportkurse": { "id": "261" },
+      "Sprachkurse": { "id": "271" },
+      "Tanzkurse": { "id": "267" },
+      "Weiterbildung": { "id": "266" },
+      "Weitere Unterricht & Kurse": { "id": "270" }
+    }
+  },
+  "Verschenken & Tauschen": {
+    "id": "272",
+    "subcategories": {
+      "Tauschen": { "id": "273" },
+      "Verleihen": { "id": "274" },
+      "Verschenken": { "id": "192" }
+    }
+  }
+}

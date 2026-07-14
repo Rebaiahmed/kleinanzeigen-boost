@@ -1,0 +1,253 @@
+{
+  "_meta": {
+    "status": "REFERENCE ONLY — NOT wired into any code path, NOT verified by Claude Code",
+    "why_unverified": "This attribute/filter schema (brand lists, size enums, condition-per-category, etc.) was provided by the user as a data dump from an external research session Claude Code could not independently reproduce or corroborate line-by-line. Unlike kleinanzeigen-categories.json (category/subcategory names, which WERE cross-checked against independent scraping), this file's field keys and enum values are taken on trust.",
+    "do_not": "Do not consume this file in the AI generation prompt or any production code path without first spot-checking a sample of field_key/value pairs against the live kleinanzeigen.de filter UI.",
+    "truncation_note": "The source paste was cut off twice at the same point, inside 'Baby- & Kinderkleidung' → 'Shirts & Tops': 'shirts_'. That category's entry has been dropped entirely from this file (better to omit than to store a guessed/completed value). Re-paste the rest to add it back.",
+    "coverage_values": {
+      "fully_enumerated": "the category's filter sidebar was opened directly and read",
+      "family_pattern": "inferred from a directly-confirmed sibling category sharing the same schema shape — not independently opened"
+    }
+  },
+
+  "global_attributes": {
+    "Zustand": {
+      "field_key": "global.zustand",
+      "type": "enum",
+      "values": { "Neu": "new", "Sehr Gut": "like_new", "Gut": "ok", "In Ordnung": "alright", "Defekt": "defect" }
+    },
+    "Farbe": {
+      "field_key": "global.farbe",
+      "type": "enum",
+      "values": {
+        "Andere Farben": "sonstige", "Beige": "beige", "Blau": "blau", "Braun": "braun", "Gelb": "gelb",
+        "Gold": "gold", "Grau": "grau", "Grün": "grün", "Lila": "lila", "Orange": "orange", "Pink": "pink",
+        "Roségold": "rose_gold", "Rot": "rot", "Schwarz": "schwarz", "Silber": "silber", "Violet": "violet", "Weiß": "weiß"
+      },
+      "note": "Color set varies slightly per category. URL-encoded on site (grün→gr%C3%BCn, weiß→wei%C3%9F)."
+    },
+    "Material": {
+      "field_key": "global.material",
+      "type": "enum",
+      "values": {
+        "Diamant": "diamond", "Gelb- & Weißgold": "yellow_and_white_gold", "Gelbgold": "yellow_gold",
+        "Gold": "golden", "Holz": "wood", "Keramik": "ceramic", "Kunststoff": "plastic", "Leder": "leather",
+        "Metall": "metal", "Perlen": "pearl", "Roségold": "pink_gold", "Silber": "silver", "Sonstige": "other",
+        "Stahl": "steel", "Stein": "stone", "Stoff": "fabric", "Titan": "titan", "Vergoldet": "gold_plated"
+      },
+      "note": "Confirmed on Uhren & Schmuck / Taschen & Accessoires; also appears on some furniture/decor categories."
+    }
+  },
+
+  "category_attributes": {
+
+    "Autos": {
+      "category_id": "216", "category_key": "autos", "coverage": "fully_enumerated",
+      "attributes": {
+        "Marke": { "field_key": "autos.marke_s", "type": "enum_large", "values_sample": ["volkswagen","mercedes_benz","bmw","opel","audi","ford","skoda","renault","seat","peugeot","hyundai","fiat","citroen","mini","kia","toyota","nissan","mazda","smart","dacia","volvo","mitsubishi","suzuki","porsche","land_rover","jeep","chevrolet","honda","jaguar","alfa_romeo","cupra","dodge","subaru","mg","chrysler","trabant","abarth","saab","tesla","daihatsu","lada","ssangyong","iveco","lexus","aixam","lancia","cadillac","ds","corvette","maserati","triumph","wartburg","microcar","infiniti","rover","ferrari","bentley","daewoo","lamborghini","aston_martin","rolls_royce","polestar","kgm","byd","sonstige_autos"] },
+        "Kilometerstand": { "field_key": "autos.km", "type": "range", "range_steps": ["5.000","10.000","20.000","30.000","40.000","50.000","60.000","70.000","80.000","90.000","100.000","125.000","150.000"] },
+        "Fahrzeugzustand": { "field_key": "autos.schaden_s", "type": "enum", "values": { "Beschädigtes Fahrzeug": "ja", "Unbeschädigtes Fahrzeug": "nein" } },
+        "Erstzulassungsjahr": { "field_key": "autos.registration", "type": "range", "range_steps": ["2026","2025","2024","2023","2022","2021","2020","2019","2018","2017","2016","2015","2014","2013","2012","2011","2010","2009","2008","2007","2006","2005","2000","1995","1990","1985","1980","1970","1960","1910"] },
+        "Kraftstoffart": { "field_key": "autos.fuel_s", "type": "enum", "values": { "Benzin": "benzin", "Diesel": "diesel", "Erdgas (CNG)": "cng", "Autogas (LPG)": "lpg", "Hybrid": "hybrid", "Elektro": "elektro", "Andere Kraftstoffarten": "andere" } },
+        "Leistung": { "field_key": "autos.power", "type": "range", "unit": "kW/PS" },
+        "Getriebe": { "field_key": "autos.shift_s", "type": "enum", "values": { "Automatik": "automatik", "Manuell": "manuell" } },
+        "Fahrzeugtyp": { "field_key": "autos.typ_s", "type": "enum", "values": { "Kleinwagen": "kleinwagen", "Limousine": "limousine", "Kombi": "kombi", "Cabrio": "cabrio", "SUV/Geländewagen": "suv", "Van/Bus": "bus", "Coupé": "coupe", "Andere Fahrzeugtypen": "andere" } },
+        "Anzahl Türen": { "field_key": "autos.anzahl_tueren_s", "type": "enum", "values": { "2/3": "2_3", "4/5": "4_5", "6/7": "6_7", "Andere Türanzahl": "andere" } },
+        "HU Jahr": { "field_key": "autos.hu", "type": "range", "range_steps": ["2026","2027","2028","2029"] },
+        "Umweltplakette": { "field_key": "autos.umweltplakette_s", "type": "enum", "values": { "4 (Grün)": "4_gruen", "3 (Gelb)": "3_yellow", "2 (Rot)": "2_red", "1 (Keine)": "1_none" } },
+        "Schadstoffklasse": { "field_key": "autos.schadstoffklasse_s", "type": "enum", "values": { "Euro1": "euro1", "Euro2": "euro2", "Euro3": "euro3", "Euro4": "euro4", "Euro5": "euro5", "Euro6": "euro6" } },
+        "Material Innenausstattung": { "field_key": "autos.material_innenausstattung_s", "type": "enum", "values": { "Vollleder": "volleder", "Teilleder": "teilleder", "Stoff": "stoff", "Velours": "velours", "Alcantara": "alcantara", "Andere Materialien Innenausstattung": "andere" } },
+        "Außenfarbe": { "field_key": "global.farbe", "type": "enum" }
+      }
+    },
+
+    "Motorräder & Motorroller": {
+      "category_id": "305", "category_key": "motorraeder_roller", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "motorraeder_roller.type_s", "type": "enum", "values": { "Mofas & Mopeds": "mofa", "Motorräder": "motorrad", "Quads": "quad", "Motorroller & Scooter": "roller" } },
+        "Marke": { "field_key": "motorraeder_roller.marke_s", "type": "enum_large" },
+        "Kilometerstand": { "field_key": "motorraeder_roller.km", "type": "range" },
+        "Erstzulassungsjahr": { "field_key": "motorraeder_roller.registration", "type": "range" },
+        "Hubraum": { "field_key": "motorraeder_roller.hubraum", "type": "range", "unit": "ccm" },
+        "Leistung": { "field_key": "motorraeder_roller.power", "type": "range", "unit": "kW/PS" },
+        "Getriebe": { "field_key": "motorraeder_roller.shift_s", "type": "enum", "values": { "Automatik": "automatik", "Manuell": "manuell" } },
+        "HU Jahr": { "field_key": "motorraeder_roller.hu", "type": "range" }
+      }
+    },
+
+    "Autoteile & Reifen": {
+      "category_id": "223", "category_key": "autoteile_reifen", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "autoteile_reifen.art_s", "type": "enum", "values": { "Auto Hifi & Navigation": "auto_hifi_navigation", "Ersatz- & Reparaturteile": "ersatz_reparaturteile", "Reifen & Felgen": "reifen_felgen", "Tuning & Styling": "tuning_styling", "Werkzeug": "werkzeug", "Weitere Autoteile": "sonstige_autoteile" } }
+      }
+    },
+
+    "Motorradteile & Zubehör": {
+      "category_id": "306", "category_key": "motorraeder_roller_teile", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "motorraeder_roller_teile.type_s", "type": "enum", "values": { "Ersatz- & Reparaturteile": "teile", "Reifen & Felgen": "reifen_felgen", "Motorradbekleidung": "kleidung" } }
+      }
+    },
+
+    "Boote & Bootszubehör": {
+      "category_id": "211", "category_key": "boote_bootszubehoer", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "boote_bootszubehoer.art_s", "type": "enum", "values": { "Motorboote": "motorboote", "Segelboote": "segelboote", "Kleinboote": "kleinboote", "Schlauchboote": "schlauchboote", "Jetski": "jetski", "Bootstrailer": "bootstrailer", "Bootsliegeplätze": "bootsliegeplaetze", "Bootszubehör": "bootszubehoer", "Weitere Boote": "andere" } }
+      }
+    },
+
+    "Nutzfahrzeuge & Anhänger": {
+      "category_id": "276", "category_key": "anhaenger_nutzfahrzeuge", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "anhaenger_nutzfahrzeuge.art_s", "type": "enum", "values": { "Agrarfahrzeuge": "agrarfahrzeuge", "Anhänger": "anhaenger", "Baumaschinen": "baumaschinen", "Busse": "busse", "LKW": "lkw", "Sattelzugmaschinen & Auflieger": "sattelzugmaschinen_auflieger", "Stapler": "stapler", "Traktoren": "traktoren", "Transporter": "transporter", "Nutzfahrzeugteile & Zubehör": "zubehoer", "Weitere Nutzfahrzeuge & Anhänger": "andere" } }
+      }
+    },
+
+    "Wohnwagen & -mobile": {
+      "category_id": "220", "category_key": "wohnwagen_mobile", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "wohnwagen_mobile.art_s", "type": "enum", "values": { "Alkoven": "alkoven", "Integrierter": "integrierter", "Kastenwagen": "kastenwagen", "Teilintegrierter": "teilintegrierter", "Wohnwagen": "wohnwagen", "Weitere Wohnwagen & -mobile": "andere" } }
+      }
+    },
+
+    "Fahrräder & Zubehör": {
+      "category_id": "217", "category_key": "fahrraeder", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "fahrraeder.art_s", "type": "enum", "values": { "Damen": "damen", "Herren": "herren", "Kinder": "kinder", "Zubehör": "zubehoer", "Weitere Fahrräder & Zubehör": "weiteres" } },
+        "Typ": { "field_key": "fahrraeder.type_s", "type": "enum", "values": { "BMX-Räder": "bmx", "Cityräder": "city", "Cross- & Trekkingräder": "cross", "Cruiser": "cruise", "Elektrofahrräder": "ebike", "Fixie & Singlespeed": "fixie_singlespeed", "Klappräder": "klapprad", "Lastenräder": "lastenraeder", "Mountainbikes": "mountainbike", "Rennräder": "rennrad", "Tandems": "tandem", "Andere Fahrräder": "sonstiges" } }
+      }
+    },
+
+    "Handy & Telefon": {
+      "category_id": "173", "category_key": "handy_telekom", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "handy_telekom.art_s", "type": "enum", "values": { "Apple": "apple", "Google": "google_handy", "HTC": "htc_handy", "Huawei": "huawai_handy", "LG": "lg_handy", "Motorola": "motorola_handy", "Nokia": "nokia_handy", "Samsung": "samsung_handy", "Siemens": "siemens_handy", "Sony": "sony_handy", "Xiaomi": "xiaomi_handy", "Faxgeräte": "faxgeraete", "Telefone": "telefone", "Weitere Handys & Telefone": "sonstige" }, "note": "Site typo: Huawei value is 'huawai_handy'." },
+        "Gerät & Zubehör": { "field_key": "handy_telekom.device_equipment_s", "type": "enum", "values": { "Gerät": "only_device", "Zubehör": "only_equipment", "Gerät & Zubehör": "device_and_equipment" } },
+        "Farbe": { "field_key": "global.farbe", "type": "enum" }
+      }
+    },
+
+    "Audio & Hifi": {
+      "category_id": "172", "category_key": "audio_hifi", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "audio_hifi.art_s", "type": "enum", "values": { "CD Player": "cd_player", "Lautsprecher & Kopfhörer": "lautsprecher_kopfhoerer", "MP3 Player": "mp3_player", "Radio & Receiver": "radio_receiver", "Stereoanlagen": "stereoanlagen", "Weiteres Audio & Hifi": "sonstiges" } }
+      }
+    },
+
+    "TV & Video": {
+      "category_id": "175", "category_key": "tv_video", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "tv_video.art_s", "type": "enum", "values": { "DVD-Player & Recorder": "dvdplayer_recorder", "Fernseher": "fernseher", "TV-Receiver": "tv_receiver", "Weitere TV & Video": "weitere" } }
+      }
+    },
+
+    "Konsolen": {
+      "category_id": "279", "category_key": "konsolen", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "konsolen.art_s", "type": "enum", "values": { "Pocket Konsolen": "dsi_psp", "PlayStation": "playstation", "Xbox": "xbox", "Wii": "wii", "Weitere Konsolen": "weitere" } }
+      }
+    },
+
+    "Videospiele": {
+      "category_id": "227", "category_key": "pc_videospiele", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "pc_videospiele.art_s", "type": "enum", "values": { "DS(i)- & PSP Spiele": "dsi_psp", "Nintendo Spiele": "nintendo", "PlayStation Spiele": "playstation", "Xbox Spiele": "xbox", "Wii Spiele": "wii", "PC Spiele": "pc_spiele", "Weitere Videospiele": "sonstige" } }
+      }
+    },
+
+    "Haushaltsgeräte": {
+      "category_id": "176", "category_key": "haushaltsgeraete", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "haushaltsgeraete.art_s", "type": "enum", "values": { "Haushaltskleingeräte": "haushaltskleingeraete", "Herde & Backöfen": "herde_backoefen", "Kaffee- & Espressomaschinen": "kaffee_espressomaschinen", "Kühlschränke & Gefriergeräte": "kuehlschraenke_gefriergeraete", "Spülmaschinen": "spuelmaschinen", "Staubsauger": "staubsauger", "Waschmaschinen & Trockner": "waschmaschinen_trockner", "Weitere Haushaltsgeräte": "sonstige" } }
+      }
+    },
+
+    "Foto": {
+      "category_id": "245", "category_key": "foto", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "foto.art_s", "type": "enum", "values": { "Kamera": "camera", "Objektiv": "lens", "Zubehör": "equipment", "Kamera & Zubehör": "camera_and_equipment", "Weiteres Foto": "other" } }
+      }
+    },
+
+    "Tablets & Reader": {
+      "category_id": "285", "category_key": "tablets_reader", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "tablets_reader.art_s", "type": "enum", "values": { "iPad": "ipad", "Kindle": "kindle", "Samsung Tablets": "samsung_tablets", "Weitere Tablets & Reader": "weitere" } }
+      }
+    },
+
+    "PC-Zubehör & Software": {
+      "category_id": "225", "category_key": "pc_zubehoer_software", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "pc_zubehoer_software.art_s", "type": "enum", "values": { "Drucker & Scanner": "drucker_scanner", "Festplatten & Laufwerke": "festplatten_laufwerke", "Gehäuse": "gehaeuse", "Grafikkarten": "grafikkarten", "Kabel & Adapter": "kabel_adapter", "Mainboards": "mainboards", "Monitore": "monitore", "Multimedia": "multimedia", "Netzwerk & Modem": "netzwerk_modem", "Prozessoren / CPUs": "prozessor_cpu", "Speicher": "speicher", "Software": "software", "Tastatur & Maus": "tastatur_maus", "Weiteres PC-Zubehör": "sonstiges" } }
+      }
+    },
+
+    "Notebooks": { "category_id": "278", "coverage": "fully_enumerated", "attributes": {}, "note": "No category-specific attributes; global Zustand/Farbe only." },
+    "PCs": { "category_id": "228", "coverage": "fully_enumerated", "attributes": {}, "note": "No category-specific attributes; global Zustand/Farbe only." },
+
+    "Damenbekleidung": {
+      "category_id": "154", "category_key": "kleidung_damen", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "kleidung_damen.art_s", "type": "enum", "values": { "Anzüge": "anzuege", "Bademode": "bademode", "Hemden & Blusen": "hemden_blusen", "Hochzeitsmode": "hochzeitsmode", "Hosen": "hosen", "Jacken & Mäntel": "jacken_maentel", "Jeans": "jeans", "Kostüme & Verkleidungen": "kostueme_verkleidungen", "Pullover": "pullover", "Röcke & Kleider": "roecke_kleider", "Shirts & Tops": "shirts_tops", "Shorts": "shorts", "Sportbekleidung": "sportbekleidung", "Umstandsmode": "umstandsmode", "Weitere Damenbekleidung": "sonstige" } },
+        "Marke": { "field_key": "kleidung_damen.marke_s", "type": "enum_large" },
+        "Größe": { "field_key": "kleidung_damen.groesse_s", "type": "enum", "values": { "Einheitsgröße": "unisize", "XXXS (30)": "xxxs", "XXS (32)": "xxs", "XS (34)": "xs", "S (36)": "s", "M (38)": "m", "L (40)": "l", "XL (42)": "xl", "XXL (44)": "xxl", "XXXL (46)": "xxxl", "4XL (48)": "4xl", "5XL (50)": "5xl", "6XL (52)": "6xl", "7XL (54)": "7xl", "8XL (56) & mehr": "8xl+" } },
+        "Farbe": { "field_key": "global.farbe", "type": "enum" }
+      }
+    },
+
+    "Herrenbekleidung": {
+      "category_id": "160", "category_key": "kleidung_herren", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "kleidung_herren.art_s", "type": "enum", "values": { "Anzüge": "anzuege", "Bademode": "bademode", "Hemden": "hemden", "Hochzeitsmode": "hochzeitsmode", "Hosen": "hosen", "Jacken & Mäntel": "jacken_maentel", "Jeans": "jeans", "Kostüme & Verkleidungen": "kostueme_verkleidungen", "Pullover": "pullover", "Shirts": "shirts", "Shorts": "shorts", "Sportbekleidung": "sportbekleidung", "Weitere Herrenbekleidung": "sonstige" } },
+        "Marke": { "field_key": "kleidung_herren.marke_s", "type": "enum_large" },
+        "Größe": { "field_key": "kleidung_herren.groesse_s", "type": "enum", "values": { "Einheitsgröße": "unisize", "XXS": "xxs", "XS": "xs", "S": "s", "M": "m", "L": "l", "XL": "xl", "XXL": "xxl", "XXXL": "xxxl", "4XL": "4xl", "5XL": "5xl", "6XL": "6xl", "7XL": "7xl", "8XL & mehr": "8xl+" } },
+        "Farbe": { "field_key": "global.farbe", "type": "enum" }
+      }
+    },
+
+    "Damenschuhe": {
+      "category_id": "159", "category_key": "schuhe_damen", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "schuhe_damen.art_s", "type": "enum", "values": { "Ballerinas": "ballerinas", "Halb- & Schnürschuhe": "halb_schnuerschuhe", "Hausschuhe": "hausschuhe", "Outdoor & Wanderschuhe": "outdoor_wanderschuhe", "Pumps & High Heels": "pumps", "Sandalen": "sandalen", "Sneaker & Sportschuhe": "sneaker_sportschuhe", "Stiefel & Stiefeletten": "stiefel", "Weitere Schuhe": "sonstiges" } },
+        "Marke": { "field_key": "schuhe_damen.marke_s", "type": "enum_large" },
+        "Größe": { "field_key": "schuhe_damen.groesse_s", "type": "enum_range", "values_special": { "< 35": "less36", "> 50": "greater41" }, "range": "35 to 49 in 0.5 steps (e.g. 35, 35.5, 36 …), plus less36 / greater41 endpoints" },
+        "Farbe": { "field_key": "global.farbe", "type": "enum" }
+      }
+    },
+
+    "Herrenschuhe": {
+      "category_id": "158", "category_key": "schuhe_herren", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "schuhe_herren.art_s", "type": "enum", "values": { "Halb- & Schnürschuhe": "halb_schnuerschuhe", "Hausschuhe": "hausschuhe", "Sandalen": "sandalen", "Sneaker & Sportschuhe": "sneaker_sportschuhe", "Stiefel & Stiefeletten": "stiefel", "Outdoor & Wanderschuhe": "outdoor_wanderschuhe", "Weitere Schuhe": "sonstiges" } },
+        "Marke": { "field_key": "schuhe_herren.marke_s", "type": "enum_large" },
+        "Größe": { "field_key": "schuhe_herren.groesse_s", "type": "enum_range", "range": "men's EU shoe sizes in 0.5 steps with low/high endpoints (same shape as Damenschuhe)" },
+        "Farbe": { "field_key": "global.farbe", "type": "enum" }
+      }
+    },
+
+    "Uhren & Schmuck": {
+      "category_id": "157", "category_key": "uhren_schmuck", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "uhren_schmuck.art_s", "type": "enum", "values": { "Schmuck": "schmuck", "Uhren": "uhren" } },
+        "Material": { "field_key": "global.material", "type": "enum" }
+      }
+    },
+
+    "Taschen & Accessoires": {
+      "category_id": "156", "category_key": "accessoires_schmuck", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "accessoires_schmuck.art_s", "type": "enum", "values": { "Mützen, Schals & Handschuhe": "muetzen_schals_handschuhe", "Sonnenbrillen": "sonnenbrillen", "Taschen & Rucksäcke": "taschen_rucksaecke", "Weitere Taschen & Accessoires": "sonstiges" } },
+        "Marke": { "field_key": "accessoires_schmuck.marke_s", "type": "enum_large" },
+        "Material": { "field_key": "global.material", "type": "enum" }
+      }
+    },
+
+    "Beauty & Gesundheit": {
+      "category_id": "224", "category_key": "beauty_gesundheit", "coverage": "fully_enumerated",
+      "attributes": {
+        "Art": { "field_key": "beauty_gesundheit.art_s", "type": "enum", "values": { "Make-Up & Gesichtspflege": "make_up", "Haarpflege": "haarpflege", "Körperpflege": "koerperpflege", "Hand- & Nagelpflege": "handpflege", "Gesundheit": "gesundheit", "Weiteres Beauty & Gesundheit": "sonstiges" } }
+      }
+    }
+  }
+}

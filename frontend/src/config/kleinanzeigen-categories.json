@@ -1,0 +1,17 @@
+{
+  "Auto, Rad & Boot": ["Autos", "Autoteile & Reifen", "Boote & Bootszubehör", "Fahrräder & Zubehör", "Motorräder & Motorroller", "Motorradteile & Zubehör", "Nutzfahrzeuge & Anhänger", "Reparaturen & Dienstleistungen", "Wohnwagen & -mobile", "Weiteres Auto, Rad & Boot"],
+  "Dienstleistungen": ["Altenpflege", "Auto, Rad & Boot", "Babysitter/-in & Kinderbetreuung", "Elektronik", "Haus & Garten", "Künstler/-in & Musiker/-in", "Reise & Event", "Tierbetreuung & Training", "Umzug & Transport", "Weitere Dienstleistungen"],
+  "Eintrittskarten & Tickets": ["Bahn & ÖPNV", "Comedy & Kabarett", "Gutscheine", "Kinder", "Konzerte", "Sport", "Theater & Musical", "Weitere Eintrittskarten & Tickets"],
+  "Elektronik": ["Audio & Hifi", "Dienstleistungen Elektronik", "Foto", "Handy & Telefon", "Haushaltsgeräte", "Konsolen", "Notebooks", "PCs", "PC-Zubehör & Software", "Tablets & Reader", "TV & Video", "Videospiele", "Wearables", "Wearables Zubehör", "Weitere Elektronik"],
+  "Familie, Kind & Baby": ["Altenpflege", "Baby- & Kinderkleidung", "Baby- & Kinderschuhe", "Baby-Ausstattung", "Babyschalen & Kindersitze", "Babysitter/-in & Kinderbetreuung", "Kinderwagen & Buggys", "Kinderzimmermöbel", "Spielzeug", "Weiteres Familie, Kind & Baby"],
+  "Freizeit, Hobby & Nachbarschaft": ["Esoterik & Spirituelles", "Essen & Trinken", "Freizeitaktivitäten", "Handarbeit, Basteln & Kunsthandwerk", "Kunst & Antiquitäten", "Künstler/-in & Musiker/-in", "Modellbau", "Reise & Eventservices", "Sammeln", "Sport & Camping", "Trödel", "Verloren & Gefunden", "Weiteres Freizeit, Hobby & Nachbarschaft"],
+  "Haus & Garten": ["Badezimmer", "Büro", "Dekoration", "Dienstleistungen Haus & Garten", "Gartenzubehör & Pflanzen", "Heimtextilien", "Heimwerken", "Küche & Esszimmer", "Lampen & Licht", "Schlafzimmer", "Wohnzimmer", "Weiteres Haus & Garten"],
+  "Haustiere": ["Fische", "Hunde", "Katzen", "Kleintiere", "Nutztiere", "Pferde", "Tierbetreuung & Training", "Vermisste Tiere", "Vögel", "Zubehör"],
+  "Immobilien": ["Auf Zeit & WG", "Container", "Eigentumswohnungen", "Ferien- & Auslandsimmobilien", "Garagen & Stellplätze", "Gewerbeimmobilien", "Grundstücke & Gärten", "Häuser zum Kauf", "Häuser zur Miete", "Mietwohnungen", "Neubauprojekte", "Umzug & Transport", "Weitere Immobilien"],
+  "Jobs": ["Ausbildung", "Bau, Handwerk & Produktion", "Büroarbeit & Verwaltung", "Gastronomie & Tourismus", "Kundenservice & Call Center", "Mini- & Nebenjobs", "Praktika", "Sozialer Sektor & Pflege", "Transport, Logistik & Verkehr", "Vertrieb, Einkauf & Verkauf", "Weitere Jobs"],
+  "Mode & Beauty": ["Beauty & Gesundheit", "Damenbekleidung", "Damenschuhe", "Herrenbekleidung", "Herrenschuhe", "Taschen & Accessoires", "Uhren & Schmuck", "Weiteres Mode & Beauty"],
+  "Musik, Filme & Bücher": ["Bücher & Zeitschriften", "Büro & Schreibwaren", "Comics", "Fachbücher, Schule & Studium", "Film & DVD", "Musik & CDs", "Musikinstrumente", "Weitere Musik, Filme & Bücher"],
+  "Nachbarschaftshilfe": ["Nachbarschaftshilfe"],
+  "Unterricht & Kurse": ["Beauty & Gesundheit", "Computerkurse", "Esoterik & Spirituelles", "Kochen & Backen", "Kunst & Gestaltung", "Musik & Gesang", "Nachhilfe", "Sportkurse", "Sprachkurse", "Tanzkurse", "Weiterbildung", "Weitere Unterricht & Kurse"],
+  "Verschenken & Tauschen": ["Tauschen", "Verleihen", "Verschenken"]
+}

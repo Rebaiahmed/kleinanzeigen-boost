@@ -22,6 +22,9 @@ import {
   DISCLAIMER_LEARN_MORE_URL,
   formatVerifiedDateLabel,
 } from '../config/legalDisclaimer';
+import categoryTreeData from '../config/kleinanzeigen-categories.json';
+
+const CATEGORY_TREE: Record<string, string[]> = categoryTreeData;
 
 // Appended verbatim to the end of the description. The leading separator
 // keeps it visually distinct from the user's own text in the raw textarea
@@ -30,28 +33,7 @@ import {
 // preview block below are the two ways this stays "visually set apart").
 const DISCLAIMER_BLOCK = `\n\n---\n${DISCLAIMER_TEXT}`;
 
-const CATEGORIES = [
-  "Auto, Rad & Boot",
-  "Elektronik",
-  "Haus & Garten",
-  "Freizeit, Hobby & Nachbarschaft",
-  "Familie, Kind & Baby",
-  "Mode & Beauty",
-  "Eintrittskarten & Tickets",
-  "Haustiere",
-  "Immobilien",
-  "Jobs",
-  "Dienstleistungen",
-  "Nachbarschaft",
-  "Musik, Filme & Bücher",
-  "Spielzeug",
-  "Sport & Outdoor",
-  "Büro & Schreibwaren",
-  "Antiquitäten & Kunst",
-  "Musik & Instrumente",
-  "Beauty & Gesundheit",
-  "Sonstiges"
-];
+const CATEGORIES = Object.keys(CATEGORY_TREE);
 
 const CONDITIONS = ["Neu", "Wie neu", "Gut", "In Ordnung", "Defekt"];
 
@@ -133,6 +115,10 @@ export function CreateWithAi() {
   // Step 2: Form States (populated by API response)
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
+  const [subcategory, setSubcategory] = useState<string>(CATEGORY_TREE[CATEGORIES[0]]?.[0] || '');
+  // The AI already picks a category/subcategory silently — this only shows
+  // the fuller two-dropdown picker when the user clicks "Ändern" to override.
+  const [isEditingCategory, setIsEditingCategory] = useState(false);
   const [condition, setCondition] = useState(CONDITIONS[2]); // Default 'Gut'
   const [price, setPrice] = useState<number>(0);
   const [description, setDescription] = useState('');
@@ -231,7 +217,11 @@ export function CreateWithAi() {
     if (!draft) return;
 
     setTitle(draft.title || '');
-    setCategory(CATEGORIES.includes(draft.category) ? draft.category : CATEGORIES[CATEGORIES.length - 1]);
+    const draftCategory = CATEGORIES.includes(draft.category) ? draft.category : CATEGORIES[CATEGORIES.length - 1];
+    setCategory(draftCategory);
+    const draftSubcats = CATEGORY_TREE[draftCategory] || [];
+    setSubcategory(draftSubcats.includes(draft.subcategory) ? draft.subcategory : draftSubcats[0] || '');
+    setIsEditingCategory(false);
     setCondition(CONDITIONS.includes(draft.condition) ? draft.condition : CONDITIONS[2]);
     setPrice(typeof draft.price === 'number' ? draft.price : parseFloat(draft.price) || 0);
     setDescription(draft.description || '');
@@ -406,7 +396,11 @@ export function CreateWithAi() {
 
       // Populate results form
       setTitle(data.title || '');
-      setCategory(CATEGORIES.includes(data.category) ? data.category : CATEGORIES[CATEGORIES.length - 1]);
+      const aiCategory = CATEGORIES.includes(data.category) ? data.category : CATEGORIES[CATEGORIES.length - 1];
+      setCategory(aiCategory);
+      const aiSubcats = CATEGORY_TREE[aiCategory] || [];
+      setSubcategory(aiSubcats.includes(data.subcategory) ? data.subcategory : aiSubcats[0] || '');
+      setIsEditingCategory(false);
       setCondition(CONDITIONS.includes(data.condition) ? data.condition : CONDITIONS[2]);
       setPrice(data.price || 0);
       setDescription(data.description || '');
@@ -447,7 +441,7 @@ export function CreateWithAi() {
 
   // Copy details action
   const copyToClipboard = () => {
-    const text = `Titel: ${title}\nBeschreibung: ${description}\nPreis: ${price} €\nKategorie: ${category}\nZustand: ${condition}`;
+    const text = `Titel: ${title}\nBeschreibung: ${description}\nPreis: ${price} €\nKategorie: ${category} → ${subcategory}\nZustand: ${condition}`;
     navigator.clipboard.writeText(text).then(() => {
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
@@ -478,6 +472,7 @@ export function CreateWithAi() {
     id,
     title,
     category,
+    subcategory,
     price,
     description,
     brand,
@@ -857,21 +852,66 @@ export function CreateWithAi() {
 
             {/* Grid for category & price */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Category */}
+              {/* Category — AI picks category+subcategory silently; shown as a single
+                  confirmable line. Clicking "Ändern" reveals the full two-dropdown
+                  picker instead of showing it by default (fewer default decisions
+                  for the target audience). */}
               <div>
                 <div className="flex justify-between items-center mb-1.5">
                   <label className="text-[13px] font-semibold text-gray-800">Kategorie</label>
-                  {renderCopyBtn('ka-category', category)}
+                  {renderCopyBtn('ka-category', `${category} → ${subcategory}`)}
                 </div>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#A8C300] bg-white cursor-pointer"
-                >
-                  {CATEGORIES.map((cat, idx) => (
-                    <option key={idx} value={cat}>{cat}</option>
-                  ))}
-                </select>
+                {!isEditingCategory ? (
+                  <div className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white">
+                    <div className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-[#A8C300] shrink-0 mt-0.5" aria-label="Bestätigt" />
+                      <span className="text-gray-800 leading-snug break-words">
+                        <span className="text-gray-400">{category}</span>
+                        <span className="text-gray-300 mx-1">→</span>
+                        <span className="font-semibold text-gray-900">{subcategory}</span>
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingCategory(true)}
+                      className="mt-2 ml-6 text-[12px] font-semibold text-gray-500 hover:text-gray-800 underline underline-offset-2"
+                    >
+                      Ändern
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <select
+                      value={category}
+                      onChange={(e) => {
+                        const nextCategory = e.target.value;
+                        setCategory(nextCategory);
+                        setSubcategory(CATEGORY_TREE[nextCategory]?.[0] || '');
+                      }}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#A8C300] bg-white cursor-pointer"
+                    >
+                      {CATEGORIES.map((cat, idx) => (
+                        <option key={idx} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={subcategory}
+                      onChange={(e) => setSubcategory(e.target.value)}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#A8C300] bg-white cursor-pointer"
+                    >
+                      {(CATEGORY_TREE[category] || []).map((sub, idx) => (
+                        <option key={idx} value={sub}>{sub}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingCategory(false)}
+                      className="text-[12px] font-semibold text-[#A8C300] hover:text-[#8fa600] underline underline-offset-2"
+                    >
+                      ✓ Bestätigen
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Price */}

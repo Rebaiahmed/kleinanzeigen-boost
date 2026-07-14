@@ -11,6 +11,42 @@ import * as fs from 'fs';
 import * as path from 'path';
 import axios from 'axios';
 
+const KLEINANZEIGEN_CATEGORIES: Record<string, string[]> = JSON.parse(
+  fs.readFileSync(path.join(__dirname, '../config/kleinanzeigen-categories.json'), 'utf-8'),
+);
+
+const CATEGORY_NAMES_JSON = JSON.stringify(Object.keys(KLEINANZEIGEN_CATEGORIES));
+
+const CATEGORY_TREE_TEXT = Object.entries(KLEINANZEIGEN_CATEGORIES)
+  .map(([category, subcategories]) => `  "${category}": ${JSON.stringify(subcategories)}`)
+  .join('\n');
+
+/** Basic hashtag pattern: a '#' immediately followed by non-whitespace text,
+ * e.g. "#vintage" or "#TopZustand". Fallback safety net in case the prompt's
+ * explicit "no hashtags" instruction isn't fully reliable. Applied to every
+ * free-text output field, not just title/description, since hashtags could
+ * plausibly leak into any of them (e.g. keyFeatures, vinted.description). */
+function stripHashtags(value: string): string {
+  return value.replace(/#\S+/g, '').replace(/[ \t]{2,}/g, ' ').trim();
+}
+
+function stripHashtagsFromResult(parsed: any): any {
+  if (!parsed || typeof parsed !== 'object') return parsed;
+  const textFields = ['title', 'description'];
+  for (const field of textFields) {
+    if (typeof parsed[field] === 'string') parsed[field] = stripHashtags(parsed[field]);
+  }
+  if (Array.isArray(parsed.keyFeatures)) {
+    parsed.keyFeatures = parsed.keyFeatures.map((f: any) => (typeof f === 'string' ? stripHashtags(f) : f));
+  }
+  if (parsed.vinted && typeof parsed.vinted === 'object') {
+    for (const field of ['title', 'description']) {
+      if (typeof parsed.vinted[field] === 'string') parsed.vinted[field] = stripHashtags(parsed.vinted[field]);
+    }
+  }
+  return parsed;
+}
+
 @Injectable()
 export class AiService {
   private readonly logger = new Logger(AiService.name);
@@ -429,7 +465,10 @@ export class AiService {
     // The prompt is language-parameterized ({{LANG}}) so the field specs themselves
     // demand the right output language — the key to actually getting English out
     // (a trailing override alone was ignored). category/condition stay German.
-    const localizedPrompt = this.analyzePhotosPrompt.replace(/\{\{LANG\}\}/g, wantEnglish ? 'English' : 'German');
+    const localizedPrompt = this.analyzePhotosPrompt
+      .replace(/\{\{LANG\}\}/g, wantEnglish ? 'English' : 'German')
+      .replace(/\{\{CATEGORY_NAMES\}\}/g, CATEGORY_NAMES_JSON)
+      .replace(/\{\{CATEGORY_TREE\}\}/g, CATEGORY_TREE_TEXT);
     const systemInstruction = `${langInstruction}\n\n${localizedPrompt}\n\n${langInstruction}`;
     const userPrompt = `${langInstruction}\n${hint ? `Optionaler Hinweis vom Verkäufer: ${hint}` : 'Analysiere das Produkt auf den Fotos.'}`;
 
@@ -472,7 +511,7 @@ export class AiService {
     let parsedJson: any = null;
     try {
       const cleaned = cleanAndExtractJson(responseText);
-      parsedJson = JSON.parse(cleaned);
+      parsedJson = stripHashtagsFromResult(JSON.parse(cleaned));
     } catch (parseError) {
       this.logger.error('Failed to parse Gemini response on first attempt. Raw response:', responseText);
       this.logger.error('Parse error:', parseError);
@@ -490,7 +529,7 @@ export class AiService {
         promptTokenCount += fallbackResult.promptTokenCount;
         candidatesTokenCount += fallbackResult.candidatesTokenCount;
         const cleanedRetry = cleanAndExtractJson(responseText);
-        parsedJson = JSON.parse(cleanedRetry);
+        parsedJson = stripHashtagsFromResult(JSON.parse(cleanedRetry));
       } catch (retryError) {
         this.logger.error('Failed to parse Gemini response on second attempt. Raw response:', responseText);
         this.logger.error('Retry parse error:', retryError);

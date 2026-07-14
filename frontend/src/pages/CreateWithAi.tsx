@@ -862,20 +862,22 @@ export function CreateWithAi() {
                   {renderCopyBtn('ka-category', `${category} → ${subcategory}`)}
                 </div>
                 {!isEditingCategory ? (
-                  <div className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white flex items-center justify-between gap-2">
-                    <span className="text-gray-800 truncate">
-                      {category} <span className="text-gray-400">→</span> {subcategory}
-                    </span>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Check className="w-4 h-4 text-[#A8C300]" aria-label="Bestätigt" />
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingCategory(true)}
-                        className="text-[12px] font-semibold text-gray-500 hover:text-gray-800 underline underline-offset-2"
-                      >
-                        Ändern
-                      </button>
+                  <div className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white">
+                    <div className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-[#A8C300] shrink-0 mt-0.5" aria-label="Bestätigt" />
+                      <span className="text-gray-800 leading-snug break-words">
+                        <span className="text-gray-400">{category}</span>
+                        <span className="text-gray-300 mx-1">→</span>
+                        <span className="font-semibold text-gray-900">{subcategory}</span>
+                      </span>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingCategory(true)}
+                      className="mt-2 ml-6 text-[12px] font-semibold text-gray-500 hover:text-gray-800 underline underline-offset-2"
+                    >
+                      Ändern
+                    </button>
                   </div>
                 ) : (
                   <div className="space-y-2">

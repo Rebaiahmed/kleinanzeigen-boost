@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SupportMe } from '../components/SupportMe';
-import { Heart, CheckCircle2, AlertCircle, RefreshCw, LogOut, Check, Languages } from 'lucide-react';
+import { Heart, Languages, Moon, Sun } from 'lucide-react';
 import { Toast } from '../components/Toast';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import { useDarkMode } from '../hooks/useDarkMode';
 
 const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -51,6 +52,7 @@ export function Settings() {
   const navigate = useNavigate();
   const flags = useFeatureFlags();
   const { t, i18n } = useTranslation();
+  const { isDark, setDark, isLoaded: isDarkModeLoaded } = useDarkMode();
   const [ebayConnected, setEbayConnected] = useState(false);
   const [ebayUsername, setEbayUsername] = useState('');
   const [isLoadingEbay, setIsLoadingEbay] = useState(false);
@@ -86,7 +88,7 @@ export function Settings() {
         } else {
           setEbayConnected(false);
           setEbayUsername('');
-          if (!silent) showToast('Bitte logge dich zuerst in eBay ein', 'error');
+          if (!silent) showToast(t('settings.ebayLoginFirst'), 'error');
         }
       }
     };
@@ -132,7 +134,7 @@ export function Settings() {
     // 2. Read success param from URL redirect
     const params = new URLSearchParams(window.location.search);
     if (params.get('platform') === 'ebay' && params.get('status') === 'connected') {
-      showToast('Erfolgreich mit eBay verbunden!', 'success');
+      showToast(t('settings.ebayConnectedSuccess'), 'success');
       // Clean query parameters from URL
       window.history.replaceState({}, document.title, window.location.pathname);
       checkEbayStatus(true);
@@ -152,6 +154,41 @@ export function Settings() {
       </div>
 
       <h1 className="text-3xl font-bold text-[#333]">{t('settings.title')}</h1>
+
+      {/* Appearance Section */}
+      {isDarkModeLoaded && (
+        <section className="bg-white p-6 rounded-lg shadow-sm border border-ka-gray-200">
+          <h2 className="text-xl font-semibold mb-1 text-ka-gray-900 flex items-center gap-2">
+            {isDark ? <Moon className="w-5 h-5 text-gray-400" /> : <Sun className="w-5 h-5 text-gray-400" />}
+            {t('settings.appearanceTitle')}
+          </h2>
+          <p className="text-sm text-gray-500 mb-4">{t('settings.appearanceHint')}</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setDark(false)}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                !isDark
+                  ? 'bg-[#A8C300] border-[#A8C300] text-white'
+                  : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {t('settings.lightMode')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDark(true)}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                isDark
+                  ? 'bg-[#A8C300] border-[#A8C300] text-white'
+                  : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {t('settings.darkMode')}
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* Language Section — only shown while i18n is enabled */}
       {flags.enableI18n && (
@@ -193,7 +230,7 @@ export function Settings() {
           render an empty heading, so hide the whole section. */}
       {(flags.enableVinted || flags.enableEbay || flags.enableFacebookMarketplace) && (
       <section className="bg-white p-6 rounded-lg shadow-sm border border-ka-gray-200">
-        <h2 className="text-xl font-semibold mb-6 text-ka-gray-900">Plattform-Verbindungen</h2>
+        <h2 className="text-xl font-semibold mb-6 text-ka-gray-900">{t('settings.platformConnections')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           {/* Vinted Platform Card — gated behind feature flag */}
@@ -207,11 +244,11 @@ export function Settings() {
                 <h3 className="text-lg font-bold text-gray-700 flex flex-wrap items-center gap-1.5">
                   Vinted
                   <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded-full border border-yellow-200">
-                    🚧 In Entwicklung
+                    🚧 {t('settings.vintedInDevelopment')}
                   </span>
                 </h3>
                 <p className="text-sm text-gray-500 mt-1 mb-2">
-                  Das direkte Posting auf Vinted wird in einem zukünftigen Update verfügbar sein.
+                  {t('settings.vintedDescription')}
                 </p>
               </div>
             </div>
@@ -221,7 +258,7 @@ export function Settings() {
                 disabled
                 className="w-full bg-gray-100 border border-gray-200 text-gray-400 font-bold py-2 px-4 rounded-sm text-[13px] cursor-not-allowed text-center"
               >
-                Kommt bald
+                {t('settings.comingSoon')}
               </button>
             </div>
           </div>
@@ -238,14 +275,14 @@ export function Settings() {
                 <h3 className="text-lg font-bold text-gray-800 flex flex-wrap items-center gap-1.5">
                   eBay
                   <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded-full border border-yellow-200">
-                    🚧 In Kürze
+                    🚧 {t('settings.ebaySoon')}
                   </span>
                 </h3>
                 <p className="text-sm text-gray-500 mt-1 mb-2">
-                  Veröffentliche deine Anzeigen als Festpreis-Artikel auf dem offiziellen eBay-Marktplatz.
+                  {t('settings.ebayDescription')}
                 </p>
                 <div className="text-sm font-semibold text-gray-400">
-                  eBay-Integration kommt in Kürze
+                  {t('settings.ebayIntegrationSoon')}
                 </div>
               </div>
             </div>
@@ -253,10 +290,10 @@ export function Settings() {
             <div className="mt-6">
               <button
                 disabled
-                title="eBay-Integration kommt in Kürze"
+                title={t('settings.ebayIntegrationSoon')}
                 className="w-full bg-gray-100 border border-gray-200 text-gray-400 font-bold py-2 px-4 rounded-sm text-[13px] cursor-not-allowed text-center"
               >
-                Kommt bald
+                {t('settings.comingSoon')}
               </button>
             </div>
           </div>
@@ -273,11 +310,11 @@ export function Settings() {
                 <h3 className="text-lg font-bold text-gray-700 flex flex-wrap items-center gap-1.5">
                   Facebook Marketplace
                   <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded-full border border-yellow-200">
-                    🚧 In Entwicklung
+                    🚧 {t('settings.facebookInDevelopment')}
                   </span>
                 </h3>
                 <p className="text-sm text-gray-500 mt-1 mb-2">
-                  Verkaufe deine Anzeigen direkt auf Facebook Marketplace und erreiche Millionen von Käufern.
+                  {t('settings.facebookDescription')}
                 </p>
               </div>
             </div>
@@ -287,7 +324,7 @@ export function Settings() {
                 disabled
                 className="w-full bg-gray-100 border border-gray-200 text-gray-400 font-bold py-2 px-4 rounded-sm text-[13px] cursor-not-allowed text-center"
               >
-                Kommt bald
+                {t('settings.comingSoon')}
               </button>
             </div>
           </div>
@@ -299,10 +336,10 @@ export function Settings() {
 
       {/* AI Usage Section */}
       <section className="bg-white p-6 rounded-lg shadow-sm border border-ka-gray-200">
-        <h2 className="text-xl font-semibold mb-6 text-ka-gray-900">KI-Optimierungen</h2>
-        
+        <h2 className="text-xl font-semibold mb-6 text-ka-gray-900">{t('settings.aiOptimizations')}</h2>
+
         {isLoadingUsage ? (
-          <div className="text-sm text-gray-500 animate-pulse py-4">Lade KI-Nutzungsdaten...</div>
+          <div className="text-sm text-gray-500 animate-pulse py-4">{t('settings.loadingUsage')}</div>
         ) : (
           aiUsage && (() => {
             const { callsCount, limit, unlimited = false } = aiUsage as any;
@@ -330,7 +367,7 @@ export function Settings() {
                     ></div>
                   </div>
                   <span className="text-sm font-semibold text-gray-700 whitespace-nowrap shrink-0">
-                    {isUnlimited ? '∞' : `${pct}%`} diesen Monat genutzt
+                    {isUnlimited ? '∞' : `${pct}%`} {t('settings.usedThisMonth')}
                   </span>
                 </div>
 
@@ -338,11 +375,11 @@ export function Settings() {
                 <div className="pt-2 text-sm text-gray-600 leading-normal">
                   {isUnlimited ? (
                     <p className="font-semibold text-gray-800">
-                      {callsCount} Optimierungen genutzt. Unbegrenzter Zugriff aktiv.
+                      {t('settings.unlimitedUsed', { count: callsCount })}
                     </p>
                   ) : (
                     <p className="font-semibold text-gray-800">
-                      {remaining} von {(limit || 0).toLocaleString('de-DE')} KI-Optimierungen verfügbar diesen Monat.
+                      {t('settings.availableThisMonth', { remaining, limit: (limit || 0).toLocaleString(i18n.language === 'en' ? 'en-US' : 'de-DE') })}
                     </p>
                   )}
                 </div>
@@ -357,10 +394,10 @@ export function Settings() {
         <div>
           <h2 className="text-lg font-semibold text-ka-gray-900 flex items-center gap-2">
             <Heart className="w-5 h-5 text-ka-orange" />
-            Unterstütze das Projekt
+            {t('settings.supportProject')}
           </h2>
           <p className="text-sm text-ka-gray-600 mt-1">
-            AnzeigenBoost ist ein unabhängiges Seitenprojekt. Jede Spende hilft bei den Serverkosten.
+            {t('settings.supportProjectText')}
           </p>
         </div>
         <div className="shrink-0">

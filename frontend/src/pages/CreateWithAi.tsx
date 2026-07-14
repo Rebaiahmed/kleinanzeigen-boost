@@ -92,7 +92,7 @@ export function CreateWithAi() {
   const { ads } = useAds();
   const { saveDraft, handleEbayCrossPost, handlePriceCheck } = useAdsActions();
   const { callsCount, limit, remaining, pct, isWarning, isBlocked, unlimited, incrementUsage } = useAiUsage();
-  const { enableDisclaimer } = useFeatureFlags();
+  const { enableDisclaimer, enableCrossPosting } = useFeatureFlags();
 
   // Navigation step
   const [step, setStep] = useState<'upload' | 'result'>('upload');
@@ -1128,7 +1128,13 @@ export function CreateWithAi() {
               </div>
             </div>
 
-            {/* CROSS-POST PLATFORMS SECTION */}
+            {/* CROSS-POST PLATFORMS SECTION — gated behind enableCrossPosting.
+                Not a validated feature yet; both buttons below are inert
+                placeholders (disabled, no real posting action wired to them).
+                Kept in the tree but fully hidden when the flag is off, rather
+                than just disabled, so users don't see a promise of a feature
+                that isn't being actively built. */}
+            {enableCrossPosting && (
             <div className="border-t border-gray-100 pt-6">
               <h4 className="text-[13px] font-bold text-gray-800 mb-2 uppercase tracking-wider">Cross-Posting</h4>
               <p className="text-[12px] text-gray-500 mb-4">
@@ -1163,6 +1169,7 @@ export function CreateWithAi() {
                 </button>
               </div>
             </div>
+            )}
 
             {/* SAVE AS DRAFT & RESET ACTIONS */}
             <div className="border-t border-gray-100 pt-6 flex flex-col items-center gap-4">

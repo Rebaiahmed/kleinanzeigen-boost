@@ -113,6 +113,16 @@ export class AdsController {
     return this.adsService.updateAd(req.user.userId, adId, body);
   }
 
+  /** Cancels a scheduled (not-yet-due) recurring repost. Rejects with 409 if
+   *  the repost is already executing (status === pending_repost). */
+  @Post(':id/cancel-repost')
+  async cancelScheduledRepost(
+    @Req() req: any,
+    @Param('id') adId: string,
+  ) {
+    return this.adsService.cancelScheduledRepost(req.user.userId, adId);
+  }
+
   @Post(':id/cross-post/ebay')
   async crossPostEbay(
     @Req() req: any,

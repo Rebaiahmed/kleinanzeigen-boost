@@ -39,7 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const showBanner = isChromiumBrowser && !isChecking && !isConnected && !hasSession;
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5] flex flex-col relative font-sans text-[#333]">
+    <div className="min-h-screen bg-[#f5f5f5] dark:bg-[#1e2023] flex flex-col relative font-sans text-[#333] dark:text-[#e5e5e5] transition-colors duration-200">
       <TopBar />
 
       {!isChromiumBrowser && (

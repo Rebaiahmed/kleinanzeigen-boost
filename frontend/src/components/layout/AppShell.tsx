@@ -75,13 +75,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      {/* Nav tabs */}
-      <div className="bg-white border-b border-[#e5e5e5]">
-        <div className="max-w-[900px] mx-auto px-4 sm:px-6 flex gap-1">
+      {/* Nav tabs — mobile responsive */}
+      <div className="bg-white border-b border-[#e5e5e5] overflow-x-auto">
+        <div className="max-w-[900px] mx-auto px-4 sm:px-6 flex gap-1 min-w-min sm:min-w-0">
           <NavLink
             to="/meine-anzeigen"
             className={({ isActive }) =>
-              `px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
+              `px-3 sm:px-4 py-3 sm:py-2.5 text-[12px] sm:text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap ${
                 isActive
                   ? 'border-[#A8C300] text-[#A8C300]'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -93,7 +93,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <NavLink
             to="/meine-entwuerfe"
             className={({ isActive }) =>
-              `px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
+              `px-3 sm:px-4 py-3 sm:py-2.5 text-[12px] sm:text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap ${
                 isActive
                   ? 'border-[#A8C300] text-[#A8C300]'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -105,7 +105,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <NavLink
             to="/vorlagen"
             className={({ isActive }) =>
-              `px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
+              `px-3 sm:px-4 py-3 sm:py-2.5 text-[12px] sm:text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap ${
                 isActive
                   ? 'border-[#A8C300] text-[#A8C300]'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -118,7 +118,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <NavLink
               to="/wettbewerb"
               className={({ isActive }) =>
-                `px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
+                `px-3 sm:px-4 py-3 sm:py-2.5 text-[12px] sm:text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap ${
                   isActive
                     ? 'border-[#A8C300] text-[#A8C300]'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -147,16 +147,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </footer>
 
-      {/* Floating feedback button */}
+      {/* Floating feedback button — mobile optimized */}
       <a
         href={FEEDBACK_FORM_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] text-white font-semibold text-[13px] py-2.5 px-4 rounded-full shadow-lg transition-colors"
+        className="fixed bottom-5 right-5 z-40 inline-flex items-center justify-center sm:justify-start gap-2 bg-[#A8C300] hover:bg-[#96ae00] text-white font-semibold text-[13px] py-3 sm:py-2.5 px-4 sm:px-4 rounded-full shadow-lg transition-colors min-h-[48px]"
         title="Feedback geben"
       >
-        <MessageSquare className="w-4 h-4" />
-        Feedback
+        <MessageSquare className="w-5 sm:w-4 h-5 sm:h-4 shrink-0" />
+        <span className="hidden sm:inline">Feedback</span>
       </a>
     </div>
   );

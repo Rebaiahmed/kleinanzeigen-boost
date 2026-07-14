@@ -2,6 +2,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom/server';
 import { Landing } from './pages/Landing';
+import './i18n';
 
 /**
  * Build-time SSG: render the public Landing page to static HTML so crawlers (and

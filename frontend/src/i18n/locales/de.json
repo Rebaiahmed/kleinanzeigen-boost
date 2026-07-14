@@ -1,0 +1,70 @@
+{
+  "nav": {
+    "myAds": "Meine Anzeigen",
+    "myDrafts": "Meine Entwürfe",
+    "templates": "Antwort-Vorlagen",
+    "competition": "Wettbewerb",
+    "new": "NEU"
+  },
+  "topbar": {
+    "loggedInAs": "Angemeldet als",
+    "settings": "Einstellungen",
+    "help": "Hilfe / Support",
+    "logout": "Abmelden",
+    "accountMenu": "Konto- und Einstellungsmenü",
+    "account": "Konto",
+    "toLightMode": "Zum Light-Mode wechseln",
+    "toDarkMode": "Zum Dark-Mode wechseln",
+    "language": "Sprache"
+  },
+  "extensionBanner": {
+    "notConnected": "Chrome Extension ist nicht verbunden! Einige Funktionen könnten fehlen.",
+    "enableHint": "Bitte aktiviere die Erweiterung in den Browser-Einstellungen"
+  },
+  "browserBanner": {
+    "chromeOnly": "Die AnzeigenBoost-Erweiterung funktioniert nur in Google Chrome (oder Chromium-Browsern wie Edge & Brave).",
+    "openChrome": "Chrome öffnen →"
+  },
+  "footer": {
+    "tagline": "AnzeigenBoost — Deine Anzeigen immer ganz oben",
+    "madeWith": "Made with"
+  },
+  "feedback": "Feedback",
+  "auth": {
+    "title": "Mit Kleinanzeigen verbinden",
+    "subtitle": "Verknüpfe dein Konto, um automatische Updates & Optimierungen freizuschalten.",
+    "devLoginLabel": "🧪 Dev-Login (nur lokal)",
+    "devLoginButton": "Mit Test-Account einloggen",
+    "devLoginLoading": "Logge ein...",
+    "devLoginFailed": "Dev-Login fehlgeschlagen",
+    "extensionRecommended": "🔌 Chrome Extension (Empfohlen)",
+    "connectedSuccess": "Erfolgreich verbunden",
+    "connectedAs": "Verbunden als: {{username}}",
+    "continueToDashboard": "Weiter zum Dashboard",
+    "step1": "Installiere unsere Chrome Extension",
+    "step2": "Logge dich bei Kleinanzeigen ein",
+    "step3": "Klicke auf \"Verbinden\"",
+    "connect": "Verbinden",
+    "checkingConnection": "Prüfe Verbindung...",
+    "extensionNotFound": "Extension nicht gefunden. Bitte installiere & aktiviere die Erweiterung.",
+    "loginFirst": "Bitte logge dich zuerst bei Kleinanzeigen ein"
+  },
+  "landing": {
+    "heroTitle": "Ihre Kleinanzeigen. Automatisch immer oben.",
+    "heroSubtitle": "AnzeigenBoost veröffentlicht Ihre Anzeigen neu und schreibt bessere Texte mit KI – mit einem Klick.",
+    "ctaButton": "Kostenlos im Chrome Web Store",
+    "ctaSubtext": "Kostenlos starten · Keine Kreditkarte nötig",
+    "videoTitle": "So funktioniert's – in 60 Sekunden",
+    "playVideo": "Video abspielen",
+    "benefit1Title": "Anzeigen neu veröffentlichen",
+    "benefit1Text": "Wieder ganz oben in den Suchergebnissen.",
+    "benefit2Title": "KI schreibt Ihre Texte",
+    "benefit2Text": "Bessere Beschreibungen auf Deutsch, automatisch.",
+    "benefit3Title": "Zeit sparen",
+    "benefit3Text": "Was früher 30 Minuten dauerte, dauert jetzt 1 Klick.",
+    "passwordNote": "Ihr Kleinanzeigen-Passwort sehen wir nie.",
+    "impressum": "Impressum",
+    "datenschutz": "Datenschutz",
+    "disclaimer": "AnzeigenBoost ist ein unabhängiges Projekt und steht in keiner Verbindung zur Kleinanzeigen GmbH."
+  }
+}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { TopBar } from './TopBar';
 import { BrowserSupportBanner } from '../BrowserSupportBanner';
 import { useExtension } from '../../hooks/useExtension';
@@ -21,6 +22,7 @@ const isChromiumBrowser =
   !/firefox|fxios/i.test(navigator.userAgent);
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
   const { isConnected, isChecking } = useExtension();
   // Poll for repost notifications (incl. simulated reposts) → show desktop notif.
   useRepostNotifications();
@@ -47,7 +49,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="max-w-[900px] mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 text-amber-800 text-sm font-medium">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5 shrink-0" />
-              <span>Die AnzeigenBoost-Erweiterung funktioniert nur in Google Chrome (oder Chromium-Browsern wie Edge & Brave).</span>
+              <span>{t('browserBanner.chromeOnly')}</span>
             </div>
             <a
               href="https://www.google.com/chrome/"
@@ -55,7 +57,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               rel="noopener noreferrer"
               className="text-amber-900 text-xs font-bold underline hover:no-underline whitespace-nowrap"
             >
-              Chrome öffnen →
+              {t('browserBanner.openChrome')}
             </a>
           </div>
         </div>
@@ -66,10 +68,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="max-w-[900px] mx-auto flex items-center justify-between text-red-700 text-sm font-medium">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5" />
-              <span>Chrome Extension ist nicht verbunden! Einige Funktionen könnten fehlen.</span>
+              <span>{t('extensionBanner.notConnected')}</span>
             </div>
             <span className="text-red-800 text-xs">
-              Bitte aktiviere die Erweiterung in den Browser-Einstellungen
+              {t('extensionBanner.enableHint')}
             </span>
           </div>
         </div>
@@ -88,7 +90,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               }`
             }
           >
-            📄 Meine Anzeigen
+            📄 {t('nav.myAds')}
           </NavLink>
           <NavLink
             to="/meine-entwuerfe"
@@ -100,7 +102,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               }`
             }
           >
-            📝 Meine Entwürfe
+            📝 {t('nav.myDrafts')}
           </NavLink>
           <NavLink
             to="/vorlagen"
@@ -112,7 +114,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               }`
             }
           >
-            📋 Antwort-Vorlagen
+            📋 {t('nav.templates')}
           </NavLink>
           {enableWettbewerb && (
             <NavLink
@@ -125,10 +127,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 }`
               }
             >
-              📊 Wettbewerb
+              📊 {t('nav.competition')}
               {!hasSeenWettbewerb && (
                 <span className="ml-1.5 inline-flex items-center text-[9px] font-bold bg-[#A8C300] text-white px-1.5 py-0.5 rounded-full align-middle">
-                  NEU
+                  {t('nav.new')}
                 </span>
               )}
             </NavLink>
@@ -143,7 +145,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <footer className="bg-[#f5f5f5] py-8 mt-auto">
         <div className="max-w-[900px] mx-auto px-4 text-center text-[13px] text-[#666]">
-          AnzeigenBoost — Deine Anzeigen immer ganz oben <span className="mx-2">|</span> Made with <span className="text-red-500">♥</span> in Germany
+          {t('footer.tagline')} <span className="mx-2">|</span> {t('footer.madeWith')} <span className="text-red-500">♥</span> in Germany
         </div>
       </footer>
 
@@ -153,10 +155,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] text-white font-semibold text-[13px] py-2.5 px-4 rounded-full shadow-lg transition-colors"
-        title="Feedback geben"
+        title={t('feedback')}
       >
         <MessageSquare className="w-4 h-4" />
-        Feedback
+        {t('feedback')}
       </a>
     </div>
   );

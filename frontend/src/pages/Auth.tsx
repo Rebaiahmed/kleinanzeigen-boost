@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Loader2, ShieldCheck, CheckCircle2, ChevronRight, Terminal, AlertCircle } from 'lucide-react';
 import { BrowserSupportBanner } from '../components/BrowserSupportBanner';
 
@@ -8,6 +9,7 @@ const SHOW_MANUAL_COOKIE_METHOD = false;
 
 export function Auth() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   
   // Extension State
   const [isExtensionChecking, setIsExtensionChecking] = useState(false);
@@ -65,7 +67,7 @@ export function Auth() {
           navigate('/meine-anzeigen');
         } else {
           setExtensionStatus('failed');
-          setExtensionError('Bitte logge dich zuerst bei Kleinanzeigen ein');
+          setExtensionError(t('auth.loginFirst'));
         }
       }
 
@@ -97,7 +99,7 @@ export function Auth() {
     // Fallback timeout if extension doesn't respond
     setTimeout(() => {
       setIsExtensionChecking(false);
-      setExtensionError('Extension nicht gefunden. Bitte installiere & aktiviere die Erweiterung.');
+      setExtensionError(t('auth.extensionNotFound'));
     }, 8000);
   };
 
@@ -135,7 +137,7 @@ export function Auth() {
       const res = await fetch(`${apiBase}/auth/dev-login`, { method: 'POST', credentials: 'include' });
       const data = await res.json();
       if (!res.ok || !data.accessToken) {
-        throw new Error(data.message || 'Dev-Login ist deaktiviert (nur lokal verfügbar)');
+        throw new Error(data.message || t('auth.devLoginFailed'));
       }
       localStorage.setItem('token', data.accessToken);
       localStorage.setItem('kb_session', data.accessToken);
@@ -143,7 +145,7 @@ export function Auth() {
       localStorage.setItem('ab_mock_ads', mockAdsCount);
       navigate('/meine-anzeigen');
     } catch (err: any) {
-      setDevLoginError(err.message || 'Dev-Login fehlgeschlagen');
+      setDevLoginError(err.message || t('auth.devLoginFailed'));
     } finally {
       setIsDevLoggingIn(false);
     }
@@ -166,10 +168,10 @@ export function Auth() {
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold tracking-tight text-white flex items-center justify-center gap-2">
               <ShieldCheck className="w-7 h-7 text-lime-400 animate-pulse" />
-              <span>Mit Kleinanzeigen verbinden</span>
+              <span>{t('auth.title')}</span>
             </h2>
             <p className="text-sm text-slate-400 mt-2">
-              Verknüpfe dein Konto, um automatische Updates & Optimierungen freizuschalten.
+              {t('auth.subtitle')}
             </p>
           </div>
 
@@ -177,7 +179,7 @@ export function Auth() {
           {(import.meta as any).env.DEV && (
             <div className="p-4 bg-amber-950/20 border border-amber-800/40 rounded-xl mb-6">
               <h3 className="text-xs font-bold text-amber-400 tracking-wider flex items-center gap-2 mb-3">
-                🧪 Dev-Login (nur lokal)
+                {t('auth.devLoginLabel')}
               </h3>
               {devLoginError && (
                 <div className="flex items-start gap-2 bg-red-950/40 border border-red-900/60 p-3 rounded-lg text-red-400 text-xs mb-3">
@@ -193,10 +195,10 @@ export function Auth() {
                 {isDevLoggingIn ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Logge ein...
+                    {t('auth.devLoginLoading')}
                   </>
                 ) : (
-                  'Mit Test-Account einloggen'
+                  t('auth.devLoginButton')
                 )}
               </button>
             </div>
@@ -206,7 +208,7 @@ export function Auth() {
           <div className="p-5 bg-slate-950/60 border border-slate-800 rounded-xl mb-6">
             <h3 className="text-sm font-bold text-slate-200 tracking-wider flex items-center gap-2 mb-4">
               <span className="w-1.5 h-1.5 rounded-full bg-lime-400" />
-              🔌 Chrome Extension (Empfohlen)
+              {t('auth.extensionRecommended')}
             </h3>
 
             {extensionStatus === 'success' ? (
@@ -214,15 +216,15 @@ export function Auth() {
                 <div className="flex items-center gap-3 bg-emerald-950/40 border border-emerald-800/60 p-3.5 rounded-lg text-emerald-300">
                   <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-400" />
                   <div>
-                    <p className="text-xs font-semibold text-emerald-400">Erfolgreich verbunden</p>
-                    <p className="text-[13px] text-emerald-300 font-medium">Verbunden als: {extensionUsername}</p>
+                    <p className="text-xs font-semibold text-emerald-400">{t('auth.connectedSuccess')}</p>
+                    <p className="text-[13px] text-emerald-300 font-medium">{t('auth.connectedAs', { username: extensionUsername })}</p>
                   </div>
                 </div>
                 <button
                   onClick={handleNavigateDashboard}
                   className="w-full flex items-center justify-center gap-1.5 py-2.5 px-4 bg-lime-500 hover:bg-lime-400 text-slate-950 font-bold rounded-lg text-sm transition-colors cursor-pointer"
                 >
-                  <span>Weiter zum Dashboard</span>
+                  <span>{t('auth.continueToDashboard')}</span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
@@ -231,15 +233,15 @@ export function Auth() {
                 <div className="space-y-2.5 text-xs text-slate-400 font-medium pl-2">
                   <div className="flex gap-2">
                     <span className="text-lime-400 font-bold">1.</span>
-                    <span>Installiere unsere Chrome Extension</span>
+                    <span>{t('auth.step1')}</span>
                   </div>
                   <div className="flex gap-2">
                     <span className="text-lime-400 font-bold">2.</span>
-                    <span>Logge dich bei Kleinanzeigen ein</span>
+                    <span>{t('auth.step2')}</span>
                   </div>
                   <div className="flex gap-2">
                     <span className="text-lime-400 font-bold">3.</span>
-                    <span>Klicke auf &quot;Verbinden&quot;</span>
+                    <span>{t('auth.step3')}</span>
                   </div>
                 </div>
 
@@ -258,10 +260,10 @@ export function Auth() {
                   {isExtensionChecking ? (
                     <span className="flex items-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Prüfe Verbindung...
+                      {t('auth.checkingConnection')}
                     </span>
                   ) : (
-                    'Verbinden'
+                    t('auth.connect')
                   )}
                 </button>
               </div>

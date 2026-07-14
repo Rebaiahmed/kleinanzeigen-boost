@@ -73,6 +73,16 @@ npm run dev:mock-login   # POSTs to the backend, saves the session cookie to /tm
 This endpoint 404s automatically when `NODE_ENV=production`, so it can never
 reach a deployed environment.
 
+## EN/DE language toggle
+Behind `FEATURE_I18N_ENABLED` (backend) / `enableI18n` (frontend feature flag),
+default OFF. Set `FEATURE_I18N_ENABLED=true` in `backend/.env` to show the
+language toggle (🌐 DE/EN) in the top bar. German stays the default language
+regardless of the flag — it only gates whether the toggle UI is rendered.
+Translation strings live in `frontend/src/i18n/locales/{de,en}.json`; the shell
+(nav, top bar, login, landing page) is translated. Deeper pages (Settings,
+CreateWithAi, Wettbewerb, etc.) still render German-only strings — extend the
+JSON files and swap in `useTranslation()`'s `t()` as those get covered.
+
 ## Preview the dashboard with many ads (no backend, no login)
 For eyeballing pagination/search/list performance at scale without a big account:
 ```bash

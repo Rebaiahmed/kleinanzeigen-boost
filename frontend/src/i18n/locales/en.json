@@ -1,0 +1,70 @@
+{
+  "nav": {
+    "myAds": "My Ads",
+    "myDrafts": "My Drafts",
+    "templates": "Reply Templates",
+    "competition": "Competition",
+    "new": "NEW"
+  },
+  "topbar": {
+    "loggedInAs": "Logged in as",
+    "settings": "Settings",
+    "help": "Help / Support",
+    "logout": "Log out",
+    "accountMenu": "Account and settings menu",
+    "account": "Account",
+    "toLightMode": "Switch to light mode",
+    "toDarkMode": "Switch to dark mode",
+    "language": "Language"
+  },
+  "extensionBanner": {
+    "notConnected": "Chrome extension is not connected! Some features may be missing.",
+    "enableHint": "Please enable the extension in your browser settings"
+  },
+  "browserBanner": {
+    "chromeOnly": "The AnzeigenBoost extension only works in Google Chrome (or Chromium browsers like Edge & Brave).",
+    "openChrome": "Open Chrome →"
+  },
+  "footer": {
+    "tagline": "AnzeigenBoost — Your ads, always on top",
+    "madeWith": "Made with"
+  },
+  "feedback": "Feedback",
+  "auth": {
+    "title": "Connect with Kleinanzeigen",
+    "subtitle": "Link your account to unlock automatic updates & optimizations.",
+    "devLoginLabel": "🧪 Dev login (local only)",
+    "devLoginButton": "Log in with test account",
+    "devLoginLoading": "Logging in...",
+    "devLoginFailed": "Dev login failed",
+    "extensionRecommended": "🔌 Chrome Extension (Recommended)",
+    "connectedSuccess": "Successfully connected",
+    "connectedAs": "Connected as: {{username}}",
+    "continueToDashboard": "Continue to dashboard",
+    "step1": "Install our Chrome extension",
+    "step2": "Log in to Kleinanzeigen",
+    "step3": "Click \"Connect\"",
+    "connect": "Connect",
+    "checkingConnection": "Checking connection...",
+    "extensionNotFound": "Extension not found. Please install & enable the extension.",
+    "loginFirst": "Please log in to Kleinanzeigen first"
+  },
+  "landing": {
+    "heroTitle": "Your listings. Automatically always on top.",
+    "heroSubtitle": "AnzeigenBoost reposts your listings and writes better copy with AI — with one click.",
+    "ctaButton": "Free on the Chrome Web Store",
+    "ctaSubtext": "Start for free · No credit card required",
+    "videoTitle": "How it works – in 60 seconds",
+    "playVideo": "Play video",
+    "benefit1Title": "Repost listings",
+    "benefit1Text": "Back to the top of search results.",
+    "benefit2Title": "AI writes your copy",
+    "benefit2Text": "Better descriptions, automatically.",
+    "benefit3Title": "Save time",
+    "benefit3Text": "What used to take 30 minutes now takes 1 click.",
+    "passwordNote": "We never see your Kleinanzeigen password.",
+    "impressum": "Legal notice",
+    "datenschutz": "Privacy policy",
+    "disclaimer": "AnzeigenBoost is an independent project and is not affiliated with Kleinanzeigen GmbH."
+  }
+}

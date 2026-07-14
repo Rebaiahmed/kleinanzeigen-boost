@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { RefreshCw, Sparkles, Clock, ShieldCheck } from 'lucide-react';
+import { RefreshCw, Camera, Wallet, Clock, ShieldCheck } from 'lucide-react';
 import { SupportMe } from '../components/SupportMe';
+import { useTranslation } from 'react-i18next';
 
 /* ────────────────────────────────────────────────────────────────────────
  * Things to swap
@@ -11,14 +11,17 @@ import { SupportMe } from '../components/SupportMe';
 // TODO: replace with the real demo video ID tomorrow
 const YOUTUBE_VIDEO_ID = 'dQw4w9WgXcQ';
 
-// TODO: fill in the real profile URLs
+// TODO: replace with the real YouTube channel URL once it's live
 const SOCIAL_LINKS = {
-  tiktok: '#',
-  instagram: '#',
+  tiktok: 'https://www.tiktok.com/@ahmed.rebai6',
+  instagram: 'https://www.instagram.com/anzeigenboost/',
   youtube: '#',
 };
 
 const CHROME_STORE_URL = 'https://chromewebstore.google.com/detail/noagiapohlenpolcbeghlmngalapbobe';
+
+// TODO: replace with the real Microsoft Edge Add-ons listing URL once published
+const EDGE_STORE_URL = '#';
 
 /* ────────────────────────────────────────────────────────────────────────
  * Icons (inline SVG — no icon font, no external asset requests)
@@ -33,6 +36,32 @@ function ChromeIcon({ className }: { className?: string }) {
       <path d="M12 12 L12 24 A12 12 0 0 1 1.61 6.0 Z" fill="#FBBC05" />
       <circle cx="12" cy="12" r="8" fill="#fff" />
       <circle cx="12" cy="12" r="5.5" fill="#4285F4" />
+    </svg>
+  );
+}
+
+/** Simplified Microsoft Edge logo (swirl), brand teal/blue gradient. */
+function EdgeIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <defs>
+        <linearGradient id="edge-a" x1="2" y1="4" x2="20" y2="18" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#0C59A4" />
+          <stop offset="1" stopColor="#1B9DE2" />
+        </linearGradient>
+        <linearGradient id="edge-b" x1="6" y1="10" x2="22" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#35C1F1" />
+          <stop offset="1" stopColor="#28A8EA" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M12 2a10 10 0 0 0-9.8 12.1A9 9 0 0 1 11 6c3.4 0 6 1.7 7.3 4.2A10 10 0 0 0 12 2Z"
+        fill="url(#edge-a)"
+      />
+      <path
+        d="M22 12a10 10 0 0 1-19.6 3.3A7 7 0 0 0 9 18c4.5 0 7.7-2.7 8.6-6.3a5 5 0 0 0-3.4-5.2 8 8 0 0 1 7.8 5.5Z"
+        fill="url(#edge-b)"
+      />
     </svg>
   );
 }
@@ -134,17 +163,29 @@ export function Landing() {
               {t('landing.heroSubtitle')}
             </p>
 
-            <a
-              href={CHROME_STORE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-3 bg-[#A8C300] hover:bg-[#96ae00] text-white font-bold py-4 px-8 rounded-full text-lg shadow-sm transition-colors"
-            >
-              <ChromeIcon className="w-6 h-6 shrink-0" />
-              {t('landing.ctaButton')}
-            </a>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <a
+                href={CHROME_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-3 bg-[#A8C300] hover:bg-[#96ae00] text-white font-bold py-4 px-8 rounded-full text-lg shadow-sm transition-colors"
+              >
+                <ChromeIcon className="w-6 h-6 shrink-0" />
+                Kostenlos im Chrome Web Store
+              </a>
 
-            <p className="text-base text-slate-400 mt-4">{t('landing.ctaSubtext')}</p>
+              <a
+                href={EDGE_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-slate-800 font-bold py-4 px-8 rounded-full text-lg shadow-sm border border-slate-200 transition-colors"
+              >
+                <EdgeIcon className="w-6 h-6 shrink-0" />
+                Kostenlos für Microsoft Edge
+              </a>
+            </div>
+
+            <p className="text-base text-slate-400 mt-4">Kostenlos starten · Keine Kreditkarte nötig</p>
           </div>
         </section>
 
@@ -156,35 +197,54 @@ export function Landing() {
           <YouTubeEmbed videoId={YOUTUBE_VIDEO_ID} />
         </section>
 
-        {/* 3. THREE BENEFITS */}
+        {/* 3. FEATURES */}
         <section className="py-16 bg-slate-50 border-y border-slate-200 px-4 sm:px-6">
           <div className="max-w-4xl mx-auto grid sm:grid-cols-3 gap-8 text-center">
             <div>
               <div className="w-14 h-14 rounded-full bg-[#A8C300]/10 text-[#A8C300] flex items-center justify-center mx-auto mb-4">
                 <RefreshCw className="w-7 h-7" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">{t('landing.benefit1Title')}</h3>
-              <p className="text-slate-600">{t('landing.benefit1Text')}</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Smart Repost</h3>
+              <p className="text-slate-600">
+                Deine Anzeige wird automatisch zur besten Uhrzeit neu veröffentlicht, mit echten Änderungen —
+                wieder ganz oben in den Suchergebnissen.
+              </p>
             </div>
             <div>
               <div className="w-14 h-14 rounded-full bg-[#A8C300]/10 text-[#A8C300] flex items-center justify-center mx-auto mb-4">
-                <Sparkles className="w-7 h-7" />
+                <Camera className="w-7 h-7" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">{t('landing.benefit2Title')}</h3>
-              <p className="text-slate-600">{t('landing.benefit2Text')}</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">KI-Texterstellung per Foto</h3>
+              <p className="text-slate-600">
+                Lade ein Foto hoch, AnzeigenBoost schreibt Titel und Beschreibung automatisch auf Deutsch.
+              </p>
             </div>
             <div>
               <div className="w-14 h-14 rounded-full bg-[#A8C300]/10 text-[#A8C300] flex items-center justify-center mx-auto mb-4">
-                <Clock className="w-7 h-7" />
+                <Wallet className="w-7 h-7" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">{t('landing.benefit3Title')}</h3>
-              <p className="text-slate-600">{t('landing.benefit3Text')}</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Kein Abo — nur zahlen, was du nutzt</h3>
+              <p className="text-slate-600">
+                50 Credits kostenlos zum Start. Danach zahlst du nur für das, was du wirklich nutzt — keine
+                monatliche Kündigung nötig.
+              </p>
             </div>
           </div>
 
-          <p className="flex items-center justify-center gap-2 text-base text-slate-400 mt-10">
+          <p className="flex items-center justify-center gap-2 text-base text-slate-500 mt-10">
+            <Clock className="w-4 h-4 shrink-0" />
+            Was früher 30 Minuten dauerte, dauert jetzt 1 Klick.
+          </p>
+
+          <p className="flex items-center justify-center gap-2 text-base text-slate-400 mt-3">
             <ShieldCheck className="w-4 h-4 shrink-0" />
             {t('landing.passwordNote')}
+          </p>
+          <p className="text-center text-sm text-slate-400 mt-1.5">
+            DSGVO-konform · Kein riskantes Bot-Verhalten
+          </p>
+          <p className="text-center text-sm text-slate-400 mt-1.5">
+            DSGVO-konform · Kein riskantes Bot-Verhalten
           </p>
         </section>
       </main>

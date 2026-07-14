@@ -14,6 +14,7 @@ export interface FeatureFlags {
   enableDisclaimer: boolean;
   enableWettbewerb: boolean;
   enableI18n: boolean;
+  enableCrossPosting: boolean;
 }
 
 const DEFAULTS: FeatureFlags = {
@@ -26,6 +27,7 @@ const DEFAULTS: FeatureFlags = {
   enableDisclaimer: false,
   enableWettbewerb: false,
   enableI18n: true,
+  enableCrossPosting: false,
 };
 
 let cachedFlags: FeatureFlags = DEFAULTS;

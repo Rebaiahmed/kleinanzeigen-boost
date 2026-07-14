@@ -77,8 +77,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      {/* Nav tabs */}
-      <div className="bg-white border-b border-[#e5e5e5]">
+      {/* Nav tabs — desktop horizontal row (unchanged from before this pass) */}
+      <div className="hidden md:block bg-white border-b border-[#e5e5e5]">
         <div className="max-w-[900px] mx-auto px-4 sm:px-6 flex gap-1">
           <NavLink
             to="/meine-anzeigen"
@@ -138,10 +138,70 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <main className="flex-1 w-full max-w-[900px] mx-auto px-4 sm:px-6 py-6 pb-24">
+      <main className="flex-1 w-full max-w-[900px] mx-auto px-4 sm:px-6 py-6 pb-28 md:pb-24">
         <BrowserSupportBanner />
         {children}
       </main>
+
+      {/* Nav tabs — mobile bottom navigation bar. Same destinations as the
+          desktop row above, reflowed into a fixed bottom bar (standard mobile
+          pattern for ≤4 primary tabs) instead of a horizontal row that would
+          overflow on phone widths. Each tab gets a full-height tap target
+          (min-h-[56px], well above the 44px guideline). */}
+      <nav
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-[#e5e5e5] flex"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <NavLink
+          to="/meine-anzeigen"
+          className={({ isActive }) =>
+            `flex-1 min-h-[56px] flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors ${
+              isActive ? 'text-[#A8C300]' : 'text-gray-500'
+            }`
+          }
+        >
+          <span className="text-[18px] leading-none">📄</span>
+          <span>{t('nav.myAds')}</span>
+        </NavLink>
+        <NavLink
+          to="/meine-entwuerfe"
+          className={({ isActive }) =>
+            `flex-1 min-h-[56px] flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors ${
+              isActive ? 'text-[#A8C300]' : 'text-gray-500'
+            }`
+          }
+        >
+          <span className="text-[18px] leading-none">📝</span>
+          <span>{t('nav.myDrafts')}</span>
+        </NavLink>
+        <NavLink
+          to="/vorlagen"
+          className={({ isActive }) =>
+            `flex-1 min-h-[56px] flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors ${
+              isActive ? 'text-[#A8C300]' : 'text-gray-500'
+            }`
+          }
+        >
+          <span className="text-[18px] leading-none">📋</span>
+          <span>{t('nav.templates')}</span>
+        </NavLink>
+        {enableWettbewerb && (
+          <NavLink
+            to="/wettbewerb"
+            className={({ isActive }) =>
+              `flex-1 min-h-[56px] flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors relative ${
+                isActive ? 'text-[#A8C300]' : 'text-gray-500'
+              }`
+            }
+          >
+            <span className="text-[18px] leading-none">📊</span>
+            <span>{t('nav.competition')}</span>
+            {!hasSeenWettbewerb && (
+              <span className="absolute top-1 right-[calc(50%-22px)] w-1.5 h-1.5 rounded-full bg-[#A8C300]" />
+            )}
+          </NavLink>
+        )}
+      </nav>
 
       <footer className="bg-[#f5f5f5] py-8 mt-auto">
         <div className="max-w-[900px] mx-auto px-4 text-center text-[13px] text-[#666]">
@@ -154,7 +214,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         href={FEEDBACK_FORM_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] text-white font-semibold text-[13px] py-2.5 px-4 rounded-full shadow-lg transition-colors"
+        className="fixed bottom-20 md:bottom-5 right-5 z-40 inline-flex items-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] text-white font-semibold text-[13px] py-2.5 px-4 rounded-full shadow-lg transition-colors"
         title={t('feedback')}
       >
         <MessageSquare className="w-4 h-4" />

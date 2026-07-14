@@ -243,6 +243,9 @@ export function Landing() {
           <p className="text-center text-sm text-slate-400 mt-1.5">
             DSGVO-konform · Kein riskantes Bot-Verhalten
           </p>
+          <p className="text-center text-sm text-slate-400 mt-1.5">
+            DSGVO-konform · Kein riskantes Bot-Verhalten
+          </p>
         </section>
       </main>
 

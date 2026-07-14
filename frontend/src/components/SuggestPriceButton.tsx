@@ -11,9 +11,13 @@ interface SuggestPriceResult {
 
 interface SuggestPriceButtonProps {
   ad: any;
+  // 'sm' (default) matches the compact desktop action-grid buttons. 'lg' gives
+  // a full 44px+ tap target for standalone mobile contexts (e.g. the AdCard
+  // bottom sheet), where this button isn't sitting in a dense grid.
+  size?: 'sm' | 'lg';
 }
 
-export function SuggestPriceButton({ ad }: SuggestPriceButtonProps) {
+export function SuggestPriceButton({ ad, size = 'sm' }: SuggestPriceButtonProps) {
   const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [result, setResult] = useState<SuggestPriceResult | null>(null);
   const [showPopover, setShowPopover] = useState(false);
@@ -70,7 +74,11 @@ export function SuggestPriceButton({ ad }: SuggestPriceButtonProps) {
         onClick={handleClick}
         disabled={state === 'loading'}
         title="Preisvorschlag basierend auf ähnlichen Anzeigen"
-        className="w-full border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors whitespace-nowrap border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+        className={
+          size === 'lg'
+            ? 'w-full border rounded-lg py-3 px-4 font-semibold text-sm flex items-center justify-center gap-2.5 transition-colors border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-50'
+            : 'w-full border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors whitespace-nowrap border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-50'
+        }
       >
         <span className="shrink-0">💶</span>
         <span>

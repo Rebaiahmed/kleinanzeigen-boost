@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { RefreshCw, Sparkles, Clock, ShieldCheck } from 'lucide-react';
 import { SupportMe } from '../components/SupportMe';
 
@@ -70,13 +71,14 @@ function YouTubeIcon({ className }: { className?: string }) {
 
 function YouTubeEmbed({ videoId }: { videoId: string }) {
   const [loaded, setLoaded] = useState(false);
+  const { t } = useTranslation();
 
   return (
     <div className="relative w-full max-w-[800px] mx-auto aspect-video rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
       {loaded ? (
         <iframe
           src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
-          title="So funktioniert's – in 60 Sekunden"
+          title={t('landing.videoTitle')}
           className="absolute inset-0 w-full h-full"
           loading="lazy"
           allow="accelerated-video; encrypted-media"
@@ -87,11 +89,11 @@ function YouTubeEmbed({ videoId }: { videoId: string }) {
           type="button"
           onClick={() => setLoaded(true)}
           className="absolute inset-0 w-full h-full group"
-          aria-label="Video abspielen"
+          aria-label={t('landing.playVideo')}
         >
           <img
             src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
-            alt="Vorschaubild: So funktioniert's"
+            alt={t('landing.videoTitle')}
             loading="lazy"
             className="absolute inset-0 w-full h-full object-cover"
           />
@@ -112,6 +114,7 @@ function YouTubeEmbed({ videoId }: { videoId: string }) {
  * ──────────────────────────────────────────────────────────────────────── */
 
 export function Landing() {
+  const { t } = useTranslation();
   return (
     <div className="min-h-screen bg-white font-sans text-slate-700 text-[18px] leading-relaxed">
       <main>
@@ -124,11 +127,11 @@ export function Landing() {
             </div>
 
             <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-slate-900 mb-5 leading-[1.15]">
-              Ihre Kleinanzeigen. Automatisch immer oben.
+              {t('landing.heroTitle')}
             </h1>
 
             <p className="text-lg sm:text-xl text-slate-600 mb-8 leading-relaxed">
-              AnzeigenBoost veröffentlicht Ihre Anzeigen neu und schreibt bessere Texte mit KI – mit einem Klick.
+              {t('landing.heroSubtitle')}
             </p>
 
             <a
@@ -138,17 +141,17 @@ export function Landing() {
               className="inline-flex items-center justify-center gap-3 bg-[#A8C300] hover:bg-[#96ae00] text-white font-bold py-4 px-8 rounded-full text-lg shadow-sm transition-colors"
             >
               <ChromeIcon className="w-6 h-6 shrink-0" />
-              Kostenlos im Chrome Web Store
+              {t('landing.ctaButton')}
             </a>
 
-            <p className="text-base text-slate-400 mt-4">Kostenlos starten · Keine Kreditkarte nötig</p>
+            <p className="text-base text-slate-400 mt-4">{t('landing.ctaSubtext')}</p>
           </div>
         </section>
 
         {/* 2. VIDEO */}
         <section className="pb-16 px-4 sm:px-6">
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 text-center mb-6">
-            So funktioniert's – in 60 Sekunden
+            {t('landing.videoTitle')}
           </h2>
           <YouTubeEmbed videoId={YOUTUBE_VIDEO_ID} />
         </section>
@@ -160,28 +163,28 @@ export function Landing() {
               <div className="w-14 h-14 rounded-full bg-[#A8C300]/10 text-[#A8C300] flex items-center justify-center mx-auto mb-4">
                 <RefreshCw className="w-7 h-7" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Anzeigen neu veröffentlichen</h3>
-              <p className="text-slate-600">Wieder ganz oben in den Suchergebnissen.</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">{t('landing.benefit1Title')}</h3>
+              <p className="text-slate-600">{t('landing.benefit1Text')}</p>
             </div>
             <div>
               <div className="w-14 h-14 rounded-full bg-[#A8C300]/10 text-[#A8C300] flex items-center justify-center mx-auto mb-4">
                 <Sparkles className="w-7 h-7" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">KI schreibt Ihre Texte</h3>
-              <p className="text-slate-600">Bessere Beschreibungen auf Deutsch, automatisch.</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">{t('landing.benefit2Title')}</h3>
+              <p className="text-slate-600">{t('landing.benefit2Text')}</p>
             </div>
             <div>
               <div className="w-14 h-14 rounded-full bg-[#A8C300]/10 text-[#A8C300] flex items-center justify-center mx-auto mb-4">
                 <Clock className="w-7 h-7" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Zeit sparen</h3>
-              <p className="text-slate-600">Was früher 30 Minuten dauerte, dauert jetzt 1 Klick.</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">{t('landing.benefit3Title')}</h3>
+              <p className="text-slate-600">{t('landing.benefit3Text')}</p>
             </div>
           </div>
 
           <p className="flex items-center justify-center gap-2 text-base text-slate-400 mt-10">
             <ShieldCheck className="w-4 h-4 shrink-0" />
-            Ihr Kleinanzeigen-Passwort sehen wir nie.
+            {t('landing.passwordNote')}
           </p>
         </section>
       </main>
@@ -204,13 +207,13 @@ export function Landing() {
           <SupportMe />
 
           <nav className="flex items-center gap-4 text-sm text-slate-500">
-            <Link to="/impressum" className="hover:text-slate-800">Impressum</Link>
+            <Link to="/impressum" className="hover:text-slate-800">{t('landing.impressum')}</Link>
             <span className="text-slate-300">·</span>
-            <Link to="/datenschutz" className="hover:text-slate-800">Datenschutz</Link>
+            <Link to="/datenschutz" className="hover:text-slate-800">{t('landing.datenschutz')}</Link>
           </nav>
 
           <p className="text-xs text-slate-400 max-w-md leading-relaxed">
-            AnzeigenBoost ist ein unabhängiges Projekt und steht in keiner Verbindung zur Kleinanzeigen GmbH.
+            {t('landing.disclaimer')}
           </p>
         </div>
       </footer>

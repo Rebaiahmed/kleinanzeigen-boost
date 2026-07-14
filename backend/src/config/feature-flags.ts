@@ -15,6 +15,7 @@ export interface FeatureFlags {
   enableDisclaimer: boolean;
   enableWettbewerb: boolean;
   enableCredits: boolean;
+  enableI18n: boolean;
 }
 
 function parseEnvBool(value: string | undefined, defaultVal: boolean): boolean {
@@ -52,6 +53,10 @@ export const FEATURE_FLAGS: FeatureFlags = {
   // Flipping this on while MONETIZATION_ENABLED stays off is a valid soft-launch
   // state (unlimited monthly quota, but credits still meter/charge per action).
   enableCredits: parseEnvBool(process.env.ENABLE_CREDITS, false),
+  // EN/DE i18n toggle — default ON. German remains the always-available
+  // default language regardless of this flag; this only gates whether the
+  // DE|EN toggle UI is rendered at all.
+  enableI18n: parseEnvBool(process.env.FEATURE_I18N_ENABLED, true),
 };
 
 /**

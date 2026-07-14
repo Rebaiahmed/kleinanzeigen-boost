@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, Sparkles, RefreshCw, Check, Loader2, AlertCircle } from 'lucide-react';
 import { PriceSuggestion } from './PriceSuggestion';
 import { isGiveAwayAd } from '../../lib/adPrice';
@@ -60,6 +61,7 @@ export function KiPanel({
   onApplyAll,
   onPriceCheck,
 }: KiPanelProps) {
+  const { t } = useTranslation();
   return (
     <div
       className={`fixed top-0 right-0 h-full bg-white shadow-2xl z-[60] transition-transform duration-300 ease-in-out border-l border-[#e5e5e5] flex flex-col ${
@@ -70,9 +72,9 @@ export function KiPanel({
       <div className="px-5 py-4 border-b border-[#e5e5e5] flex justify-between items-center bg-[#F9FAFB]">
         <div className="flex items-center gap-2 text-green-700 font-bold text-[16px]">
           <Sparkles className="w-5 h-5 text-green-600 animate-pulse" />
-          <span>KI-Optimierung</span>
+          <span>{t('kiPanel.title')}</span>
           <span
-            title={geminiHealth === 'ok' ? 'Gemini verbunden' : geminiHealth === 'error' ? 'Gemini nicht erreichbar' : 'Verbindung wird geprüft...'}
+            title={geminiHealth === 'ok' ? t('kiPanel.geminiConnected') : geminiHealth === 'error' ? t('kiPanel.geminiError') : t('kiPanel.geminiChecking')}
             className={`w-2.5 h-2.5 rounded-full ml-1 transition-colors ${
               geminiHealth === 'ok' ? 'bg-green-400' :
               geminiHealth === 'error' ? 'bg-red-400 animate-pulse' :
@@ -83,8 +85,8 @@ export function KiPanel({
         <button
           onClick={onClose}
           className="text-gray-500 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-full transition-all duration-200 cursor-pointer flex items-center justify-center border border-transparent hover:border-red-200"
-          aria-label="Schließen"
-          title="Schließen"
+          aria-label={t('kiPanel.close')}
+          title={t('kiPanel.close')}
         >
           <X className="w-[20px] h-[20px]" />
         </button>
@@ -97,7 +99,7 @@ export function KiPanel({
         'bg-gray-50 border-[#e5e5e5]'
       }`}>
         <span className={`font-medium whitespace-nowrap ${isBlocked ? 'text-red-600' : isWarning ? 'text-yellow-700' : 'text-gray-500'}`}>
-          {isBlocked ? '🚫 Limit erreicht' : isWarning ? `⚠️ Noch ${remaining} übrig` : `✨ ${remaining} von ${limit} verfügbar`}
+          {isBlocked ? t('kiPanel.limitReached') : isWarning ? t('kiPanel.remainingWarning', { remaining }) : t('kiPanel.available', { remaining, limit })}
         </span>
         <div className="flex-1 bg-gray-200 rounded-full h-1.5 overflow-hidden">
           <div
@@ -112,13 +114,13 @@ export function KiPanel({
       <div className="flex-1 overflow-y-auto p-5 space-y-6">
         {loadedFromCache && panelData && !isPanelLoading && (
           <div className="bg-blue-50 border border-blue-200 text-blue-850 text-[12px] p-2.5 rounded-sm flex items-center justify-between gap-2 shadow-xxs">
-            <span>KI-Vorschlag aus Cache geladen.</span>
+            <span>{t('kiPanel.loadedFromCache')}</span>
             <button
               onClick={() => panelAd && onStartOptimization(panelAd, true)}
               className="text-blue-700 hover:text-blue-900 font-bold hover:underline shrink-0 flex items-center gap-1 cursor-pointer"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              <span>Neu generieren</span>
+              <span>{t('kiPanel.regenerate')}</span>
             </button>
           </div>
         )}
@@ -185,10 +187,10 @@ export function KiPanel({
             </div>
             <div className="px-4">
               <p className="text-[14px] font-semibold text-gray-800 mb-1">
-                KI-Optimierung fehlgeschlagen
+                {t('kiPanel.optimizationFailed')}
               </p>
               <p className="text-[12px] text-gray-500 leading-relaxed">
-                Der Server ist ausgelastet. Bitte klicke auf 'Erneut versuchen' oder passe deine Beschreibung an.
+                {t('kiPanel.serverBusy')}
               </p>
             </div>
             <button
@@ -196,7 +198,7 @@ export function KiPanel({
               className="flex items-center gap-1.5 px-4 py-2 bg-[#A8C300] hover:bg-[#96ae00] text-white font-semibold text-[13px] rounded-sm transition-colors"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              Erneut versuchen
+              {t('kiPanel.retry')}
             </button>
           </div>
         ) : (
@@ -205,12 +207,12 @@ export function KiPanel({
               {/* Section One: Title Comparison */}
               <div className="space-y-3">
                 <h4 className="text-[13px] font-bold text-gray-800 uppercase tracking-wider border-b border-gray-100 pb-1">
-                  Anzeigentitel
+                  {t('kiPanel.adTitle')}
                 </h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <span className="inline-block text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-sm uppercase">
-                      Aktuell
+                      {t('kiPanel.current')}
                     </span>
                     <p
                       className="text-[12px] text-gray-500 break-words leading-snug line-clamp-4"
@@ -219,7 +221,7 @@ export function KiPanel({
                   </div>
                   <div className="space-y-1">
                     <span className="inline-block text-[10px] font-bold bg-green-50 text-green-700 border border-green-200 px-1.5 py-0.5 rounded-sm uppercase">
-                      KI-Vorschlag
+                      {t('kiPanel.aiSuggestion')}
                     </span>
                     <p className="text-[12px] font-semibold text-gray-800 break-words leading-snug">
                       {panelData.improvedTitle}
@@ -230,7 +232,7 @@ export function KiPanel({
                 {appliedTitle ? (
                   <div className="w-full flex items-center justify-center gap-1.5 bg-green-50 border border-green-200 text-green-700 py-1.5 rounded-sm text-[13px] font-medium">
                     <Check className="w-4 h-4" />
-                    <span>Kopiert!</span>
+                    <span>{t('kiPanel.copied')}</span>
                   </div>
                 ) : (
                   <button
@@ -239,7 +241,7 @@ export function KiPanel({
                     className="w-full bg-[#f2f2f2] hover:bg-[#e6e6e6] border border-[#ccc] text-[#333] font-semibold py-1.5 rounded-sm text-[13px] transition-colors flex items-center justify-center gap-1"
                   >
                     {isApplyingTitle && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                    <span>📋 Kopieren</span>
+                    <span>{t('kiPanel.copy')}</span>
                   </button>
                 )}
               </div>
@@ -247,20 +249,20 @@ export function KiPanel({
               {/* Section Two: Description Comparison */}
               <div className="space-y-3">
                 <h4 className="text-[13px] font-bold text-gray-800 uppercase tracking-wider border-b border-gray-100 pb-1">
-                  Beschreibung
+                  {t('kiPanel.description')}
                 </h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <span className="inline-block text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-sm uppercase">
-                      Aktuell
+                      {t('kiPanel.current')}
                     </span>
                     <div className="text-[11px] text-gray-500 leading-relaxed overflow-y-auto max-h-[140px] break-words pr-1">
-                      {panelAd?.description || 'Keine Beschreibung vorhanden'}
+                      {panelAd?.description || t('kiPanel.noDescription')}
                     </div>
                   </div>
                   <div className="space-y-1">
                     <span className="inline-block text-[10px] font-bold bg-green-50 text-green-700 border border-green-200 px-1.5 py-0.5 rounded-sm uppercase">
-                      KI-Vorschlag
+                      {t('kiPanel.aiSuggestion')}
                     </span>
                     <div className="text-[11px] font-medium text-gray-800 leading-relaxed overflow-y-auto max-h-[140px] break-words pr-1">
                       {panelData.improvedDescription}
@@ -271,7 +273,7 @@ export function KiPanel({
                 {appliedDescription ? (
                   <div className="w-full flex items-center justify-center gap-1.5 bg-green-50 border border-green-200 text-green-700 py-1.5 rounded-sm text-[13px] font-medium">
                     <Check className="w-4 h-4" />
-                    <span>Kopiert!</span>
+                    <span>{t('kiPanel.copied')}</span>
                   </div>
                 ) : (
                   <button
@@ -280,7 +282,7 @@ export function KiPanel({
                     className="w-full bg-[#f2f2f2] hover:bg-[#e6e6e6] border border-[#ccc] text-[#333] font-semibold py-1.5 rounded-sm text-[13px] transition-colors flex items-center justify-center gap-1"
                   >
                     {isApplyingDescription && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                    <span>📋 Kopieren</span>
+                    <span>{t('kiPanel.copy')}</span>
                   </button>
                 )}
               </div>
@@ -298,7 +300,7 @@ export function KiPanel({
               {panelAd && !isGiveAwayAd(panelAd) && (
                 <div className="border-t border-gray-100 pt-4">
                   <p className="text-[12px] font-bold text-gray-600 uppercase tracking-wider mb-2">
-                    💶 Preisvorschlag
+                    {t('kiPanel.priceSuggestion')}
                   </p>
                   <PriceSuggestion
                     adId={panelAd.id}
@@ -323,14 +325,14 @@ export function KiPanel({
             className="w-full bg-[#A8C300] hover:bg-[#96ae00] text-white font-bold py-2 rounded-sm text-[13px] transition-colors flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
           >
             {isApplyingAll && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            <span>📋 Alles kopieren (Titel + Beschreibung)</span>
+            <span>{t('kiPanel.copyAll')}</span>
           </button>
           <button
             onClick={() => panelAd && onStartOptimization(panelAd, true)}
             className="w-full bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 font-semibold py-2 rounded-sm text-[13px] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5 text-gray-500" />
-            <span>Neu generieren</span>
+            <span>{t('kiPanel.regenerate')}</span>
           </button>
         </div>
       )}

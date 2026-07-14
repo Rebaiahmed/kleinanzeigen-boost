@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ReplyTemplate, ReplyTemplatesApi } from '../../api/reply-templates';
 import { Copy, Plus, Trash2, Edit2, CheckCircle2, Loader2, X, Wand2 } from 'lucide-react';
 import { AiTemplateModal } from './AiTemplateModal';
@@ -9,6 +10,9 @@ import { AiTemplateModal } from './AiTemplateModal';
 // injects VITE_API_URL. Default-on avoids that footgun.)
 const AI_TEMPLATES_ENABLED = (import.meta as any).env.VITE_FEATURE_AI_TEMPLATES !== 'false';
 
+// Starter template content is real marketplace chat copy for the German
+// Kleinanzeigen platform — it stays German regardless of the dashboard's
+// UI language, same as the rest of the reposting/AI copy the app writes.
 const STARTER_TEMPLATES = [
   { icon: '📦', title: 'Verfügbarkeit', content: 'Ja, der Artikel ist noch verfügbar! Bei Interesse gerne melden.' },
   { icon: '📮', title: 'Versand', content: 'Versand ist möglich. Die Versandkosten trägt der Käufer. Zahlung per PayPal oder Überweisung.' },
@@ -26,6 +30,7 @@ function getToken() {
 const ICON_OPTIONS = ['💬', '📦', '📮', '💰', '📏', '🚚', '✅', '🙏', '⏰', '🔔'];
 
 export function ReplyTemplatesList() {
+  const { t } = useTranslation();
   const [templates, setTemplates] = useState<ReplyTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -87,14 +92,14 @@ export function ReplyTemplatesList() {
       closeForm();
       await load();
     } catch (e: any) {
-      setFormError(e.message || 'Fehler beim Speichern');
+      setFormError(e.message || t('replyTemplates.saveError'));
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Vorlage wirklich löschen?')) return;
+    if (!confirm(t('replyTemplates.confirmDelete'))) return;
     try {
       await ReplyTemplatesApi.delete(id);
       setTemplates(prev => prev.filter(t => t.id !== id));
@@ -135,10 +140,10 @@ export function ReplyTemplatesList() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
         <div>
           <h2 className="text-xl font-bold text-[#333] flex items-center gap-2">
-            📋 Meine Antwort-Vorlagen
+            {t('replyTemplates.heading')}
           </h2>
           <p className="text-[13px] text-gray-500 mt-0.5">
-            Kopiere eine Vorlage und füge sie direkt im Kleinanzeigen-Chat ein.
+            {t('replyTemplates.subheading')}
           </p>
         </div>
 
@@ -149,7 +154,7 @@ export function ReplyTemplatesList() {
               className="inline-flex items-center gap-2 border border-[#A8C300] text-[#A8C300] hover:bg-[#A8C300] hover:text-white font-semibold py-2 px-4 rounded text-[13px] transition-colors"
             >
               <Wand2 className="w-4 h-4" />
-              KI-Vorlagen
+              {t('replyTemplates.aiTemplates')}
             </button>
           )}
           <button
@@ -157,7 +162,7 @@ export function ReplyTemplatesList() {
             className="inline-flex items-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] text-white font-semibold py-2 px-4 rounded text-[13px] transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" />
-            Neue Vorlage
+            {t('replyTemplates.newTemplate')}
           </button>
         </div>
       </div>
@@ -168,7 +173,7 @@ export function ReplyTemplatesList() {
         <div className="mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-[14px] font-bold text-gray-800">
-              {editingId ? 'Vorlage bearbeiten' : 'Neue Vorlage erstellen'}
+              {editingId ? t('replyTemplates.editTemplate') : t('replyTemplates.createTemplate')}
             </h3>
             <button onClick={closeForm} className="text-gray-400 hover:text-gray-600">
               <X className="w-4 h-4" />
@@ -177,7 +182,7 @@ export function ReplyTemplatesList() {
 
           {/* Icon picker */}
           <div className="mb-3">
-            <label className="block text-[12px] font-semibold text-gray-600 mb-1.5">Icon</label>
+            <label className="block text-[12px] font-semibold text-gray-600 mb-1.5">{t('replyTemplates.icon')}</label>
             <div className="flex flex-wrap gap-1.5">
               {ICON_OPTIONS.map(icon => (
                 <button
@@ -198,12 +203,12 @@ export function ReplyTemplatesList() {
 
           {/* Title */}
           <div className="mb-3">
-            <label className="block text-[12px] font-semibold text-gray-600 mb-1">Titel</label>
+            <label className="block text-[12px] font-semibold text-gray-600 mb-1">{t('replyTemplates.titleLabel')}</label>
             <input
               type="text"
               value={formData.title}
               onChange={e => setFormData(f => ({ ...f, title: e.target.value }))}
-              placeholder="z.B. Verfügbarkeit, Versand, Preis…"
+              placeholder={t('replyTemplates.titlePlaceholder')}
               maxLength={60}
               className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#A8C300]"
             />
@@ -211,11 +216,11 @@ export function ReplyTemplatesList() {
 
           {/* Content */}
           <div className="mb-4">
-            <label className="block text-[12px] font-semibold text-gray-600 mb-1">Text (wird kopiert)</label>
+            <label className="block text-[12px] font-semibold text-gray-600 mb-1">{t('replyTemplates.contentLabel')}</label>
             <textarea
               value={formData.content}
               onChange={e => setFormData(f => ({ ...f, content: e.target.value }))}
-              placeholder="Ja, der Artikel ist noch verfügbar! Bei Interesse gerne melden."
+              placeholder={t('replyTemplates.contentPlaceholder')}
               rows={4}
               className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#A8C300] resize-none"
             />
@@ -230,7 +235,7 @@ export function ReplyTemplatesList() {
               onClick={closeForm}
               className="px-4 py-2 text-[13px] font-medium text-gray-600 hover:text-gray-800 transition-colors"
             >
-              Abbrechen
+              {t('replyTemplates.cancel')}
             </button>
             <button
               onClick={handleSave}
@@ -238,7 +243,7 @@ export function ReplyTemplatesList() {
               className="inline-flex items-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold py-2 px-4 rounded text-[13px] transition-colors"
             >
               {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Speichern
+              {t('replyTemplates.save')}
             </button>
           </div>
         </div>
@@ -263,9 +268,9 @@ export function ReplyTemplatesList() {
         <div className="space-y-4">
           {/* Starter templates CTA */}
           <div className="border border-dashed border-[#A8C300]/50 bg-green-50/30 rounded-lg p-5">
-            <p className="text-[14px] font-semibold text-gray-700 mb-1">🚀 Schnellstart mit 5 fertigen Vorlagen</p>
+            <p className="text-[14px] font-semibold text-gray-700 mb-1">{t('replyTemplates.quickStartTitle')}</p>
             <p className="text-[13px] text-gray-500 mb-4">
-              Verfügbarkeit, Versand, Preis, Details & Abholung — sofort einsatzbereit, jederzeit anpassbar.
+              {t('replyTemplates.quickStartSubtitle')}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 mb-4">
               {STARTER_TEMPLATES.map(t => (
@@ -280,12 +285,12 @@ export function ReplyTemplatesList() {
               disabled={isAddingStarter}
               className="inline-flex items-center gap-2 bg-[#A8C300] hover:bg-[#96ae00] disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold py-2 px-5 rounded text-[13px] transition-colors"
             >
-              {isAddingStarter ? <><Loader2 className="w-4 h-4 animate-spin" /> Wird hinzugefügt…</> : '+ Alle 5 Vorlagen hinzufügen'}
+              {isAddingStarter ? <><Loader2 className="w-4 h-4 animate-spin" /> {t('replyTemplates.addingStarters')}</> : t('replyTemplates.addAllStarters')}
             </button>
           </div>
 
           <div className="text-center py-4 text-[13px] text-gray-400">
-            oder <button onClick={openCreate} className="text-[#A8C300] hover:underline font-medium">eigene Vorlage erstellen</button>
+            {t('replyTemplates.orCreateOwn')} <button onClick={openCreate} className="text-[#A8C300] hover:underline font-medium">{t('replyTemplates.createOwnTemplate')}</button>
           </div>
         </div>
         )
@@ -305,14 +310,14 @@ export function ReplyTemplatesList() {
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => openEdit(template)}
-                    title="Bearbeiten"
+                    title={t('replyTemplates.edit')}
                     className="p-1.5 text-gray-400 hover:text-[#A8C300] hover:bg-green-50 rounded transition-colors"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => handleDelete(template.id!)}
-                    title="Löschen"
+                    title={t('replyTemplates.delete')}
                     className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -335,16 +340,16 @@ export function ReplyTemplatesList() {
                 }`}
               >
                 {copiedId === template.id ? (
-                  <><CheckCircle2 className="w-4 h-4" /> Kopiert!</>
+                  <><CheckCircle2 className="w-4 h-4" /> {t('replyTemplates.copied')}</>
                 ) : (
-                  <><Copy className="w-4 h-4" /> Kopieren</>
+                  <><Copy className="w-4 h-4" /> {t('replyTemplates.copy')}</>
                 )}
               </button>
 
               {/* Copy count badge */}
               {template.copyCount > 0 && (
                 <p className="text-[10px] text-gray-400 text-center mt-1.5">
-                  {template.copyCount}× verwendet
+                  {t('replyTemplates.usedTimes', { count: template.copyCount })}
                 </p>
               )}
             </div>
@@ -355,7 +360,7 @@ export function ReplyTemplatesList() {
       {/* Footer tip */}
       {templates.length > 0 && (
         <p className="text-[12px] text-gray-400 mt-5 text-center">
-          Klicke auf <strong>Kopieren</strong> und füge den Text mit <kbd className="px-1 py-0.5 bg-gray-100 rounded border border-gray-200 font-mono text-[11px]">Strg+V</kbd> direkt im Kleinanzeigen-Chat ein.
+          {t('replyTemplates.footerTipBefore')} <strong>{t('replyTemplates.copy')}</strong> {t('replyTemplates.footerTipAfter')} <kbd className="px-1 py-0.5 bg-gray-100 rounded border border-gray-200 font-mono text-[11px]">Strg+V</kbd> {t('replyTemplates.footerTipEnd')}
         </p>
       )}
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Sparkles,
   Eye,
@@ -61,32 +62,31 @@ const EbayLogo = () => (
   </svg>
 );
 
-const DE_DAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
-
 // Recurring repost intervals (minutes). Runs again every interval — client-side
 // when the browser is open, server-side fallback when it's closed.
 // Manual mode intervals (5/10min removed — ineffective + bot-like). Smart Repost
 // is the recommended default; these are the "advanced" fallback.
 const MANUAL_INTERVAL_OPTIONS = [
-  { label: '24 Std', value: 1440 },
-  { label: '3 Tage', value: 4320 },
-  { label: '7 Tage', value: 10080 },
+  { labelKey: 'interval24h', value: 1440 },
+  { labelKey: 'interval3d', value: 4320 },
+  { labelKey: 'interval7d', value: 10080 },
 ];
 
-/** Human-friendly "next repost" label. */
-function formatNextRepostGerman(nextRepostAt: string | null, autoRepost: boolean): string {
-  if (!autoRepost || !nextRepostAt) return 'Kein Zeitplan';
+/** Human-friendly "next repost" label, locale-aware. */
+function formatNextRepost(nextRepostAt: string | null, autoRepost: boolean, t: (key: string, opts?: any) => string, locale: string): string {
+  if (!autoRepost || !nextRepostAt) return t('adCard.noSchedule');
   const date = new Date(nextRepostAt);
   const now = new Date();
   // Past due: the scheduled time has passed but it hasn't reposted yet (e.g. the
   // browser is closed, so the server fallback handles it within ~15 min). Showing
   // the stale past time as "Nächster" looks broken — show a pending state instead.
-  if (date.getTime() <= now.getTime()) return 'Fällig – wird in Kürze verarbeitet';
-  const timeStr = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-  if (date.toDateString() === now.toDateString()) return `Heute ${timeStr}`;
+  if (date.getTime() <= now.getTime()) return t('adCard.duePending');
+  const localeCode = locale === 'en' ? 'en-US' : 'de-DE';
+  const timeStr = date.toLocaleTimeString(localeCode, { hour: '2-digit', minute: '2-digit' });
+  if (date.toDateString() === now.toDateString()) return t('adCard.todayAt', { time: timeStr });
   const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
-  if (date.toDateString() === tomorrow.toDateString()) return `Morgen ${timeStr}`;
-  return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  if (date.toDateString() === tomorrow.toDateString()) return t('adCard.tomorrowAt', { time: timeStr });
+  return date.toLocaleDateString(localeCode, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
 function calculateActiveDays(ad: any): number {
@@ -152,6 +152,7 @@ export function AdCard({
   repostBusy = false,
   repostQueuePosition = 0,
 }: AdCardProps) {
+  const { t, i18n } = useTranslation();
   const flags = useFeatureFlags();
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [showEbayConfirm, setShowEbayConfirm] = useState(false);
@@ -171,9 +172,9 @@ export function AdCard({
   // State is refreshed on every sync, so this clears when a reservation is lifted.
   const repostLocked = ad.listingState === 'reserved' || ad.listingState === 'paused' || ad.listingState === 'deleted';
   const repostLockedLabel =
-    ad.listingState === 'reserved' ? 'reserviert'
-    : ad.listingState === 'paused' ? 'pausiert'
-    : 'gelöscht';
+    ad.listingState === 'reserved' ? t('adCard.repostLockedReserved')
+    : ad.listingState === 'paused' ? t('adCard.repostLockedPaused')
+    : t('adCard.repostLockedDeleted');
 
   const ebayConnected = isEbayConnected ?? false;
   const isEbayPosted = !!ad.ebayListingId || !!ad.ebayUrl;
@@ -196,11 +197,11 @@ export function AdCard({
     try {
       const res = await onEbayCrossPost(ad.id);
       if (!res.success) {
-        setEbayError(res.error || 'Fehler beim Posten auf eBay.');
+        setEbayError(res.error || t('adCard.ebayPostError'));
         setTimeout(() => setEbayError(null), 6000);
       }
     } catch (err) {
-      setEbayError('Netzwerkfehler beim eBay-Posting.');
+      setEbayError(t('adCard.ebayNetworkError'));
       setTimeout(() => setEbayError(null), 6000);
     } finally {
       setIsPostingEbay(false);
@@ -281,7 +282,7 @@ export function AdCard({
   const confirmRepostWarning = () => {
     const action = confirmRepostAction;
     setConfirmRepostAction(null);
-    if (action === 'instant') onAction('repost', ad.id, 'Repost wird ausgeführt…');
+    if (action === 'instant') onAction('repost', ad.id, t('adCard.repostRunningAction'));
     else if (action === 'schedule') void doSaveSchedule();
   };
 
@@ -314,16 +315,16 @@ export function AdCard({
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
           ) : (
-            <span className="text-[#bbb] text-[11px]">Kein Bild</span>
+            <span className="text-[#bbb] text-[11px]">{t('adCard.noImage')}</span>
           )}
           {ad.listingState === 'reserved' && (
             <span className="absolute bottom-1 left-1 text-[9px] font-bold uppercase tracking-wide text-white bg-orange-500/90 px-1.5 py-0.5 rounded-sm">
-              Reserviert
+              {t('adCard.reserved')}
             </span>
           )}
           {ad.listingState === 'deleted' && (
             <span className="absolute bottom-1 left-1 text-[9px] font-bold uppercase tracking-wide text-white bg-red-500/90 px-1.5 py-0.5 rounded-sm">
-              Gelöscht
+              {t('adCard.deleted')}
             </span>
           )}
         </div>
@@ -353,56 +354,56 @@ export function AdCard({
         {/* Top: Header, Price & Status Badge */}
         <div>
           <div className="flex justify-between items-center gap-2 mb-1">
-            <span className="text-[11px] font-semibold text-[#999] uppercase tracking-wide">Optionen</span>
+            <span className="text-[11px] font-semibold text-[#999] uppercase tracking-wide">{t('adCard.options')}</span>
             <span className="text-[14px] font-bold text-[#333]" dangerouslySetInnerHTML={{ __html: ad.price }} />
           </div>
 
           <div className="flex items-center gap-1 flex-wrap">
             {ad.status === 'Aktiv' && (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-green-50 text-green-700 px-2 py-0.5 rounded-full border border-green-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Aktiv
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> {t('adCard.active')}
               </span>
             )}
             {ad.status === 'Pausiert' && (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-gray-50 text-gray-600 px-2 py-0.5 rounded-full border border-gray-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> Pausiert
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> {t('adCard.paused')}
               </span>
             )}
             {ad.status === 'Reserviert' && (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full border border-orange-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-orange-500" /> Reserviert
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-500" /> {t('adCard.reserved')}
               </span>
             )}
             {ad.status === 'pending' && (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded-full border border-yellow-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" /> Entwurf
+                <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" /> {t('adCard.draft')}
               </span>
             )}
             {/* Live state synced from Kleinanzeigen */}
             {ad.listingState === 'reserved' && (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full border border-orange-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-orange-500" /> Reserviert
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-500" /> {t('adCard.reserved')}
               </span>
             )}
             {ad.listingState === 'paused' && (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-gray-50 text-gray-600 px-2 py-0.5 rounded-full border border-gray-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> Pausiert
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> {t('adCard.paused')}
               </span>
             )}
             {ad.listingState === 'deleted' && (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-red-50 text-red-600 px-2 py-0.5 rounded-full border border-red-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Gelöscht
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> {t('adCard.deleted')}
               </span>
             )}
             {/* Repost queue state */}
             {repostState === 'running' && (
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-[#A8C300]/10 text-[#6f8f00] px-2 py-0.5 rounded-full border border-[#A8C300]/40">
-                <Loader2 className="w-3 h-3 animate-spin" /> Läuft…
+                <Loader2 className="w-3 h-3 animate-spin" /> {t('adCard.running')}
               </span>
             )}
             {repostState === 'queued' && (
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200">
-                ⏳ In Warteschlange{repostQueuePosition > 0 ? ` (#${repostQueuePosition})` : ''}
+                ⏳ {repostQueuePosition > 0 ? t('adCard.queuedPosition', { position: repostQueuePosition }) : t('adCard.queuedNoPosition')}
               </span>
             )}
           </div>
@@ -423,14 +424,14 @@ export function AdCard({
               onChange={() => {
                 if (repostState !== 'idle' || repostLocked) return;
                 if (hasStatsToLose) setConfirmRepostAction('instant');
-                else onAction('repost', ad.id, 'Repost wird ausgeführt…');
+                else onAction('repost', ad.id, t('adCard.repostRunningAction'));
               }}
             />
             <div className="text-[12px]">
-              <span className={`block font-semibold transition-colors ${repostLocked ? 'text-gray-400' : 'text-[#333] group-hover:text-ka-green'}`}>Jetzt neu einstellen</span>
+              <span className={`block font-semibold transition-colors ${repostLocked ? 'text-gray-400' : 'text-[#333] group-hover:text-ka-green'}`}>{t('adCard.repostNow')}</span>
               {repostLocked ? (
                 <span className="text-[12px] block text-orange-600 font-medium">
-                  ⏸ Pausiert — Anzeige ist {repostLockedLabel}
+                  {t('adCard.pausedListing', { state: repostLockedLabel })}
                 </span>
               ) : ad.repostDisabledReason ? (
                 <span title={ad.repostDisabledReason} className="text-[12px] block text-red-600 font-medium">
@@ -439,10 +440,10 @@ export function AdCard({
               ) : (
                 <span className="text-[12px] block text-[#888]">
                   {repostState === 'running'
-                    ? 'Läuft… wird neu eingestellt'
+                    ? t('adCard.repostRunning')
                     : repostState === 'queued'
-                    ? `In Warteschlange${repostQueuePosition > 0 ? ` (#${repostQueuePosition})` : ''}`
-                    : 'Einmalig — stellt die Anzeige wieder ganz nach oben'}
+                    ? (repostQueuePosition > 0 ? t('adCard.queuedPosition', { position: repostQueuePosition }) : t('adCard.queuedNoPosition'))
+                    : t('adCard.repostOnce')}
                 </span>
               )}
 
@@ -450,20 +451,21 @@ export function AdCard({
               <div className="mt-1 space-y-0.5 text-[11px] text-gray-550">
                 {(() => {
                   const count = ad.trackedRepostsCount || 0;
+                  const days = t('adCard.days', { returnObjects: true }) as string[];
                   if (count === 0) {
-                    return <div className="text-gray-400 italic">Führe deinen ersten Repost durch</div>;
+                    return <div className="text-gray-400 italic">{t('adCard.firstRepost')}</div>;
                   } else if (count < 3) {
                     const viewsGained = ad.lastRepostViewsGained !== undefined ? ad.lastRepostViewsGained : 0;
-                    return <div className="font-medium text-gray-700">📊 Letzter Repost: +{viewsGained} Aufrufe in 24h</div>;
+                    return <div className="font-medium text-gray-700">{t('adCard.lastRepostGain', { views: viewsGained })}</div>;
                   } else if (count < 5) {
-                    const bestDay = ad.bestDayBisher || 'Donnerstag';
+                    const bestDay = ad.bestDayBisher || days[4];
                     const bestHour = ad.bestHourBisher ?? 19;
-                    return <div className="font-medium text-gray-700">📈 Beste Zeit (Tipp): {bestDay}, {String(bestHour).padStart(2, '0')}:00 Uhr ({count} Reposts)</div>;
+                    return <div className="font-medium text-gray-700">{t('adCard.bestTimeTip', { day: bestDay, hour: `${String(bestHour).padStart(2, '0')}:00`, count })}</div>;
                   } else {
                     const suggestedDay = ad.aiSuggestedRepostDay ?? 4;
                     const suggestedHour = ad.aiSuggestedRepostHour ?? 19;
                     const improvement = ad.aiSuggestedImprovementPercent || 47;
-                    return <div className="font-semibold text-green-700">🎯 KI-Tipp: {DE_DAYS[suggestedDay] || 'Donnerstag'}, {String(suggestedHour).padStart(2, '0')}:00 Uhr wäre eine gute Zeit (+{improvement}% mehr Aufrufe)</div>;
+                    return <div className="font-semibold text-green-700">{t('adCard.aiTip', { day: days[suggestedDay] || days[4], hour: `${String(suggestedHour).padStart(2, '0')}:00`, improvement })}</div>;
                   }
                 })()}
               </div>
@@ -482,20 +484,21 @@ export function AdCard({
             >
               <span className="flex items-center gap-1 min-w-0">
                 <Clock className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Automatisch wiederholen</span>
+                <span className="truncate">{t('adCard.autoRepeat')}</span>
               </span>
               {localAutoRepost ? (
                 (() => {
                   const due = !!localNextRepostAt && new Date(localNextRepostAt).getTime() <= Date.now();
+                  const formatted = formatNextRepost(localNextRepostAt, true, t, i18n.language);
                   return (
                     <span className={`text-[11px] font-medium shrink-0 ${due ? 'text-[#c2620a]' : 'text-[#6f8f00]'}`}>
-                      {due ? formatNextRepostGerman(localNextRepostAt, true) : `Nächster: ${formatNextRepostGerman(localNextRepostAt, true)}`}
+                      {due ? formatted : t('adCard.nextRepost', { time: formatted })}
                     </span>
                   );
                 })()
               ) : (
                 <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 border border-gray-200 rounded-full px-2 py-0.5 shrink-0">
-                  Aus
+                  {t('adCard.off')}
                 </span>
               )}
             </button>
@@ -503,7 +506,7 @@ export function AdCard({
             {scheduleOpen && (
               <div className="absolute right-0 top-full mt-1 w-[19rem] bg-white border border-[#d4d4d4] shadow-lg rounded-sm p-3 z-40 text-left">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wide">Repost-Modus</span>
+                  <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wide">{t('adCard.repostMode')}</span>
                   <button type="button" onClick={() => setScheduleOpen(false)} className="text-gray-400 hover:text-gray-600">
                     <X className="w-4 h-4" />
                   </button>
@@ -512,16 +515,14 @@ export function AdCard({
                 {/* One-time "what changed" callout */}
                 {showSmartCallout && (
                   <div className="relative bg-[#f2f7e6] border border-[#d4e39a] rounded-sm px-2.5 py-2 mb-3 text-[11px] text-[#5a6e00] leading-snug">
-                    <button type="button" onClick={dismissSmartCallout} aria-label="Schließen" className="absolute top-1 right-1 text-[#7a9000] hover:text-[#5a6e00]"><X className="w-3 h-3" /></button>
-                    <span className="font-semibold">Neu: Smart Repost.</span> Statt fester Intervalle
-                    postet AnzeigenBoost jetzt zur besten Uhrzeit und mit echten Änderungen. Feste
-                    Intervalle findest du weiterhin unter „Manuell".
+                    <button type="button" onClick={dismissSmartCallout} aria-label={t('adCard.close')} className="absolute top-1 right-1 text-[#7a9000] hover:text-[#5a6e00]"><X className="w-3 h-3" /></button>
+                    <span className="font-semibold">{t('adCard.smartCalloutTitle')}</span> {t('adCard.smartCalloutText')}
                   </div>
                 )}
 
                 {/* Mode toggle */}
                 <div className="grid grid-cols-2 gap-1 mb-2">
-                  {([['smart', 'Smart (empfohlen)'], ['manual', 'Manuell']] as const).map(([m, lbl]) => (
+                  {([['smart', t('adCard.smartRecommended')], ['manual', t('adCard.manual')]] as const).map(([m, lbl]) => (
                     <button key={m} type="button" onClick={() => setRepostMode(m)}
                       className={`py-1.5 text-[11px] font-semibold rounded-sm border transition-colors ${
                         repostMode === m ? 'bg-[#A8C300] text-white border-[#A8C300]' : 'bg-white text-gray-600 border-gray-200 hover:border-[#A8C300]'
@@ -532,26 +533,26 @@ export function AdCard({
                 {repostMode === 'smart' ? (
                   <div className="space-y-2 mb-3">
                     <p className="text-[11px] text-gray-500 leading-snug">
-                      Postet zur besten Uhrzeit und mit echten Änderungen — so wie es der Algorithmus belohnt.
+                      {t('adCard.smartHint')}
                     </p>
                     {/* Variations */}
                     <div className="space-y-1.5 border border-gray-100 rounded-sm p-2">
-                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Variationen (optional)</span>
-                      <input value={titleA} onChange={(e) => setTitleA(e.target.value)} placeholder="Titel-Variante A" className="w-full border border-gray-200 rounded-sm px-2 py-1 text-[11px] focus:outline-none focus:border-[#A8C300]" />
-                      <input value={titleB} onChange={(e) => setTitleB(e.target.value)} placeholder="Titel-Variante B (wechselt sich ab)" className="w-full border border-gray-200 rounded-sm px-2 py-1 text-[11px] focus:outline-none focus:border-[#A8C300]" />
+                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">{t('adCard.variationsOptional')}</span>
+                      <input value={titleA} onChange={(e) => setTitleA(e.target.value)} placeholder={t('adCard.titleVariantA')} className="w-full border border-gray-200 rounded-sm px-2 py-1 text-[11px] focus:outline-none focus:border-[#A8C300]" />
+                      <input value={titleB} onChange={(e) => setTitleB(e.target.value)} placeholder={t('adCard.titleVariantB')} className="w-full border border-gray-200 rounded-sm px-2 py-1 text-[11px] focus:outline-none focus:border-[#A8C300]" />
                       <label className="flex items-center gap-2 text-[11px] text-gray-600">
                         <input type="checkbox" checked={rotatePhotos} onChange={(e) => setRotatePhotos(e.target.checked)} className="h-3.5 w-3.5" />
-                        Fotos rotieren (1. & 2. tauschen)
+                        {t('adCard.rotatePhotos')}
                       </label>
                       <label className="flex items-center gap-2 text-[11px] text-gray-600">
-                        Preis senken um
+                        {t('adCard.lowerPriceBy')}
                         <input type="number" min={0} max={90} value={priceStep} onChange={(e) => setPriceStep(Math.max(0, Math.min(90, Number(e.target.value) || 0)))} className="w-14 border border-gray-200 rounded-sm px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-[#A8C300]" />
-                        % pro Repost
+                        {t('adCard.perRepost')}
                       </label>
                     </div>
                     {!hasVariation && (
                       <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-2 py-1 leading-snug">
-                        Tipp: Ohne Variation wird der Repost oft nicht als „neu" gewertet. Aktiviere mindestens eine.
+                        {t('adCard.noVariationTip')}
                       </p>
                     )}
                   </div>
@@ -562,11 +563,11 @@ export function AdCard({
                         <button key={opt.value} type="button" onClick={() => setSelectedInterval(opt.value)}
                           className={`py-1 text-[11px] font-semibold rounded-sm border transition-colors ${
                             selectedInterval === opt.value ? 'bg-[#A8C300] text-white border-[#A8C300]' : 'bg-white text-gray-600 border-gray-200 hover:border-[#A8C300]'
-                          }`}>{opt.label}</button>
+                          }`}>{t(`adCard.${opt.labelKey}`)}</button>
                       ))}
                     </div>
                     <div className="text-[11px] text-gray-500 bg-gray-50 border border-gray-200 rounded-sm px-2.5 py-1.5">
-                      Nächster Repost: <span className="font-semibold text-gray-700">{formatNextRepostGerman(new Date(Date.now() + selectedInterval * 60000).toISOString(), true)}</span>
+                      {t('adCard.nextRepostLabel')} <span className="font-semibold text-gray-700">{formatNextRepost(new Date(Date.now() + selectedInterval * 60000).toISOString(), true, t, i18n.language)}</span>
                     </div>
                   </div>
                 )}
@@ -575,12 +576,12 @@ export function AdCard({
                   {localAutoRepost && (
                     <button type="button" onClick={handleClearSchedule} disabled={isSavingSchedule}
                       className="px-3 py-1.5 text-[11px] font-semibold text-red-600 hover:bg-red-50 rounded-sm transition-colors">
-                      Zeitplan entfernen
+                      {t('adCard.removeSchedule')}
                     </button>
                   )}
                   <button type="button" onClick={handleSaveSchedule} disabled={isSavingSchedule}
                     className="ml-auto px-3 py-1.5 bg-[#A8C300] hover:bg-[#96ae00] disabled:bg-gray-300 text-white font-bold rounded-sm text-[11px] transition-colors">
-                    {isSavingSchedule ? 'Speichern…' : 'Speichern'}
+                    {isSavingSchedule ? t('adCard.saving') : t('adCard.save')}
                   </button>
                 </div>
               </div>
@@ -594,7 +595,7 @@ export function AdCard({
           {/* KI-Optimierung */}
           <button
             onClick={() => onAIOptimize(ad.id)}
-            title={aiBlocked ? 'Monatslimit erreicht' : aiWarning ? 'Fast am Limit' : 'KI-Optimierung'}
+            title={aiBlocked ? t('adCard.aiOptLimitReached') : aiWarning ? t('adCard.aiOptNearLimit') : t('adCard.aiOpt')}
             disabled={aiBlocked}
             className={`w-full border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors whitespace-nowrap ${
               aiBlocked
@@ -605,7 +606,7 @@ export function AdCard({
             }`}
           >
             <Sparkles className={`w-3.5 h-3.5 shrink-0 ${aiBlocked ? 'text-gray-300' : aiWarning ? 'text-yellow-500' : 'text-green-600'}`} />
-            <span>KI-Opt</span>
+            <span>{t('adCard.aiOptShort')}</span>
           </button>
 
           {/* Photo Feedback */}
@@ -624,11 +625,11 @@ export function AdCard({
               setIsLoadingPhotoFeedback(false);
             }}
             disabled={isLoadingPhotoFeedback}
-            title="Foto-Qualität analysieren (kostet 1 Analyse-Guthaben)"
+            title={t('adCard.photoCheckTitle')}
             className="w-full border rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 transition-colors whitespace-nowrap border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-50"
           >
             <span className="shrink-0">📷</span>
-            <span>{isLoadingPhotoFeedback ? 'Analysiert…' : 'Foto-Check'}</span>
+            <span>{isLoadingPhotoFeedback ? t('adCard.photoCheckAnalyzing') : t('adCard.photoCheck')}</span>
           </button>
 
           {/* Vinted — gated behind feature flag */}
@@ -636,14 +637,14 @@ export function AdCard({
             <div className="relative w-full group">
               <button
                 disabled
-                title="Vinted-Integration kommt in Kürze"
+                title={t('adCard.comingSoon')}
                 className="w-full border border-gray-200 rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 text-gray-400 bg-gray-50 cursor-not-allowed"
               >
                 <span>Vinted</span>
                 <span>🚧</span>
               </button>
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block bg-gray-800 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap z-10 pointer-events-none">
-                Vinted-Integration kommt in Kürze
+                {t('adCard.comingSoon')}
               </div>
             </div>
           )}
@@ -660,14 +661,14 @@ export function AdCard({
             <div className="relative flex-1 group">
               <button
                 disabled
-                title="eBay-Integration kommt in Kürze"
+                title={t('adCard.ebayComingSoon')}
                 className="w-full border border-gray-200 rounded-sm py-1.5 px-1 font-medium text-[11px] flex items-center justify-center gap-1 text-gray-400 bg-gray-50 cursor-not-allowed"
               >
                 <span>eBay</span>
                 <span>🚧</span>
               </button>
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block bg-gray-800 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap z-10 pointer-events-none">
-                eBay-Integration kommt in Kürze
+                {t('adCard.ebayComingSoon')}
               </div>
             </div>
           )}
@@ -680,7 +681,7 @@ export function AdCard({
             onClick={() => setIsBottomSheetOpen(true)}
             className="w-full flex justify-center items-center gap-1.5 text-[13px] font-semibold text-[#333] bg-[#f2f2f2] border border-[#ccc] hover:bg-[#e6e6e6] rounded-sm py-2 transition-colors"
           >
-            Aktionen
+            {t('adCard.actions')}
           </button>
         </div>
 
@@ -690,7 +691,7 @@ export function AdCard({
       {showAnalytics && flags.enableAnalytics && (
         <div className="border-t border-ka-green/20 bg-green-50/40 p-3">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[12px] font-semibold text-ka-green uppercase tracking-wider">📊 Repost-Performance</h3>
+            <h3 className="text-[12px] font-semibold text-ka-green uppercase tracking-wider">{t('adCard.repostPerformance')}</h3>
             <button
               onClick={() => setShowAnalytics(false)}
               className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -702,22 +703,22 @@ export function AdCard({
           {/* Per-repost data (mock) */}
           <div className="space-y-2 max-h-[200px] overflow-y-auto">
             {[
-              { date: 'Heute', views: 12, messages: 2, time: '14:30' },
-              { date: 'Gestern', views: 8, messages: 1, time: '10:15' },
-              { date: '2 Tage ago', views: 15, messages: 3, time: '09:00' },
+              { date: t('adCard.today'), views: 12, messages: 2, time: '14:30' },
+              { date: t('adCard.yesterday'), views: 8, messages: 1, time: '10:15' },
+              { date: t('adCard.daysAgo', { count: 2 }), views: 15, messages: 3, time: '09:00' },
             ].map((repost, idx) => (
               <div key={idx} className="bg-white rounded border border-ka-green/20 p-2 text-[11px]">
                 <div className="flex justify-between items-start mb-1">
                   <span className="font-semibold text-gray-800">{repost.date}</span>
-                  <span className="text-gray-500 text-[10px]">{repost.time} Uhr</span>
+                  <span className="text-gray-500 text-[10px]">{repost.time}</span>
                 </div>
                 <div className="flex gap-4">
                   <div>
-                    <span className="text-gray-500">👁 Aufrufe:</span>
+                    <span className="text-gray-500">{t('adCard.views')}</span>
                     <span className="font-bold text-ka-green ml-1">{repost.views}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">💬 Nachr.:</span>
+                    <span className="text-gray-500">{t('adCard.messages')}</span>
                     <span className="font-bold text-ka-green ml-1">{repost.messages}</span>
                   </div>
                 </div>
@@ -730,7 +731,7 @@ export function AdCard({
       {/* Placeholder when feature is disabled */}
       {showAnalytics && !flags.enableAnalytics && (
         <div className="border-t border-gray-200 bg-gray-50 p-3 text-center">
-          <p className="text-[12px] text-gray-500">Analytics-Feature ist noch nicht aktiviert</p>
+          <p className="text-[12px] text-gray-500">{t('adCard.analyticsDisabled')}</p>
         </div>
       )}
 
@@ -778,7 +779,7 @@ export function AdCard({
             <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-2" />
 
             <div className="flex justify-between items-center mb-1">
-              <h3 className="font-bold text-gray-800 text-[16px]">Anzeigen-Optionen</h3>
+              <h3 className="font-bold text-gray-800 text-[16px]">{t('adCard.adOptions')}</h3>
               <button 
                 onClick={() => setIsBottomSheetOpen(false)} 
                 className="p-1 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
@@ -798,27 +799,27 @@ export function AdCard({
               className="flex items-center justify-center gap-2.5 w-full py-3 px-4 border border-green-600 text-green-700 rounded-lg hover:bg-green-50 font-semibold text-sm transition-colors"
             >
               <Sparkles className="w-4 h-4 text-green-600" />
-              <span>KI-Optimierung starten</span>
+              <span>{t('adCard.startAiOpt')}</span>
             </button>
 
             {/* Vinted — coming soon */}
             <button
               disabled
               className="w-full py-3 px-4 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 border border-gray-200 text-gray-400 bg-gray-50/50 cursor-not-allowed"
-              title="Vinted-Integration kommt in Kürze"
+              title={t('adCard.comingSoon')}
             >
               <span>Vinted 🚧</span>
-              <span className="text-xs font-normal">(kommt bald)</span>
+              <span className="text-xs font-normal">{t('adCard.comingSoonShort')}</span>
             </button>
 
             {/* eBay — coming soon */}
             <button
               disabled
-              title="eBay-Integration kommt in Kürze"
+              title={t('adCard.ebayComingSoon')}
               className="flex items-center justify-center gap-2.5 w-full py-3 px-4 border border-gray-200 text-gray-300 bg-gray-50/50 rounded-lg font-semibold text-sm cursor-not-allowed"
             >
               <EbayLogo />
-              <span>eBay 🚧 <span className="text-xs font-normal">(kommt bald)</span></span>
+              <span>eBay 🚧 <span className="text-xs font-normal">{t('adCard.comingSoonShort')}</span></span>
             </button>
 
             {/* Cancel Trigger */}
@@ -826,7 +827,7 @@ export function AdCard({
               onClick={() => setIsBottomSheetOpen(false)}
               className="w-full py-3 px-4 mt-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-semibold text-sm transition-colors"
             >
-              Abbrechen
+              {t('adCard.cancel')}
             </button>
           </div>
         </div>
@@ -837,26 +838,28 @@ export function AdCard({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xxs">
           <div className="bg-white rounded-sm border border-gray-200 shadow-2xl p-5 w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <h4 className="text-[15px] font-bold text-gray-800 flex items-center gap-1.5 mb-2">
-              <EbayLogo /> Inserieren bestätigen
+              <EbayLogo /> {t('adCard.confirmEbayListing')}
             </h4>
             <p className="text-[13px] text-gray-600 mb-3 leading-normal">
-              Möchtest du das Produkt <strong className="text-gray-800" dangerouslySetInnerHTML={{ __html: ad.title }} /> auf eBay.de als Festpreis-Angebot inserieren?
+              {t('adCard.confirmEbayListingBefore')}{' '}
+              <strong className="text-gray-800" dangerouslySetInnerHTML={{ __html: ad.title }} />{' '}
+              {t('adCard.confirmEbayListingAfter')}
             </p>
             <div className="bg-blue-50 border border-blue-100 rounded-sm p-2.5 text-[11px] text-blue-800 font-semibold mb-4 leading-relaxed">
-              Hinweis: Auf eBay.de als Festpreis-Angebot inserieren (Abholung vor Ort).
+              {t('adCard.ebayFixedPriceHint')}
             </div>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setShowEbayConfirm(false)}
                 className="px-3 py-1.5 text-[12px] font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-sm transition-colors"
               >
-                Abbrechen
+                {t('adCard.cancel')}
               </button>
               <button
                 onClick={handleConfirmEbayCrossPost}
                 className="px-3 py-1.5 text-[12px] font-bold bg-[#A8C300] hover:bg-[#96ae00] text-white rounded-sm transition-colors"
               >
-                Bestätigen
+                {t('adCard.confirm')}
               </button>
             </div>
           </div>
@@ -868,33 +871,33 @@ export function AdCard({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xxs">
           <div className="bg-white rounded-sm border border-gray-200 shadow-2xl p-5 w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <h4 className="text-[15px] font-bold text-gray-800 flex items-center gap-1.5 mb-2">
-              <AlertTriangle className="w-4 h-4 text-orange-500" /> Neu einstellen bestätigen
+              <AlertTriangle className="w-4 h-4 text-orange-500" /> {t('adCard.confirmRepostTitle')}
             </h4>
             <p className="text-[13px] text-gray-600 mb-3 leading-normal">
-              Beim Neu-Einstellen wird deine Anzeige als neue Anzeige erstellt. Bisherige Aufrufe, Merklisten und Nachrichten gehen dabei verloren.
+              {t('adCard.confirmRepostText')}
             </p>
             <div className="bg-orange-50 border border-orange-100 rounded-sm p-2.5 text-[12px] text-gray-700 mb-4 leading-relaxed">
-              <div className="font-semibold text-gray-800 mb-1">Aktuelle Statistik:</div>
+              <div className="font-semibold text-gray-800 mb-1">{t('adCard.currentStats')}</div>
               <ul className="space-y-0.5">
-                <li>- {statViews} Aufrufe</li>
-                <li>- {statFavorites} Merklisten</li>
-                <li>- {statMessages} Nachrichten</li>
+                <li>- {statViews} {t('adCard.statViews')}</li>
+                <li>- {statFavorites} {t('adCard.statFavorites')}</li>
+                <li>- {statMessages} {t('adCard.statMessages')}</li>
               </ul>
             </div>
-            <p className="text-[13px] text-gray-700 font-medium mb-4">Trotzdem neu einstellen?</p>
+            <p className="text-[13px] text-gray-700 font-medium mb-4">{t('adCard.confirmRepostQuestion')}</p>
             <div className="flex justify-end gap-2">
               <button
                 autoFocus
                 onClick={() => setConfirmRepostAction(null)}
                 className="px-3 py-1.5 text-[12px] font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-sm transition-colors"
               >
-                Abbrechen
+                {t('adCard.cancel')}
               </button>
               <button
                 onClick={confirmRepostWarning}
                 className="px-3 py-1.5 text-[12px] font-bold bg-[#A8C300] hover:bg-[#96ae00] text-white rounded-sm transition-colors"
               >
-                Ja, neu einstellen
+                {t('adCard.confirmRepostYes')}
               </button>
             </div>
           </div>

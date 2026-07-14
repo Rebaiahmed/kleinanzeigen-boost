@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, LogOut, Settings, HelpCircle, ChevronDown, Moon, Sun } from 'lucide-react';
+import { User, LogOut, Settings, HelpCircle, ChevronDown, Moon, Sun, Languages } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useDarkMode } from '../../hooks/useDarkMode';
+import { useFeatureFlags } from '../../hooks/useFeatureFlags';
 
 function getUserFromToken(): { email: string; initials: string; fullEmail: string } | null {
   try {
@@ -28,6 +30,9 @@ export function TopBar() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [user, setUser] = useState(() => getUserFromToken());
   const { isDark, toggle, isLoaded } = useDarkMode();
+  const { t, i18n } = useTranslation();
+  const { enableI18n } = useFeatureFlags();
+  const toggleLanguage = () => i18n.changeLanguage(i18n.language === 'de' ? 'en' : 'de');
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -82,13 +87,24 @@ export function TopBar() {
             </Link>
           </div>
           
-          {/* Right: dark mode toggle + account menu */}
+          {/* Right: language toggle + dark mode toggle + account menu */}
           <div className="flex items-center gap-3 border-l border-[#d4d4d4] dark:border-[#3a3d42] pl-4 relative" ref={dropdownRef}>
+            {enableI18n && (
+              <button
+                type="button"
+                onClick={toggleLanguage}
+                aria-label={t('topbar.language')}
+                className="flex items-center gap-1 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-[11px] font-bold text-gray-600 dark:text-gray-300"
+              >
+                <Languages className="w-5 h-5" />
+                {i18n.language === 'de' ? 'DE' : 'EN'}
+              </button>
+            )}
             {isLoaded && (
               <button
                 type="button"
                 onClick={toggle}
-                aria-label={isDark ? 'Zum Light-Mode wechseln' : 'Zum Dark-Mode wechseln'}
+                aria-label={isDark ? t('topbar.toLightMode') : t('topbar.toDarkMode')}
                 className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 {isDark ? (
@@ -103,7 +119,7 @@ export function TopBar() {
               onClick={() => setIsDropdownOpen((o) => !o)}
               aria-haspopup="menu"
               aria-expanded={isDropdownOpen}
-              aria-label="Konto- und Einstellungsmenü"
+              aria-label={t('topbar.accountMenu')}
               className="flex items-center gap-1.5 rounded-full pl-1 pr-2 py-1 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#A8C300] transition-colors"
             >
               {user ? (
@@ -129,12 +145,12 @@ export function TopBar() {
             {isDropdownOpen && (
               <div
                 role="menu"
-                aria-label="Konto"
+                aria-label={t('topbar.account')}
                 className="absolute top-12 right-0 mt-1 w-56 bg-white dark:bg-[#2c2f33] border border-[#e5e5e5] dark:border-[#3a3d42] rounded-md shadow-lg py-1 z-50"
               >
                 {user && (
                   <div className="px-4 py-2 border-b border-[#f0f0f0] dark:border-[#3a3d42] mb-1">
-                    <p className="text-[11px] text-gray-400 dark:text-gray-500">Angemeldet als</p>
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500">{t('topbar.loggedInAs')}</p>
                     <p className="text-[12px] text-gray-600 dark:text-gray-300 truncate" title={user.fullEmail}>
                       {user.fullEmail}
                     </p>
@@ -148,7 +164,7 @@ export function TopBar() {
                   className="w-full flex items-center gap-2 px-4 py-2 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#35383c] transition-colors focus:bg-gray-50 dark:focus:bg-[#35383c] focus:outline-none"
                 >
                   <Settings className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                  <span>Einstellungen</span>
+                  <span>{t('topbar.settings')}</span>
                 </Link>
 
                 {/* Opens the support/feedback form in a new tab. A mailto: link
@@ -163,7 +179,7 @@ export function TopBar() {
                   className="w-full flex items-center gap-2 px-4 py-2 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#35383c] transition-colors focus:bg-gray-50 dark:focus:bg-[#35383c] focus:outline-none"
                 >
                   <HelpCircle className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                  <span>Hilfe / Support</span>
+                  <span>{t('topbar.help')}</span>
                 </a>
 
                 <div className="h-px bg-[#f0f0f0] dark:bg-[#3a3d42] my-1" />
@@ -178,7 +194,7 @@ export function TopBar() {
                   className="w-full flex items-center gap-2 px-4 py-2 text-[13px] text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors focus:bg-red-50 dark:focus:bg-red-900/20 focus:outline-none"
                 >
                   <LogOut className="w-4 h-4 text-red-500" />
-                  <span>Abmelden</span>
+                  <span>{t('topbar.logout')}</span>
                 </button>
               </div>
             )}

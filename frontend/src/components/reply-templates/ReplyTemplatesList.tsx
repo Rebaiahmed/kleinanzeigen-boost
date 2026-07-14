@@ -123,7 +123,9 @@ export function ReplyTemplatesList() {
       setCopiedId(template.id || null);
       setTimeout(() => setCopiedId(null), 2000);
       if (template.id) ReplyTemplatesApi.copy(template.id).catch(() => {});
-    } catch {}
+    } catch {
+      /* clipboard write can fail silently (permissions, insecure context) */
+    }
   };
 
   return (

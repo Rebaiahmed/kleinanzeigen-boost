@@ -116,6 +116,7 @@ export class AiController {
       if (!adDoc.exists) throw new Error('Ad not found');
       const ad = { id: adDoc.id, ...adDoc.data() };
 
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const priceSuggestionService = new (require('./price-suggestion.service').PriceSuggestionService)();
       const result = await priceSuggestionService.suggestPrice(this.aiService, ad);
       console.log(`[Price Suggestion] ✅ Suggested ${result.suggestedLow}-${result.suggestedHigh}€`);

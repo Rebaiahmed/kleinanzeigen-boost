@@ -11,6 +11,7 @@ interface AdGridProps {
   onConnectEbay: () => void;
   isEbayConnected?: boolean;
   onUpdateFields: (adId: string, fields: any) => Promise<boolean>;
+  onCancelScheduledRepost?: (adId: string) => Promise<{ success: boolean; alreadyExecuting?: boolean }>;
   aiBlocked?: boolean;
   aiWarning?: boolean;
   repostRunningId?: string | null;
@@ -27,6 +28,7 @@ export function AdGrid({
   onConnectEbay,
   isEbayConnected,
   onUpdateFields,
+  onCancelScheduledRepost,
   aiBlocked = false,
   aiWarning = false,
   repostRunningId = null,
@@ -53,6 +55,7 @@ export function AdGrid({
             onConnectEbay={onConnectEbay}
             isEbayConnected={isEbayConnected}
             onUpdateFields={onUpdateFields}
+            onCancelScheduledRepost={onCancelScheduledRepost}
             aiBlocked={aiBlocked}
             aiWarning={aiWarning}
             repostState={repostState}

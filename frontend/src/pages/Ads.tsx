@@ -53,6 +53,7 @@ export function Ads() {
     handleEbayCrossPost,
     optimizeExistingAd,
     updateAdFields,
+    cancelScheduledRepost,
     fetchSchedulerStatus,
     isSyncing,
     toastMessage,
@@ -385,6 +386,7 @@ export function Ads() {
           onConnectEbay={handleConnectEbay}
           isEbayConnected={isEbayConnected}
           onUpdateFields={updateAdFields}
+          onCancelScheduledRepost={cancelScheduledRepost}
           aiBlocked={isBlocked}
           aiWarning={isWarning}
           repostRunningId={repostRunningId}

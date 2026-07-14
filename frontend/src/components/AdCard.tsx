@@ -31,6 +31,7 @@ export interface AdCardProps {
   onConnectEbay: () => void;
   isEbayConnected?: boolean;
   onUpdateFields?: (adId: string, fields: any) => Promise<boolean>;
+  onCancelScheduledRepost?: (adId: string) => Promise<{ success: boolean; alreadyExecuting?: boolean }>;
   // Repost queue state for this card
   repostState?: 'idle' | 'running' | 'queued';
   repostBusy?: boolean; // any repost active anywhere
@@ -146,6 +147,7 @@ export function AdCard({
   onConnectEbay,
   isEbayConnected,
   onUpdateFields,
+  onCancelScheduledRepost,
   aiBlocked = false,
   aiWarning = false,
   repostState = 'idle',
@@ -224,6 +226,13 @@ export function AdCard({
   const [isSavingSchedule, setIsSavingSchedule] = useState(false);
   const [localAutoRepost, setLocalAutoRepost] = useState<boolean>(!!ad.autoRepost);
   const [localNextRepostAt, setLocalNextRepostAt] = useState<string | null>(ad.nextRepostAt || null);
+  // `pending_repost` is the atomic lock the backend scheduler sets right before
+  // it calls the automation worker (see scheduler.service.ts) — the actual
+  // point of no return for a scheduled repost. From here on, cancellation is
+  // refused server-side too (belt-and-suspenders against the race where a
+  // click lands between the lock and the worker call).
+  const isRepostExecuting = ad.status === 'pending_repost';
+  const [isCancellingRepost, setIsCancellingRepost] = useState(false);
   // One-time "what changed" callout for users who already had a schedule.
   const [showSmartCallout, setShowSmartCallout] = useState<boolean>(
     () => localStorage.getItem('ab_smart_repost_seen') !== '1',
@@ -296,6 +305,22 @@ export function AdCard({
       if (ok) { setLocalAutoRepost(false); setLocalNextRepostAt(null); setScheduleOpen(false); }
     } finally {
       setIsSavingSchedule(false);
+    }
+  };
+
+  /** Lightweight cancel for the next scheduled occurrence — same end state as
+   *  "Zeitplan entfernen" (autoRepost:false, nextRepostAt:null), but reachable
+   *  directly from the collapsed schedule row and goes through the dedicated
+   *  cancel-repost endpoint, which atomically refuses if execution has already
+   *  started (see ads.service.ts's cancelScheduledRepost). */
+  const handleCancelScheduledRepost = async () => {
+    if (!onCancelScheduledRepost || isRepostExecuting) return;
+    setIsCancellingRepost(true);
+    try {
+      const result = await onCancelScheduledRepost(ad.id);
+      if (result.success) { setLocalAutoRepost(false); setLocalNextRepostAt(null); }
+    } finally {
+      setIsCancellingRepost(false);
     }
   };
 
@@ -406,6 +431,13 @@ export function AdCard({
                 ⏳ {repostQueuePosition > 0 ? t('adCard.queuedPosition', { position: repostQueuePosition }) : t('adCard.queuedNoPosition')}
               </span>
             )}
+            {/* Scheduled recurring repost currently executing server-side
+                (backend scheduler picked it up — see isRepostExecuting) */}
+            {isRepostExecuting && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-[#A8C300]/10 text-[#6f8f00] px-2 py-0.5 rounded-full border border-[#A8C300]/40">
+                <Loader2 className="w-3 h-3 animate-spin" /> {t('adCard.executingBadge')}
+              </span>
+            )}
           </div>
         </div>
 
@@ -502,6 +534,25 @@ export function AdCard({
                 </span>
               )}
             </button>
+
+            {/* Cancel — visible whenever a repost is scheduled (localAutoRepost)
+                or currently executing. Hidden entirely once idle/off. */}
+            {(localAutoRepost || isRepostExecuting) && onCancelScheduledRepost && (
+              <div className="mt-1 text-[11px]">
+                {isRepostExecuting ? (
+                  <span className="text-orange-600 font-medium">{t('adCard.executingCannotCancel')}</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleCancelScheduledRepost}
+                    disabled={isCancellingRepost}
+                    className="text-red-600 hover:text-red-700 font-semibold underline underline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isCancellingRepost ? t('adCard.cancellingScheduled') : t('adCard.cancelScheduled')}
+                  </button>
+                )}
+              </div>
+            )}
 
             {scheduleOpen && (
               <div className="absolute right-0 top-full mt-1 w-[19rem] bg-white border border-[#d4d4d4] shadow-lg rounded-sm p-3 z-40 text-left">

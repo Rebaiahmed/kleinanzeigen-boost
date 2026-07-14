@@ -6,10 +6,11 @@ import { AI_CONFIG } from '../config/ai.constants';
 import { CreditsService } from '../credits/credits.service';
 import { getCreditCost } from '../config/credit-costs.constants';
 import { FEATURE_FLAGS } from '../config/feature-flags';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import axios from 'axios';
+import sharp from 'sharp';
 
 const KLEINANZEIGEN_CATEGORIES: Record<string, string[]> = JSON.parse(
   fs.readFileSync(path.join(__dirname, '../config/kleinanzeigen-categories.json'), 'utf-8'),
@@ -420,9 +421,26 @@ export class AiService {
       if (data.month === currentMonth) callsCount = data.callsCount || 0;
     }
 
-    // 3. Enforce effective limit (plan + per-user bonus). Only photo analysis is metered.
     const limit = getEffectiveLimit(plan, bonus);
 
+    // 3. Cache check — a hit costs nothing (no model call, no credits, no
+    // quota), so it's checked BEFORE the quota-limit gate below and before
+    // any credit deduction: gating a free operation behind a cost-based quota
+    // doesn't make sense. Keyed by a content hash of the exact uploaded bytes
+    // (not URLs — unlike getPhotoFeedback's cache, no ad document exists yet
+    // at this point in the flow to hang a URL-based hash on).
+    const contentHash = this.hashImageBuffers(files.map((f) => f.buffer));
+    const cacheRef = db.collection('photoAnalysisCache').doc(contentHash);
+    const cacheDoc = await cacheRef.get();
+    if (cacheDoc.exists) {
+      this.logger.log(`[analyze-photos] cache hit — hash=${contentHash}`);
+      return {
+        ...cacheDoc.data()!.result,
+        remainingCallsThisMonth: limit === Infinity ? -1 : Math.max(0, limit - callsCount),
+      };
+    }
+
+    // 4. Enforce effective limit (plan + per-user bonus). Only photo analysis is metered.
     if (callsCount >= limit) {
       throw new HttpException(
         {
@@ -433,7 +451,7 @@ export class AiService {
       );
     }
 
-    // 4. Pre-check API Key configuration
+    // 5. Pre-check API Key configuration
     this.assertAiConfigured();
 
     // Credits: deduct up-front, refund on any of the 3 failure exits below.
@@ -448,10 +466,14 @@ export class AiService {
       await this.creditsService.deduct(userId, getCreditCost('ai_generation'), 'ai_generation', creditActionId);
     }
 
-    const imageParts = files.map((file) => ({
+    // Resize before sending to the vision model — previously the raw upload
+    // (up to 4MB/photo, MAX_PHOTO_BYTES) was sent untouched. Caps both the
+    // request payload and the model's token cost.
+    const resizedBuffers = await Promise.all(files.map((file) => this.resizeImageBuffer(file.buffer)));
+    const imageParts = resizedBuffers.map((buffer) => ({
       inlineData: {
-        data: file.buffer.toString('base64'),
-        mimeType: file.mimetype,
+        data: buffer.toString('base64'),
+        mimeType: 'image/jpeg',
       },
     }));
 
@@ -577,6 +599,10 @@ export class AiService {
     // 6. Record usage — metered (counts toward the limit) + model/cost/lastActive tracking.
     // Only reached once we know the result is actually usable (see check above).
     await this.logUsage(userId, modelUsed, promptTokenCount, candidatesTokenCount, true);
+
+    // 7. Store for future identical uploads (cache write — see the cache check
+    // near the top of this function for why it's keyed by content hash).
+    await cacheRef.set({ result: parsedJson, createdAt: new Date().toISOString() });
 
     const remainingCallsThisMonth = limit === Infinity ? -1 : Math.max(0, limit - (callsCount + 1));
 
@@ -1092,12 +1118,31 @@ Respond ONLY with valid JSON, no markdown, no extra text:
     try {
       const response = await axios.get(url, { responseType: 'arraybuffer', timeout: 10000 });
       const buffer = Buffer.from(response.data);
-      // For now, just encode as base64 (in production, use sharp or similar to downscale)
-      return buffer.toString('base64');
+      const resized = await this.resizeImageBuffer(buffer, maxPx);
+      return resized.toString('base64');
     } catch (err: any) {
       this.logger.warn(`Failed to download image from ${url}:`, err.message);
       throw new HttpException('Foto konnte nicht geladen werden', HttpStatus.BAD_REQUEST);
     }
+  }
+
+  /** Resize + re-encode an image buffer for the vision model — caps both the
+   *  request payload and the model's token cost. `fit: 'inside'` never
+   *  upscales a smaller source image, only shrinks larger ones. */
+  private async resizeImageBuffer(buffer: Buffer, maxPx = 1024, quality = 80): Promise<Buffer> {
+    return sharp(buffer)
+      .resize(maxPx, maxPx, { fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality })
+      .toBuffer();
+  }
+
+  /** Content hash (SHA-256) of the exact uploaded image bytes, used to key
+   *  analyzePhotos' cache. Unlike hashPhotoSet (URL-based, for an ad that
+   *  already exists), this runs before any ad/draft document exists. */
+  private hashImageBuffers(buffers: Buffer[]): string {
+    const hash = createHash('sha256');
+    for (const buffer of buffers) hash.update(buffer);
+    return hash.digest('hex');
   }
 }
 

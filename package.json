@@ -10,6 +10,10 @@
     "start:backend": "cd backend && npm run start:dev",
     "start:automation": "cd automation && DEBUG_BROWSER=false npm run dev",
     "ext:dev": "cd extension && npm run build:dev",
+    "dev:mock": "concurrently -n frontend,backend -c green,cyan \"npm run start:frontend:mock\" \"npm run start:backend:mock\"",
+    "start:frontend:mock": "cd frontend && VITE_DEV_MOCK_ADS_COUNT=24 npm run dev",
+    "start:backend:mock": "cd backend && DEV_LOGIN_ENABLED=true npm run start:dev",
+    "dev:mock-login": "curl -s -X POST http://localhost:3000/api/auth/dev-login -c /tmp/anzeigenboost-dev-session.txt",
     "install:all": "npm install && (cd frontend && npm install) && (cd backend && npm install) && (cd extension && npm install)"
   },
   "devDependencies": {

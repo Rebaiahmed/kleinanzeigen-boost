@@ -19,7 +19,8 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Landing />} />
+        {/* Dev builds skip the marketing page and go straight to login/dashboard */}
+        <Route path="/" element={(import.meta as any).env.DEV ? <Navigate to="/login" replace /> : <Landing />} />
         <Route path="/datenschutz" element={<Datenschutz />} />
         <Route path="/impressum" element={<Impressum />} />
         <Route path="/login" element={<Auth />} />

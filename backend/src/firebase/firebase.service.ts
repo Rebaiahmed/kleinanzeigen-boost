@@ -9,7 +9,7 @@ function loadStore(): Record<string, any> {
   try { return JSON.parse(fs.readFileSync(STORE_FILE, 'utf8')); } catch { return {}; }
 }
 function saveStore(store: Record<string, any>) {
-  try { fs.writeFileSync(STORE_FILE, JSON.stringify(store, null, 2)); } catch {}
+  try { fs.writeFileSync(STORE_FILE, JSON.stringify(store, null, 2)); } catch { /* best-effort persistence */ }
 }
 const inMemoryStore: Record<string, any> = loadStore();
 function generateMockId(): string {

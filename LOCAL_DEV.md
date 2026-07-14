@@ -43,6 +43,36 @@ handshake against your local backend and log you in with your real account/cooki
 > `ENDPOINTS` at localhost; the production build never includes localhost. See
 > `extension/scripts/patch-dev-manifest.mjs`.
 
+## Dev-only mock login (fastest way to reach the dashboard)
+No extension, no real Kleinanzeigen account, no CAPTCHA.
+
+Start both servers already wired for mock login:
+```bash
+npm run dev:mock          # frontend + backend, both in mock mode
+```
+Or start each side independently (useful when only one half needs restarting):
+```bash
+npm run start:backend:mock    # backend with DEV_LOGIN_ENABLED=true
+npm run start:frontend:mock   # frontend with VITE_DEV_MOCK_ADS_COUNT=24
+```
+Then open http://localhost:5173/login and click **"Mit Test-Account einloggen"**
+(only rendered in dev builds). It calls `POST /api/auth/dev-login`, sets the
+session cookie + `localStorage` token, seeds `ab_mock_ads`, and redirects to
+`/meine-anzeigen`.
+
+Configurable via env:
+- Backend `DEV_LOGIN_ENABLED` (default `true` outside `NODE_ENV=production`) —
+  set to `false` to disable the endpoint even in dev.
+- Backend `DEV_LOGIN_EMAIL` — identity of the mock session (default `dev@example.com`).
+- Frontend `VITE_DEV_MOCK_ADS_COUNT` — how many synthetic ads to seed.
+
+CLI alternative (skips the UI, requires the backend already running):
+```bash
+npm run dev:mock-login   # POSTs to the backend, saves the session cookie to /tmp
+```
+This endpoint 404s automatically when `NODE_ENV=production`, so it can never
+reach a deployed environment.
+
 ## Preview the dashboard with many ads (no backend, no login)
 For eyeballing pagination/search/list performance at scale without a big account:
 ```bash

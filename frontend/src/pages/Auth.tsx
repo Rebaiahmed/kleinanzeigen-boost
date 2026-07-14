@@ -122,6 +122,33 @@ export function Auth() {
     navigate('/meine-anzeigen');
   };
 
+  // Dev-only mock login: skips the real Kleinanzeigen handshake entirely so the
+  // dashboard is reachable locally without the extension. Dead-code-eliminated
+  // from production builds via import.meta.env.DEV.
+  const [isDevLoggingIn, setIsDevLoggingIn] = useState(false);
+  const [devLoginError, setDevLoginError] = useState<string | null>(null);
+  const handleDevLogin = async () => {
+    setIsDevLoggingIn(true);
+    setDevLoginError(null);
+    try {
+      const apiBase = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
+      const res = await fetch(`${apiBase}/auth/dev-login`, { method: 'POST', credentials: 'include' });
+      const data = await res.json();
+      if (!res.ok || !data.accessToken) {
+        throw new Error(data.message || 'Dev-Login ist deaktiviert (nur lokal verfügbar)');
+      }
+      localStorage.setItem('token', data.accessToken);
+      localStorage.setItem('kb_session', data.accessToken);
+      const mockAdsCount = (import.meta as any).env.VITE_DEV_MOCK_ADS_COUNT || '24';
+      localStorage.setItem('ab_mock_ads', mockAdsCount);
+      navigate('/meine-anzeigen');
+    } catch (err: any) {
+      setDevLoginError(err.message || 'Dev-Login fehlgeschlagen');
+    } finally {
+      setIsDevLoggingIn(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
@@ -145,6 +172,35 @@ export function Auth() {
               Verknüpfe dein Konto, um automatische Updates & Optimierungen freizuschalten.
             </p>
           </div>
+
+          {/* Dev-only: mock login shortcut, never present in production builds */}
+          {(import.meta as any).env.DEV && (
+            <div className="p-4 bg-amber-950/20 border border-amber-800/40 rounded-xl mb-6">
+              <h3 className="text-xs font-bold text-amber-400 tracking-wider flex items-center gap-2 mb-3">
+                🧪 Dev-Login (nur lokal)
+              </h3>
+              {devLoginError && (
+                <div className="flex items-start gap-2 bg-red-950/40 border border-red-900/60 p-3 rounded-lg text-red-400 text-xs mb-3">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{devLoginError}</span>
+                </div>
+              )}
+              <button
+                onClick={handleDevLogin}
+                disabled={isDevLoggingIn}
+                className="w-full flex justify-center items-center gap-2 py-2 px-4 border border-amber-800/60 rounded-lg text-xs font-bold text-amber-300 bg-amber-950/30 hover:bg-amber-950/50 transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                {isDevLoggingIn ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Logge ein...
+                  </>
+                ) : (
+                  'Mit Test-Account einloggen'
+                )}
+              </button>
+            </div>
+          )}
 
           {/* Method 1: Chrome Extension Section */}
           <div className="p-5 bg-slate-950/60 border border-slate-800 rounded-xl mb-6">

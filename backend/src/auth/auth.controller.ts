@@ -22,6 +22,30 @@ export class AuthController {
   }
 
   /**
+   * POST /api/auth/dev-login
+   * Local-dev-only shortcut: mints a session for a fake user without going
+   * through the real Kleinanzeigen login flow. Disabled outside development.
+   */
+  @Post('dev-login')
+  async devLogin(@Res({ passthrough: true }) res: Response) {
+    const enabled = process.env.NODE_ENV !== 'production' && process.env.DEV_LOGIN_ENABLED !== 'false';
+    if (!enabled) {
+      res.status(HttpStatus.NOT_FOUND);
+      return { message: 'Not found' };
+    }
+    const { accessToken, userId } = await this.authService.mockDevLogin();
+
+    res.cookie('kb_session', accessToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return { success: true, accessToken, userId };
+  }
+
+  /**
    * GET /api/auth/login-status/:jobId
    * Polls the automation worker for the current status of the visible login job.
    * When status === 'success', also sets the session cookie and returns accessToken.

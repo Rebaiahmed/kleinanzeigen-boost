@@ -213,6 +213,8 @@
     "autoRepeat": "Auto-repeat",
     "off": "Off",
     "nextRepost": "Next: {{time}}",
+    "browserDependencyNote": "once your browser is active",
+    "browserDependencyTooltip": "The repost runs once your browser is active with the extension (or via the server fallback if the browser stays closed longer) — the exact time may vary slightly.",
     "repostMode": "Repost Mode",
     "close": "Close",
     "smartCalloutTitle": "New: Smart Repost.",

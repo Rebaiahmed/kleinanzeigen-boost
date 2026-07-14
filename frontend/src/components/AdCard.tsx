@@ -491,7 +491,10 @@ export function AdCard({
                   const due = !!localNextRepostAt && new Date(localNextRepostAt).getTime() <= Date.now();
                   const formatted = formatNextRepost(localNextRepostAt, true, t, i18n.language);
                   return (
-                    <span className={`text-[11px] font-medium shrink-0 ${due ? 'text-[#c2620a]' : 'text-[#6f8f00]'}`}>
+                    <span
+                      className={`text-[11px] font-medium shrink-0 ${due ? 'text-[#c2620a]' : 'text-[#6f8f00]'}`}
+                      title={t('adCard.browserDependencyTooltip')}
+                    >
                       {due ? formatted : t('adCard.nextRepost', { time: formatted })}
                     </span>
                   );
@@ -568,6 +571,7 @@ export function AdCard({
                     </div>
                     <div className="text-[11px] text-gray-500 bg-gray-50 border border-gray-200 rounded-sm px-2.5 py-1.5">
                       {t('adCard.nextRepostLabel')} <span className="font-semibold text-gray-700">{formatNextRepost(new Date(Date.now() + selectedInterval * 60000).toISOString(), true, t, i18n.language)}</span>
+                      <span className="text-gray-400"> ({t('adCard.browserDependencyNote')})</span>
                     </div>
                   </div>
                 )}

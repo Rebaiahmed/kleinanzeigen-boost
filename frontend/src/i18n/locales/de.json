@@ -213,6 +213,8 @@
     "autoRepeat": "Automatisch wiederholen",
     "off": "Aus",
     "nextRepost": "Nächster: {{time}}",
+    "browserDependencyNote": "sobald der Browser aktiv ist",
+    "browserDependencyTooltip": "Der Repost läuft, sobald dein Browser mit der Erweiterung aktiv ist (oder über den Server-Fallback, falls der Browser länger geschlossen bleibt) — die genaue Uhrzeit kann leicht abweichen.",
     "repostMode": "Repost-Modus",
     "close": "Schließen",
     "smartCalloutTitle": "Neu: Smart Repost.",

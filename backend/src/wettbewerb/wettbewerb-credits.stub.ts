@@ -2,18 +2,12 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
 
 /**
- * TODO(credits-stripe): feature/credits-stripe is not merged into main yet,
- * so this whole class is a stand-in for the real CreditsService. Once that
- * branch lands:
- *   - add `competitor_tracking: ADDITIONAL_SEARCH_CREDIT_COST` to
- *     CREDIT_COSTS (backend/src/config/credit-costs.constants.ts on that
- *     branch)
- *   - replace reserveForPaidSearch()'s body with
- *     `await this.creditsService.reserve(userId, 'competitor_tracking', relatedActionId)`
- *   - delete this file, inject the real CreditsService into
- *     WettbewerbService instead.
- * canCreateFreeSearch/markFreeSearchUsed need no credits system at all —
- * they're plain Firestore bookkeeping and can stay as-is.
+ * Stub for Wettbewerb (competitor tracker) credits — handles free search allowance.
+ * When ENABLE_CREDITS=true and the real credits system is fully integrated,
+ * this stub can be replaced with calls to the real CreditsService.
+ *
+ * For now: competitor tracking is free (uses one free search per user).
+ * reserveForPaidSearch() is a no-op until credits are wired up.
  */
 @Injectable()
 export class WettbewerbCreditsStub {

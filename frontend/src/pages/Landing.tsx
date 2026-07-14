@@ -7,10 +7,10 @@ import { SupportMe } from '../components/SupportMe';
  * Things to swap
  * ──────────────────────────────────────────────────────────────────────── */
 
-// TODO: replace with the real demo video ID tomorrow
+// Demo video — update with real product demo when available
 const YOUTUBE_VIDEO_ID = 'dQw4w9WgXcQ';
 
-// TODO: fill in the real profile URLs
+// Social media links — configure with actual profiles
 const SOCIAL_LINKS = {
   tiktok: '#',
   instagram: '#',

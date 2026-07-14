@@ -41,7 +41,6 @@ import { WettbewerbModule } from './wettbewerb/wettbewerb.module';
     MonitoringModule,
     WettbewerbModule,
     CreditsModule,
-    // TODO: Import Users Modules
   ],
   controllers: [ConfigController, HealthController],
   providers: [

@@ -53,9 +53,7 @@ export function useWettbewerbActions() {
           invalidateAll();
           return { success: true };
         }
-        // TODO(credits-stripe): once the real credits system lands, this 501
-        // CREDITS_NOT_AVAILABLE path will succeed instead — no special-casing
-        // needed here, the message already comes from the backend either way.
+        // Backend returns error with message (e.g., insufficient credits)
         return { success: false, message: data.message || 'Suche konnte nicht gespeichert werden.', code: data.code };
       } catch {
         return { success: false, message: 'Netzwerkfehler beim Speichern der Suche.' };

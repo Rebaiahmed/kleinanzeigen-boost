@@ -25,7 +25,7 @@ const DEFAULTS: FeatureFlags = {
   enablePriceSuggestion: false,
   enableDisclaimer: false,
   enableWettbewerb: false,
-  enableI18n: false,
+  enableI18n: true,
 };
 
 let cachedFlags: FeatureFlags = DEFAULTS;

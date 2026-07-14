@@ -17,6 +17,14 @@
     "toDarkMode": "Switch to dark mode",
     "language": "Language"
   },
+  "settings": {
+    "backToAds": "Back to My Ads",
+    "title": "Settings",
+    "languageTitle": "Language",
+    "languageHint": "Choose the dashboard language.",
+    "languageGerman": "German",
+    "languageEnglish": "English"
+  },
   "extensionBanner": {
     "notConnected": "Chrome extension is not connected! Some features may be missing.",
     "enableHint": "Please enable the extension in your browser settings"

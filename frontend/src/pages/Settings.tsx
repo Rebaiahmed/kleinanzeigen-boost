@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { SupportMe } from '../components/SupportMe';
-import { Heart, CheckCircle2, AlertCircle, RefreshCw, LogOut, Check } from 'lucide-react';
+import { Heart, CheckCircle2, AlertCircle, RefreshCw, LogOut, Check, Languages } from 'lucide-react';
 import { Toast } from '../components/Toast';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 
@@ -49,6 +50,7 @@ const FacebookLogo = () => (
 export function Settings() {
   const navigate = useNavigate();
   const flags = useFeatureFlags();
+  const { t, i18n } = useTranslation();
   const [ebayConnected, setEbayConnected] = useState(false);
   const [ebayUsername, setEbayUsername] = useState('');
   const [isLoadingEbay, setIsLoadingEbay] = useState(false);
@@ -145,12 +147,47 @@ export function Settings() {
           onClick={() => navigate('/meine-anzeigen')}
           className="inline-flex items-center text-[13px] font-semibold text-gray-600 hover:text-[#A8C300] transition-colors focus:outline-none"
         >
-          &larr; Zurück zu Meine Anzeigen
+          &larr; {t('settings.backToAds')}
         </button>
       </div>
 
-      <h1 className="text-3xl font-bold text-[#333]">Einstellungen</h1>
-      
+      <h1 className="text-3xl font-bold text-[#333]">{t('settings.title')}</h1>
+
+      {/* Language Section — only shown while i18n is enabled */}
+      {flags.enableI18n && (
+        <section className="bg-white p-6 rounded-lg shadow-sm border border-ka-gray-200">
+          <h2 className="text-xl font-semibold mb-1 text-ka-gray-900 flex items-center gap-2">
+            <Languages className="w-5 h-5 text-gray-400" />
+            {t('settings.languageTitle')}
+          </h2>
+          <p className="text-sm text-gray-500 mb-4">{t('settings.languageHint')}</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => i18n.changeLanguage('de')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                i18n.language === 'de'
+                  ? 'bg-[#A8C300] border-[#A8C300] text-white'
+                  : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {t('settings.languageGerman')}
+            </button>
+            <button
+              type="button"
+              onClick={() => i18n.changeLanguage('en')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                i18n.language === 'en'
+                  ? 'bg-[#A8C300] border-[#A8C300] text-white'
+                  : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {t('settings.languageEnglish')}
+            </button>
+          </div>
+        </section>
+      )}
+
       {/* Platform Connections Section — only shown once a platform is enabled.
           Every card is feature-flagged; with all flags off this would otherwise
           render an empty heading, so hide the whole section. */}

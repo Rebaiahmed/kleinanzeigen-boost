@@ -4,6 +4,9 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 import de from './locales/de.json';
 import en from './locales/en.json';
 
+// Only trust an explicit prior choice from our own toggle (localStorage) — never
+// auto-detect from navigator.language. German must stay the default regardless
+// of the visitor's browser locale; the DE/EN toggle is the only way to opt in.
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
@@ -16,7 +19,7 @@ i18n
     supportedLngs: ['de', 'en'],
     interpolation: { escapeValue: false },
     detection: {
-      order: ['localStorage', 'navigator'],
+      order: ['localStorage'],
       lookupLocalStorage: 'ab_lang',
       caches: ['localStorage'],
     },

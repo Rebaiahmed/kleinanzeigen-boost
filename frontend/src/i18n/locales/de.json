@@ -17,6 +17,14 @@
     "toDarkMode": "Zum Dark-Mode wechseln",
     "language": "Sprache"
   },
+  "settings": {
+    "backToAds": "Zurück zu Meine Anzeigen",
+    "title": "Einstellungen",
+    "languageTitle": "Sprache",
+    "languageHint": "Wähle die Sprache für das Dashboard.",
+    "languageGerman": "Deutsch",
+    "languageEnglish": "Englisch"
+  },
   "extensionBanner": {
     "notConnected": "Chrome Extension ist nicht verbunden! Einige Funktionen könnten fehlen.",
     "enableHint": "Bitte aktiviere die Erweiterung in den Browser-Einstellungen"

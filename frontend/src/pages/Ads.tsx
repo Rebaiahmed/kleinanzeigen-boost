@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { X, RefreshCw, Sparkles, Loader2, AlertCircle, Search, CheckCircle2 } from 'lucide-react';
 import { useAdsActions } from '../hooks/useAdsActions';
 import { useAds } from '../hooks/useAds';
@@ -24,6 +25,7 @@ const EbayLogo = () => (
 );
 
 export function Ads() {
+  const { t } = useTranslation();
   const { isConnected, contextInvalidated } = useExtension();
   const { callsCount, limit, remaining, pct, isWarning, isBlocked, incrementUsage } = useAiUsage();
   const navigate = useNavigate();
@@ -69,11 +71,11 @@ export function Ads() {
       await syncAds(() => {});
       invalidateAds();
     } catch (e: any) {
-      setSyncError(e.message || 'Synchronisierung fehlgeschlagen');
+      setSyncError(e.message || t('ads.syncFailed'));
     } finally {
       setIsBackgroundSyncing(false);
     }
-  }, [syncAds, invalidateAds]);
+  }, [syncAds, invalidateAds, t]);
 
   useRepostNotifications(handleRepostNotification);
 
@@ -120,7 +122,7 @@ export function Ads() {
       setSyncSuccess(true);
       setTimeout(() => setSyncSuccess(false), 3500);
     } catch (e: any) {
-      setSyncError(e.message || 'Synchronisierung fehlgeschlagen');
+      setSyncError(e.message || t('ads.syncFailed'));
     } finally {
       setIsBackgroundSyncing(false);
     }
@@ -198,13 +200,13 @@ export function Ads() {
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div>
               <p className="text-[14px] font-semibold text-[#0064d2] mb-1">
-                Verbinde eBay um deine Anzeigen auf mehreren Plattformen zu inserieren
+                {t('ads.connectEbayPrompt')}
               </p>
               <div className="flex gap-2 mt-2">
                 {!isEbayConnected && (
                   <button onClick={handleConnectEbay} className="border border-[#ccc] rounded-sm py-1.5 px-3 font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-all text-gray-700 bg-white hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50/50 cursor-pointer shadow-sm hover:shadow-md">
                     <EbayLogo />
-                    <span>eBay verbinden</span>
+                    <span>{t('ads.connectEbay')}</span>
                   </button>
                 )}
               </div>
@@ -218,7 +220,7 @@ export function Ads() {
 
       {/* Top bar */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <h1 className="text-2xl font-bold text-[#333]">Meine Anzeigen</h1>
+        <h1 className="text-2xl font-bold text-[#333]">{t('ads.title')}</h1>
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
             <Search className="w-3.5 h-3.5 text-[#999] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -226,28 +228,28 @@ export function Ads() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Anzeigen durchsuchen…"
+              placeholder={t('ads.searchPlaceholder')}
               className="border border-[#ccc] bg-white rounded-sm pl-8 pr-7 py-1.5 text-[13px] text-[#333] shadow-sm focus:outline-none focus:border-[#A8C300] focus:ring-1 focus:ring-[#A8C300] w-44 sm:w-56"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
                 className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[#999] hover:text-[#333]"
-                aria-label="Suche zurücksetzen"
+                aria-label={t('ads.resetSearch')}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
           <div className="flex items-center gap-1.5 border border-[#ccc] bg-white rounded-sm px-2.5 py-1.5 text-[13px] text-[#333] shadow-sm">
-            <span className="text-[#666] font-medium hidden sm:inline">Sortieren nach:</span>
+            <span className="text-[#666] font-medium hidden sm:inline">{t('ads.sortBy')}</span>
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="bg-transparent focus:outline-none font-semibold text-[#333] cursor-pointer">
-              <option value="newest">Neueste zuerst</option>
-              <option value="oldest">Älteste zuerst</option>
-              <option value="views-desc">Meiste Aufrufe</option>
-              <option value="views-asc">Wenigste Aufrufe</option>
-              <option value="messages-desc">Meiste Nachrichten</option>
-              <option value="favorites-desc">Meiste Favoriten</option>
+              <option value="newest">{t('ads.sortNewest')}</option>
+              <option value="oldest">{t('ads.sortOldest')}</option>
+              <option value="views-desc">{t('ads.sortMostViews')}</option>
+              <option value="views-asc">{t('ads.sortLeastViews')}</option>
+              <option value="messages-desc">{t('ads.sortMostMessages')}</option>
+              <option value="favorites-desc">{t('ads.sortMostFavorites')}</option>
             </select>
           </div>
 
@@ -255,13 +257,13 @@ export function Ads() {
             <div className="flex items-center gap-1.5 text-xs text-gray-500 py-1.5 px-1 shrink-0">
               <RefreshCw className="w-3 h-3 animate-spin text-gray-400" />
               <span className="hidden md:inline text-[11px]">
-                {isBackgroundSyncing ? `Synchronisiere ${visibleAds.length} Anzeigen…` : 'Aktualisierung…'}
+                {isBackgroundSyncing ? t('ads.syncingCount', { count: visibleAds.length }) : t('ads.updating')}
               </span>
             </div>
           )}
           {contextInvalidated && (
             <span className="text-[12px] text-orange-600 bg-orange-50 border border-orange-200 px-2 py-1 rounded-sm">
-              Erweiterung neu geladen — bitte Seite aktualisieren
+              {t('ads.extensionReloaded')}
             </span>
           )}
           <button
@@ -270,7 +272,7 @@ export function Ads() {
             className="flex items-center gap-1.5 bg-[#f2f2f2] hover:bg-[#e6e6e6] border border-[#ccc] text-[#333] font-medium py-1.5 px-3 rounded-sm transition-colors text-[13px] disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${(isSyncing || isBackgroundSyncing) ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">{contextInvalidated ? 'Seite neu laden' : 'Synchronisieren'}</span>
+            <span className="hidden sm:inline">{contextInvalidated ? t('ads.reloadPage') : t('ads.sync')}</span>
           </button>
 
           <button
@@ -278,7 +280,7 @@ export function Ads() {
             className="bg-[#A8C300] hover:bg-[#96ae00] text-white font-medium py-1.5 px-3 rounded-sm transition-colors text-[13px] flex items-center gap-1"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Neue Anzeige mit KI erstellen</span>
+            <span>{t('ads.createWithAi')}</span>
           </button>
         </div>
       </div>
@@ -287,7 +289,7 @@ export function Ads() {
       {syncSuccess && !syncError && (
         <div className="flex items-center gap-2 bg-[#f2f7e6] border border-[#d4e39a] rounded-sm px-4 py-2.5 mb-4 text-[13px] text-[#5a6e00]">
           <CheckCircle2 className="w-4 h-4 shrink-0 text-[#7a9000]" />
-          <span>{visibleAds.length} {visibleAds.length === 1 ? 'Anzeige' : 'Anzeigen'} synchronisiert.</span>
+          <span>{visibleAds.length} {visibleAds.length === 1 ? t('ads.syncedCountSingular') : t('ads.syncedCountPlural')}</span>
         </div>
       )}
 
@@ -299,7 +301,7 @@ export function Ads() {
             <span>{syncError}</span>
           </div>
           <button onClick={handleSync} className="font-semibold underline hover:no-underline shrink-0">
-            Erneut versuchen
+            {t('ads.retry')}
           </button>
         </div>
       )}
@@ -309,10 +311,10 @@ export function Ads() {
         <div className="flex items-center justify-between gap-3 bg-red-50 border border-red-200 rounded-sm px-4 py-2.5 mb-4 text-[13px] text-red-800">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{(error as Error)?.message || 'Fehler beim Laden der Anzeigen'}</span>
+            <span>{(error as Error)?.message || t('ads.loadError')}</span>
           </div>
           <button onClick={() => invalidateAds()} className="font-semibold underline hover:no-underline shrink-0">
-            Erneut versuchen
+            {t('ads.retry')}
           </button>
         </div>
       )}
@@ -326,8 +328,8 @@ export function Ads() {
           </div>
           <p className="mt-1.5 text-[12px] text-gray-500">
             {visibleAds.length > 0
-              ? `Synchronisiere ${visibleAds.length} Anzeigen mit Kleinanzeigen…`
-              : 'Synchronisiere deine Anzeigen mit Kleinanzeigen…'}
+              ? t('ads.syncingWithKleinanzeigenCount', { count: visibleAds.length })
+              : t('ads.syncingWithKleinanzeigen')}
           </p>
         </div>
       )}
@@ -350,22 +352,22 @@ export function Ads() {
         </div>
       ) : ads.length === 0 ? (
         <div className="text-center py-12 text-[#666]">
-          <p className="mb-3">Keine Anzeigen gefunden.</p>
+          <p className="mb-3">{t('ads.noAdsFound')}</p>
           <button
             onClick={handleSync}
             disabled={isSyncing || isBackgroundSyncing}
             className="inline-flex items-center gap-1.5 bg-[#A8C300] hover:bg-[#96ae00] text-white font-medium py-2 px-4 rounded-sm transition-colors text-[13px] disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-            Jetzt synchronisieren
+            {t('ads.syncNow')}
           </button>
         </div>
       ) : sortedAds.length === 0 ? (
         <div className="text-center py-12 text-[#666]">
           <Search className="w-6 h-6 mx-auto mb-3 text-[#bbb]" />
-          <p className="mb-1">Keine Anzeigen für „{searchQuery}" gefunden.</p>
+          <p className="mb-1">{t('ads.noAdsForSearch', { query: searchQuery })}</p>
           <button onClick={() => setSearchQuery('')} className="text-[#A8C300] font-semibold hover:underline text-[13px]">
-            Suche zurücksetzen
+            {t('ads.resetSearch')}
           </button>
         </div>
       ) : (
@@ -396,18 +398,18 @@ export function Ads() {
               disabled={safePage === 1}
               className="px-3 py-1.5 text-[13px] font-medium rounded border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              ← Zurück
+              {t('ads.back')}
             </button>
             <span className="text-[13px] text-gray-500 px-2">
-              Seite {safePage} von {totalPages}
-              <span className="text-gray-400"> · {sortedAds.length} Anzeigen</span>
+              {t('ads.pageOf', { current: safePage, total: totalPages })}
+              <span className="text-gray-400"> · {t('ads.adsCount', { count: sortedAds.length })}</span>
             </span>
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={safePage === totalPages}
               className="px-3 py-1.5 text-[13px] font-medium rounded border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              Weiter →
+              {t('ads.next')}
             </button>
           </div>
         )}
@@ -417,11 +419,11 @@ export function Ads() {
       {/* Scheduler Footer Indicator */}
       {schedulerStatus && (
         <div className="mt-8 text-center text-[12px] text-gray-500">
-          Scheduler aktiv — letzte Prüfung: {(() => {
+          {t('ads.schedulerActive')} {(() => {
             const diffMinutes = Math.floor((Date.now() - new Date(schedulerStatus).getTime()) / 60000);
-            if (diffMinutes <= 0) return 'vor weniger als einer Minute';
-            if (diffMinutes === 1) return 'vor 1 Minute';
-            return `vor ${diffMinutes} Minuten`;
+            if (diffMinutes <= 0) return t('ads.lessThanMinuteAgo');
+            if (diffMinutes === 1) return t('ads.oneMinuteAgo');
+            return t('ads.minutesAgo', { count: diffMinutes });
           })()}
         </div>
       )}

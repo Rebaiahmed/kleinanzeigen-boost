@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Sparkles, X, TrendingUp, Loader2 } from 'lucide-react';
 
 interface PriceSuggestionProps {
@@ -10,6 +11,7 @@ interface PriceSuggestionProps {
 }
 
 export function PriceSuggestion({ adId, adTitle, currentPrice, onCheck, aiBlocked }: PriceSuggestionProps) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ suggestedPrice: number; reasoning: string } | null>(null);
   const [visible, setVisible] = useState(false);
@@ -34,7 +36,7 @@ export function PriceSuggestion({ adId, adTitle, currentPrice, onCheck, aiBlocke
       <button
         onClick={handleClick}
         disabled={loading || aiBlocked}
-        title={aiBlocked ? 'Monatslimit erreicht' : 'KI-Preisvorschlag'}
+        title={aiBlocked ? t('priceSuggestion.limitReached') : t('priceSuggestion.titleHint')}
         className={`w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-sm text-[11px] font-medium border transition-colors ${
           aiBlocked
             ? 'border-gray-200 text-gray-300 cursor-not-allowed'
@@ -42,8 +44,8 @@ export function PriceSuggestion({ adId, adTitle, currentPrice, onCheck, aiBlocke
         }`}
       >
         {loading
-          ? <><Loader2 className="w-3 h-3 animate-spin" /> Analysiere...</>
-          : <><TrendingUp className="w-3 h-3" /> Preisvorschlag</>
+          ? <><Loader2 className="w-3 h-3 animate-spin" /> {t('priceSuggestion.analyzing')}</>
+          : <><TrendingUp className="w-3 h-3" /> {t('priceSuggestion.priceSuggestion')}</>
         }
       </button>
 
@@ -59,7 +61,7 @@ export function PriceSuggestion({ adId, adTitle, currentPrice, onCheck, aiBlocke
           {loading ? (
             <div className="flex items-center gap-2 text-blue-600">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>KI analysiert den Marktpreis...</span>
+              <span>{t('priceSuggestion.analyzingMarket')}</span>
             </div>
           ) : result ? (
             <div className="space-y-2 pr-4">
@@ -77,7 +79,7 @@ export function PriceSuggestion({ adId, adTitle, currentPrice, onCheck, aiBlocke
                       ? 'bg-red-100 text-red-700'
                       : 'bg-gray-100 text-gray-500'
                   }`}>
-                    {diff > 0 ? '+' : ''}{diffPct}% vs. aktuell
+                    {diff > 0 ? '+' : ''}{diffPct}% {t('priceSuggestion.vsCurrentPrice')}
                   </span>
                 )}
               </div>
@@ -89,11 +91,11 @@ export function PriceSuggestion({ adId, adTitle, currentPrice, onCheck, aiBlocke
 
               {/* Action hint */}
               <p className="text-[11px] text-gray-400">
-                Tipp: Bearbeite deine Anzeige auf Kleinanzeigen um den Preis anzupassen.
+                {t('priceSuggestion.editHint')}
               </p>
             </div>
           ) : (
-            <p className="text-red-500">Preisanalyse fehlgeschlagen. Bitte erneut versuchen.</p>
+            <p className="text-red-500">{t('priceSuggestion.analysisFailed')}</p>
           )}
         </div>
       )}

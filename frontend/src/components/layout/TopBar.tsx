@@ -71,7 +71,7 @@ export function TopBar() {
   };
 
   return (
-    <header className="bg-white dark:bg-[#242424] sticky top-0 z-50 border-b border-[#d4d4d4] dark:border-[#404040] shadow-sm">
+    <header className="bg-white dark:bg-[#26282c] sticky top-0 z-50 border-b border-[#d4d4d4] dark:border-[#3a3d42] shadow-sm">
       <div className="max-w-[900px] mx-auto px-4 sm:px-6">
         <div className="flex justify-between items-center h-14">
           {/* Left: Logo */}
@@ -83,7 +83,7 @@ export function TopBar() {
           </div>
           
           {/* Right: dark mode toggle + account menu */}
-          <div className="flex items-center gap-3 border-l border-[#d4d4d4] dark:border-[#404040] pl-4 relative" ref={dropdownRef}>
+          <div className="flex items-center gap-3 border-l border-[#d4d4d4] dark:border-[#3a3d42] pl-4 relative" ref={dropdownRef}>
             {isLoaded && (
               <button
                 type="button"
@@ -130,10 +130,10 @@ export function TopBar() {
               <div
                 role="menu"
                 aria-label="Konto"
-                className="absolute top-12 right-0 mt-1 w-56 bg-white dark:bg-[#2a2a2a] border border-[#e5e5e5] dark:border-[#404040] rounded-md shadow-lg py-1 z-50"
+                className="absolute top-12 right-0 mt-1 w-56 bg-white dark:bg-[#2c2f33] border border-[#e5e5e5] dark:border-[#3a3d42] rounded-md shadow-lg py-1 z-50"
               >
                 {user && (
-                  <div className="px-4 py-2 border-b border-[#f0f0f0] dark:border-[#404040] mb-1">
+                  <div className="px-4 py-2 border-b border-[#f0f0f0] dark:border-[#3a3d42] mb-1">
                     <p className="text-[11px] text-gray-400 dark:text-gray-500">Angemeldet als</p>
                     <p className="text-[12px] text-gray-600 dark:text-gray-300 truncate" title={user.fullEmail}>
                       {user.fullEmail}
@@ -145,7 +145,7 @@ export function TopBar() {
                   to="/einstellungen"
                   role="menuitem"
                   onClick={() => setIsDropdownOpen(false)}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#333] transition-colors focus:bg-gray-50 dark:focus:bg-[#333] focus:outline-none"
+                  className="w-full flex items-center gap-2 px-4 py-2 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#35383c] transition-colors focus:bg-gray-50 dark:focus:bg-[#35383c] focus:outline-none"
                 >
                   <Settings className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                   <span>Einstellungen</span>
@@ -160,13 +160,13 @@ export function TopBar() {
                   rel="noopener noreferrer"
                   role="menuitem"
                   onClick={() => setIsDropdownOpen(false)}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#333] transition-colors focus:bg-gray-50 dark:focus:bg-[#333] focus:outline-none"
+                  className="w-full flex items-center gap-2 px-4 py-2 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#35383c] transition-colors focus:bg-gray-50 dark:focus:bg-[#35383c] focus:outline-none"
                 >
                   <HelpCircle className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                   <span>Hilfe / Support</span>
                 </a>
 
-                <div className="h-px bg-[#f0f0f0] dark:bg-[#404040] my-1" />
+                <div className="h-px bg-[#f0f0f0] dark:bg-[#3a3d42] my-1" />
 
                 <button
                   type="button"

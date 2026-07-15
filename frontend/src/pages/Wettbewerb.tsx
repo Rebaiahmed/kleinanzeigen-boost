@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { HelpCircle } from 'lucide-react';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useWettbewerbSearches } from '../hooks/useWettbewerbSearches';
@@ -13,6 +14,7 @@ import { Toast } from '../components/Toast';
 import type { ToastType } from '../hooks/useAdsActions';
 
 export function Wettbewerb() {
+  const { t } = useTranslation();
   const { enableWettbewerb, isLoaded: flagsLoaded } = useFeatureFlags();
   const { searches, isLoading } = useWettbewerbSearches(enableWettbewerb);
   const { freeSearchUsed, freeLimit, additionalCost, hasSeenWettbewerb, isPlaceholderData: usageIsPlaceholder } =
@@ -56,27 +58,27 @@ export function Wettbewerb() {
 
   const handleCreateSearch = async (input: Parameters<typeof createSavedSearch>[0]) => {
     const res = await createSavedSearch(input);
-    showToast(res.success ? 'Suche gespeichert.' : res.message || 'Suche konnte nicht gespeichert werden.', res.success ? 'success' : 'error');
+    showToast(res.success ? t('wettbewerb.searchSaved') : res.message || t('wettbewerb.searchSaveFailed'), res.success ? 'success' : 'error');
   };
 
   const handleDelete = async (searchId: string) => {
     const res = await deleteSavedSearch(searchId);
-    showToast(res.success ? 'Suche gelöscht.' : res.message || 'Löschen fehlgeschlagen.', res.success ? 'success' : 'error');
+    showToast(res.success ? t('wettbewerb.searchDeleted') : res.message || t('wettbewerb.searchDeleteFailed'), res.success ? 'success' : 'error');
   };
 
   const scrollToForm = () => {
     formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
-  const usagePillText = `${freeSearchUsed ? freeLimit : 0} von ${freeLimit} kostenlosen Suchen genutzt`;
+  const usagePillText = t('wettbewerb.usagePill', { used: freeSearchUsed ? freeLimit : 0, limit: freeLimit });
   const quotaReached = freeSearchUsed && searches.length >= freeLimit;
 
   return (
     <div className="w-full relative">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#333]">Wettbewerb</h1>
+        <h1 className="text-2xl font-bold text-[#333]">{t('wettbewerb.title')}</h1>
         <p className="text-[13px] text-[#666] mt-1">
-          Vergleiche deine Anzeigen mit ähnlichen Angeboten in deiner Region.
+          {t('wettbewerb.subtitle')}
         </p>
       </div>
 
@@ -85,7 +87,7 @@ export function Wettbewerb() {
           onClick={() => setGuideOpen(true)}
           className="inline-flex items-center gap-1 text-[13px] text-[#A8C300] hover:text-[#96ae00] font-medium"
         >
-          <HelpCircle className="w-3.5 h-3.5" /> Wie funktioniert das?
+          <HelpCircle className="w-3.5 h-3.5" /> {t('wettbewerb.howItWorks')}
         </button>
         <span className="inline-flex items-center text-[12px] font-medium bg-[#f2f7e6] text-[#6f8f00] px-2.5 py-1 rounded-full border border-[#d4e39a]">
           {usagePillText}

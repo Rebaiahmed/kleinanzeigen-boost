@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
 import {
   RADIUS_OPTIONS_KM,
@@ -16,10 +17,8 @@ interface SearchFormProps {
   isSubmitting: boolean;
 }
 
-const PLZ_ERROR = 'Bitte eine gültige 5-stellige PLZ eingeben (z. B. 48143)';
-const GENERIC_KEYWORD_WARNING = 'Sehr allgemeiner Begriff — die Ergebnisse könnten ungenau sein';
-
 export function SearchForm({ onSubmit, isSubmitting }: SearchFormProps) {
+  const { t } = useTranslation();
   const [keyword, setKeyword] = useState('');
   const [plz, setPlz] = useState('');
   const [radiusKm, setRadiusKm] = useState<number>(DEFAULT_RADIUS_KM);
@@ -28,17 +27,17 @@ export function SearchForm({ onSubmit, isSubmitting }: SearchFormProps) {
   const trimmedKeyword = keyword.trim();
   const keywordTouched = keyword.length > 0;
 
-  const keywordError = keywordTouched && trimmedKeyword.length === 0 ? 'Bitte einen Suchbegriff eingeben' : null;
+  const keywordError = keywordTouched && trimmedKeyword.length === 0 ? t('wettbewerb.form.keywordRequired') : null;
   const keywordWarning =
     keywordTouched &&
     !keywordError &&
     (trimmedKeyword.length < MIN_KEYWORD_LENGTH || GENERIC_KEYWORD_DENYLIST.includes(trimmedKeyword.toLowerCase()))
-      ? GENERIC_KEYWORD_WARNING
+      ? t('wettbewerb.form.genericKeywordWarning')
       : null;
 
   const plzTouched = plz.length > 0;
   const plzError =
-    plzTouched && (!isValidGermanPlzFormat(plz) || !isValidGermanPlzRange(plz)) ? PLZ_ERROR : null;
+    plzTouched && (!isValidGermanPlzFormat(plz) || !isValidGermanPlzRange(plz)) ? t('wettbewerb.form.plzError') : null;
 
   const canSubmit = useMemo(
     () => trimmedKeyword.length > 0 && plz.length > 0 && isValidGermanPlzFormat(plz) && isValidGermanPlzRange(plz),
@@ -60,12 +59,12 @@ export function SearchForm({ onSubmit, isSubmitting }: SearchFormProps) {
     <form onSubmit={handleSubmit} className="bg-white border border-[#e5e5e5] rounded-sm shadow-sm p-4 mb-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-[12px] font-medium text-[#555] mb-1">Suchbegriff</label>
+          <label className="block text-[12px] font-medium text-[#555] mb-1">{t('wettbewerb.form.keyword')}</label>
           <input
             type="text"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            placeholder="z. B. Ikea Sofa"
+            placeholder={t('wettbewerb.form.keywordPlaceholder')}
             className={fieldClass(!!keywordError)}
           />
           {keywordError && <p className="mt-1 text-[11px] text-red-600">{keywordError}</p>}
@@ -73,20 +72,20 @@ export function SearchForm({ onSubmit, isSubmitting }: SearchFormProps) {
         </div>
 
         <div>
-          <label className="block text-[12px] font-medium text-[#555] mb-1">PLZ</label>
+          <label className="block text-[12px] font-medium text-[#555] mb-1">{t('wettbewerb.form.plz')}</label>
           <input
             type="text"
             inputMode="numeric"
             value={plz}
             onChange={(e) => setPlz(e.target.value.replace(/[^\d]/g, '').slice(0, 5))}
-            placeholder="z. B. 48143"
+            placeholder={t('wettbewerb.form.plzPlaceholder')}
             className={fieldClass(!!plzError)}
           />
           {plzError && <p className="mt-1 text-[11px] text-red-600">{plzError}</p>}
         </div>
 
         <div>
-          <label className="block text-[12px] font-medium text-[#555] mb-1">Radius</label>
+          <label className="block text-[12px] font-medium text-[#555] mb-1">{t('wettbewerb.form.radius')}</label>
           <select
             value={radiusKm}
             onChange={(e) => setRadiusKm(Number(e.target.value))}
@@ -94,14 +93,14 @@ export function SearchForm({ onSubmit, isSubmitting }: SearchFormProps) {
           >
             {RADIUS_OPTIONS_KM.map((km) => (
               <option key={km} value={km}>
-                {km === 0 ? 'Nur PLZ' : `${km} km`}
+                {km === 0 ? t('wettbewerb.form.onlyPlz') : `${km} km`}
               </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className="block text-[12px] font-medium text-[#555] mb-1">Prüfintervall</label>
+          <label className="block text-[12px] font-medium text-[#555] mb-1">{t('wettbewerb.form.checkInterval')}</label>
           <select
             value={checkIntervalDays}
             onChange={(e) => setCheckIntervalDays(Number(e.target.value))}
@@ -109,7 +108,7 @@ export function SearchForm({ onSubmit, isSubmitting }: SearchFormProps) {
           >
             {CHECK_INTERVAL_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
-                {opt.label}
+                {t(opt.labelKey)}
               </option>
             ))}
           </select>
@@ -122,7 +121,7 @@ export function SearchForm({ onSubmit, isSubmitting }: SearchFormProps) {
         className="mt-3 inline-flex items-center gap-1.5 bg-[#A8C300] hover:bg-[#96ae00] disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-1.5 px-3 rounded-sm text-[13px] transition-colors"
       >
         <Search className="w-3.5 h-3.5" />
-        {isSubmitting ? 'Speichere…' : 'Suche speichern'}
+        {isSubmitting ? t('wettbewerb.form.saving') : t('wettbewerb.form.saveSearch')}
       </button>
     </form>
   );

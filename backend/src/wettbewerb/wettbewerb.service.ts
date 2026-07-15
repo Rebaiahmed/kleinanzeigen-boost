@@ -253,10 +253,25 @@ export class WettbewerbService {
       return { priceRangeLow: null, priceRangeHigh: null, suggestedPriceLow: null, suggestedPriceHigh: null };
     }
 
+    // Kleinanzeigen's keyword search matches the title, so results for e.g.
+    // "iPhone 13" also pull in unrelated accessories (cases, cables, screen
+    // protectors) priced far below the actual product — confirmed against a
+    // live search, which returned "iPhone 13 pro Handyhülle" (a phone case)
+    // at 6€/7€ alongside real iPhone 13 listings at 160€+. Left unfiltered,
+    // those accessory prices dominate the "two cheapest" heuristic below and
+    // produce a nonsensical near-zero suggestion. Real listings for the same
+    // product cluster together; drop prices under 20% of the median before
+    // computing anything, since accessories don't. Falls back to the
+    // unfiltered list if filtering would leave fewer than 2 prices.
+    const OUTLIER_LOW_RATIO = 0.2;
+    const median = competitorPrices[Math.floor(competitorPrices.length / 2)];
+    const filtered = competitorPrices.filter((p) => p >= median * OUTLIER_LOW_RATIO);
+    const prices = filtered.length >= 2 ? filtered : competitorPrices;
+
     const round5 = (n: number) => Math.round(n / 5) * 5;
-    const priceRangeLow = competitorPrices[0];
-    const priceRangeHigh = competitorPrices[competitorPrices.length - 1];
-    const min2Avg = (competitorPrices[0] + competitorPrices[1]) / 2;
+    const priceRangeLow = prices[0];
+    const priceRangeHigh = prices[prices.length - 1];
+    const min2Avg = (prices[0] + prices[1]) / 2;
     const suggestedPriceHigh = round5(min2Avg);
     const suggestedPriceLow = Math.min(round5(min2Avg * 0.98), suggestedPriceHigh);
 

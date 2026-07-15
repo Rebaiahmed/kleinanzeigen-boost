@@ -90,6 +90,35 @@ export class SchedulerService {
   }
 
   /**
+   * Runs the repost automation-worker call, retrying a small number of times
+   * with backoff (1s, 2s, ...) only when the failure is classified as
+   * transient (TIMEOUT, IP_RATE_LIMITED) — errors like SESSION_EXPIRED,
+   * CAPTCHA_DETECTED, or IP_BLOCKED are never retried since another attempt
+   * won't fix them and only wastes credits/time. Rethrows the last error if
+   * all attempts are exhausted (or immediately for non-transient errors) so
+   * the caller's existing failure handling applies unchanged.
+   */
+  private async repostWithRetry(payload: { userId: string; adId: string; adData: AdData; cookies: any[] }): Promise<any> {
+    const TRANSIENT_CODES = new Set(['TIMEOUT', 'IP_RATE_LIMITED']);
+    const MAX_ATTEMPTS = 1 + SCHEDULER_CONFIG.maxTransientRetries;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        return await this.automationService.callAutomationWorker('repost', payload);
+      } catch (error: any) {
+        const errorCode = classifyRepostError(error.message);
+        const isTransient = TRANSIENT_CODES.has(errorCode);
+        if (!isTransient || attempt === MAX_ATTEMPTS) {
+          throw error;
+        }
+        const backoffMs = 1000 * Math.pow(2, attempt - 1); // 1s, 2s
+        this.logger.warn(`${logCtx(payload.userId, payload.adId)} Repost attempt ${attempt}/${MAX_ATTEMPTS} failed [${errorCode}] — retrying in ${backoffMs}ms`);
+        await new Promise((resolve) => setTimeout(resolve, backoffMs));
+      }
+    }
+  }
+
+  /**
    * Confirms whether a session is genuinely expired before halting a user's
    * whole batch. A single SESSION_EXPIRED from the worker can be a false
    * positive (garbled response, transient worker hiccup); halting on it would
@@ -423,7 +452,7 @@ export class SchedulerService {
           : { adData, applied: 'none' as const };
         if (isSmart) this.logger.log(`${logCtx(userId, adId, runId)} Smart Repost — variation applied: ${varied.applied}`);
 
-        const result = await this.automationService.callAutomationWorker('repost', { userId, adId, adData: varied.adData, cookies });
+        const result = await this.repostWithRetry({ userId, adId, adData: varied.adData, cookies });
         this.logger.log(`${logCtx(userId, adId, runId)} Automation worker result: ${JSON.stringify(result)}`);
 
         // 4. On success, update state and create log.
@@ -528,17 +557,28 @@ export class SchedulerService {
         const MAX_REPOST_FAILURES = SCHEDULER_CONFIG.maxRepostFailures;
         const failureCount = (adData.repostFailureCount || 0) + 1;
 
-        // Build user-friendly error message
+        // Build user-friendly error message. Grouped into three categories so
+        // the user always sees actionable, honest copy instead of a raw error:
+        // transient (worth retrying — already retried a couple times above,
+        // this message means those retries also failed), auth (needs the user
+        // to re-open Kleinanzeigen), and a generic fallback for anything else.
+        const TRANSIENT_MESSAGE = 'Kleinanzeigen war nicht erreichbar — wir versuchen es erneut.';
+        const AUTH_MESSAGE = 'Anmeldung erforderlich — bitte öffne Kleinanzeigen erneut.';
+        const GENERIC_MESSAGE = 'Etwas ist schiefgelaufen — bitte versuche es später erneut oder kontaktiere den Support.';
+
         const errorMessages: Record<string, string> = {
-          SESSION_EXPIRED: 'Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.',
-          IP_BLOCKED: 'Dein IP wurde vorübergehend gesperrt. Versuche es später erneut.',
-          CAPTCHA_DETECTED: 'CAPTCHA erkannt. Bitte melde dich manuell an.',
-          TIMEOUT: 'Zeitüberschreitung beim Neuposten. Das Netzwerk ist möglicherweise langsam.',
-          VERIFICATION_FAILED: 'Die Anzeige wurde gelöscht oder ist nicht mehr live.',
-          UNKNOWN: 'Unbekannter Fehler beim Neuposten.',
+          SESSION_EXPIRED: AUTH_MESSAGE,
+          CAPTCHA_DETECTED: AUTH_MESSAGE,
+          '403_FORBIDDEN': AUTH_MESSAGE,
+          IP_BLOCKED: TRANSIENT_MESSAGE,
+          IP_RATE_LIMITED: TRANSIENT_MESSAGE,
+          TIMEOUT: TRANSIENT_MESSAGE,
+          VERIFICATION_FAILED: GENERIC_MESSAGE,
+          '404_NOT_FOUND': GENERIC_MESSAGE,
+          UNKNOWN: GENERIC_MESSAGE,
         };
 
-        const userFriendlyMessage = errorMessages[errorCode] || `Fehler: ${error.message}`;
+        const userFriendlyMessage = errorMessages[errorCode] || GENERIC_MESSAGE;
 
         if (failureCount >= MAX_REPOST_FAILURES) {
           await adRef.update({

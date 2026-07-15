@@ -14,10 +14,9 @@ export const CHECK_INTERVAL_OPTIONS_DAYS = [1, 2, 7] as const;
 export const DEFAULT_CHECK_INTERVAL_DAYS = 2;
 
 export const FREE_SAVED_SEARCH_LIMIT = 1;
-// TODO(credits-stripe): once feature/credits-stripe merges, add a
-// `competitor_tracking: ADDITIONAL_SEARCH_CREDIT_COST` entry to
-// CREDIT_COSTS on that branch and wire WettbewerbCreditsStub to the real
-// CreditsService.reserve() using this cost.
+// Mirrors CREDIT_COSTS.competitor_tracking in credit-costs.constants.ts —
+// WettbewerbService.createSavedSearch() reserves this via the real
+// CreditsService for the 2nd+ saved search.
 export const ADDITIONAL_SEARCH_CREDIT_COST = 5;
 
 export const MIN_KEYWORD_LENGTH = 3;

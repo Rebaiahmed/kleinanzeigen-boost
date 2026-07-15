@@ -8,6 +8,7 @@ export const CREDIT_COSTS = {
   repost: 1,
   smart_repost: 2,
   ai_generation: 2,
+  competitor_tracking: 5,
 } as const;
 
 export type CreditActionType = keyof typeof CREDIT_COSTS;

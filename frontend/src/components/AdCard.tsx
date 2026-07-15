@@ -251,7 +251,8 @@ export function AdCard({
       let next: string;
       if (repostMode === 'smart') {
         const titleVariants = [titleA, titleB].map((s) => s.trim()).filter(Boolean);
-        next = computeNextSmartRepost(Date.now());
+        const lastPostedAtMs = ad.lastPostedAt ? new Date(ad.lastPostedAt).getTime() : null;
+        next = computeNextSmartRepost(lastPostedAtMs);
         payload = {
           status: 'active', autoRepost: true, repostMode: 'smart', nextRepostAt: next,
           smartVariation: {

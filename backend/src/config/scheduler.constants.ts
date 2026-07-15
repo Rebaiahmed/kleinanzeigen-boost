@@ -33,4 +33,12 @@ export const SCHEDULER_CONFIG = {
    * client first crack and prevents client+server double-posting.
    */
   serverFallbackGraceMinutes: Number(process.env.SERVER_FALLBACK_GRACE_MINUTES) || 15,
+
+  /**
+   * Automatic in-run retries for a repost attempt classified as transient
+   * (TIMEOUT, IP_RATE_LIMITED) — worth a quick retry before counting it as a
+   * real failure. Non-transient errors (SESSION_EXPIRED, CAPTCHA_DETECTED,
+   * IP_BLOCKED, etc.) are never retried here since retrying won't help.
+   */
+  maxTransientRetries: Number(process.env.MAX_TRANSIENT_REPOST_RETRIES) || 2,
 };

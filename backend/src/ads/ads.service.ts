@@ -170,7 +170,12 @@ export class AdsService {
     });
     if (toSmart.length > 0) {
       const migBatch = db.batch();
-      const nextRepostAt = computeNextSmartRepost(Date.now());
+      // null, not Date.now() — these ads were on a 5/10min interval (i.e.
+      // reposting very actively already); scheduling their first Smart Repost
+      // at the next peak window rather than forcing an extra 7-day wait
+      // matches their existing cadence better. See updateAd()'s smart-mode
+      // branch below for the full explanation of this argument's semantics.
+      const nextRepostAt = computeNextSmartRepost(null);
       toSmart.forEach(d => migBatch.update(d.ref, {
         repostMode: 'smart',
         repostIntervalMinutes: null,
@@ -491,15 +496,41 @@ export class AdsService {
     // instance (custom prototype) — Firestore only accepts plain objects, so
     // spread it into one before writing.
     if (updateData.smartVariation !== undefined) payload.smartVariation = { ...updateData.smartVariation };
+    // Both branches below may need the current doc — fetch once, lazily, and
+    // reuse rather than reading twice.
+    let currentDoc: any = null;
+    const getCurrentDoc = async () => {
+      if (currentDoc === null) currentDoc = (await adRef.get()).data() || {};
+      return currentDoc;
+    };
+
     // When switching to smart mode, schedule the next repost at a peak window.
-    if (updateData.repostMode === 'smart' && updateData.autoRepost !== false) {
-      payload.nextRepostAt = computeNextSmartRepost(Date.now());
+    // BUG FIXED: computeNextSmartRepost(lastRepostAtMs, now) was being called
+    // as computeNextSmartRepost(Date.now()) — passing "now" as lastRepostAtMs
+    // (the FIRST param) instead of the ad's actual last-repost time. Since the
+    // function's floor is `max(now, lastRepostAtMs + 7days)`, that made
+    // lastRepostAtMs≈now always, forcing every ad — including ones that had
+    // never been reposted — to wait a full 7 days before its first Smart
+    // Repost, when it should schedule at the very next peak window. Now
+    // passes the ad's real lastPostedAt (or null if it's never reposted),
+    // so only ads actually reposted within the last 7 days get pushed out.
+    //
+    // Only recompute when the caller didn't already supply nextRepostAt. The
+    // extension does supply it after a client-side repost (computed from the
+    // repost that JUST happened, correctly), and at that moment the Firestore
+    // doc's lastPostedAt hasn't been written yet — recomputing here would read
+    // it as null and schedule the next peak window instead of +7 days,
+    // defeating Kleinanzeigen's one-free-refresh-per-7-days limit.
+    if (updateData.repostMode === 'smart' && updateData.autoRepost !== false && updateData.nextRepostAt === undefined) {
+      const cur = await getCurrentDoc();
+      const lastPostedAtMs = cur.lastPostedAt ? new Date(cur.lastPostedAt).getTime() : null;
+      payload.nextRepostAt = computeNextSmartRepost(lastPostedAtMs);
     }
 
     // Auto-set status to ACTIVE when enabling auto-repost (if not explicitly set and not mid-repost).
     // Frontend should explicitly set status='active' when scheduling to guarantee scheduler finds it.
     if (updateData.autoRepost === true && updateData.status === undefined) {
-      const cur = (await adRef.get()).data() as any;
+      const cur = await getCurrentDoc();
       const st = cur?.status;
       if (st !== AdStatus.PENDING && st !== AdStatus.PENDING_REPOST) {
         payload.status = AdStatus.ACTIVE;

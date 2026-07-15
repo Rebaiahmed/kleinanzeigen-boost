@@ -8,10 +8,13 @@
 export const RADIUS_OPTIONS_KM = [0, 5, 10, 20, 30, 50, 100, 150, 200] as const;
 export const DEFAULT_RADIUS_KM = 30;
 
-export const CHECK_INTERVAL_OPTIONS: { value: number; label: string }[] = [
-  { value: 1, label: 'Täglich' },
-  { value: 2, label: 'Alle 2 Tage' },
-  { value: 7, label: 'Wöchentlich' },
+// labelKey resolves via i18next (t(labelKey)) — kept as a key, not a
+// hardcoded string, so this shared constants file doesn't need to pick a
+// display language itself.
+export const CHECK_INTERVAL_OPTIONS: { value: number; labelKey: string }[] = [
+  { value: 1, labelKey: 'wettbewerb.intervalDaily' },
+  { value: 2, labelKey: 'wettbewerb.intervalEvery2Days' },
+  { value: 7, labelKey: 'wettbewerb.intervalWeekly' },
 ];
 export const DEFAULT_CHECK_INTERVAL_DAYS = 2;
 

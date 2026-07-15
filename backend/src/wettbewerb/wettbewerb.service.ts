@@ -1,10 +1,11 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { FirebaseService } from '../firebase/firebase.service';
 import { AutomationService } from '../automation/automation.service';
 import { AdsService } from '../ads/ads.service';
 import { AdStatus } from '../ads/dto/ad-status.enum';
 import { PlzValidationService } from './plz-validation.service';
-import { WettbewerbCreditsStub } from './wettbewerb-credits.stub';
+import { CreditsService } from '../credits/credits.service';
 import { CreateSavedSearchDto } from './dto/wettbewerb.dto';
 import {
   RADIUS_OPTIONS_KM,
@@ -56,11 +57,25 @@ export class WettbewerbService {
     private readonly automationService: AutomationService,
     private readonly adsService: AdsService,
     private readonly plzValidationService: PlzValidationService,
-    private readonly creditsStub: WettbewerbCreditsStub,
+    private readonly creditsService: CreditsService,
   ) {}
 
   private searchesCol(userId: string) {
     return this.firebaseService.firestore.collection('users').doc(userId).collection('wettbewerbSearches');
+  }
+
+  /** Plain Firestore bookkeeping — no credits system involved, same as
+   *  before the credits-stub swap. */
+  private async canCreateFreeSearch(userId: string): Promise<boolean> {
+    const doc = await this.firebaseService.firestore.collection('users').doc(userId).get();
+    return doc.data()?.wettbewerbFreeSearchUsed !== true;
+  }
+
+  private async markFreeSearchUsed(userId: string): Promise<void> {
+    await this.firebaseService.firestore
+      .collection('users')
+      .doc(userId)
+      .set({ wettbewerbFreeSearchUsed: true }, { merge: true });
   }
 
   async listSavedSearches(userId: string) {
@@ -87,13 +102,15 @@ export class WettbewerbService {
     }
 
     const searchRef = this.searchesCol(userId).doc();
-    const isFree = await this.creditsStub.canCreateFreeSearch(userId);
+    const isFree = await this.canCreateFreeSearch(userId);
 
-    if (!isFree) {
-      // Reserve BEFORE writing the doc — the stub always throws right now
-      // (feature/credits-stripe isn't merged), so a thrown error here never
-      // orphans a saved-search doc.
-      await this.creditsStub.reserveForPaidSearch(userId, searchRef.id);
+    // Reserve BEFORE writing the doc — a thrown 402 (insufficient credits)
+    // here never orphans a saved-search doc. reserve() deducts immediately;
+    // confirm(true) below just releases the reservation record once the doc
+    // write succeeds, confirm(false) refunds if it doesn't.
+    const creditActionId = isFree ? null : randomUUID();
+    if (!isFree && creditActionId) {
+      await this.creditsService.reserve(userId, 'competitor_tracking', creditActionId);
     }
 
     const now = new Date().toISOString();
@@ -114,10 +131,16 @@ export class WettbewerbService {
       failureCount: 0,
       latestSnapshot: null,
     };
-    await searchRef.set(doc);
+    try {
+      await searchRef.set(doc);
+    } catch (err) {
+      if (creditActionId) await this.creditsService.confirm(creditActionId, false).catch(() => {});
+      throw err;
+    }
+    if (creditActionId) await this.creditsService.confirm(creditActionId, true).catch(() => {});
 
     if (isFree) {
-      await this.creditsStub.markFreeSearchUsed(userId);
+      await this.markFreeSearchUsed(userId);
     }
 
     return { id: searchRef.id, ...doc };

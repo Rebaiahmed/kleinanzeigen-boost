@@ -41,10 +41,11 @@ export const FEATURE_FLAGS: FeatureFlags = {
   // see frontend/src/config/legalDisclaimer.ts. Do not enable in production
   // before that's replaced.
   enableDisclaimer: parseEnvBool(process.env.FEATURE_DISCLAIMER_ENABLED, false),
-  // Wettbewerb (competitor tracker) tab — default OFF until verified end-to-end.
-  // Credit-check calls go through WettbewerbCreditsStub — see
-  // backend/src/wettbewerb/wettbewerb-credits.stub.ts for the TODO to swap it
-  // for the real CreditsService now that credits-stripe is merged.
+  // Wettbewerb (competitor tracker) tab — default OFF until verified end-to-end
+  // (production-cost/soft-launch review, not a functionality gap — see
+  // WETTBEWERB_INVESTIGATION.md). Credit-check calls go through the real
+  // CreditsService (backend/src/credits/credits.service.ts) as of the
+  // credits-stripe merge — no stub remains.
   enableWettbewerb: parseEnvBool(process.env.FEATURE_WETTBEWERB_ENABLED, false),
   // Pay-as-you-go credits wallet (Stripe one-time purchases) — default OFF until
   // verified end-to-end. Independent of MONETIZATION_ENABLED (backend/src/config/

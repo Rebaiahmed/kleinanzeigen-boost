@@ -58,10 +58,10 @@ function validateEnv() {
 async function bootstrap() {
   validateEnv();
   // rawBody: true exposes req.rawBody (Buffer) on every request alongside the
-  // normal parsed req.body — needed for Stripe webhook signature verification
-  // (backend/src/credits/credits.controller.ts#webhook), which reads the raw
-  // bytes directly rather than a @Body() DTO, so the global ValidationPipe
-  // below never touches that route.
+  // normal parsed req.body — needed for Stripe webhook signature verification,
+  // used by both credits.controller.ts#webhook and billing.controller.ts#webhook,
+  // both of which read the raw bytes directly rather than a @Body() DTO, so the
+  // global ValidationPipe below never touches those routes.
   const app = await NestFactory.create(AppModule, { rawBody: true });
 
   // Security

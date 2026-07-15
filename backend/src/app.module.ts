@@ -17,6 +17,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
 import { CreditsModule } from './credits/credits.module';
 import { ConfigController } from './config/config.controller';
+import { BillingModule } from './billing/billing.module';
 import { HealthController } from './health/health.controller';
 import { WettbewerbModule } from './wettbewerb/wettbewerb.module';
 
@@ -41,6 +42,7 @@ import { WettbewerbModule } from './wettbewerb/wettbewerb.module';
     MonitoringModule,
     WettbewerbModule,
     CreditsModule,
+    BillingModule,
     // TODO: Import Users Modules
   ],
   controllers: [ConfigController, HealthController],

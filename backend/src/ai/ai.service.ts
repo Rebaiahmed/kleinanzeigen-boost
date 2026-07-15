@@ -428,8 +428,11 @@ export class AiService {
     // any credit deduction: gating a free operation behind a cost-based quota
     // doesn't make sense. Keyed by a content hash of the exact uploaded bytes
     // (not URLs — unlike getPhotoFeedback's cache, no ad document exists yet
-    // at this point in the flow to hang a URL-based hash on).
-    const contentHash = this.hashImageBuffers(files.map((f) => f.buffer));
+    // at this point in the flow to hang a URL-based hash on) PLUS language and
+    // hint, since both change the model's output — omitting them would let a
+    // re-analysis with a different language or hint silently return a stale
+    // cached result in the wrong language.
+    const contentHash = this.hashImageBuffers(files.map((f) => f.buffer), language, hint);
     const cacheRef = db.collection('photoAnalysisCache').doc(contentHash);
     const cacheDoc = await cacheRef.get();
     if (cacheDoc.exists) {
@@ -468,8 +471,21 @@ export class AiService {
 
     // Resize before sending to the vision model — previously the raw upload
     // (up to 4MB/photo, MAX_PHOTO_BYTES) was sent untouched. Caps both the
-    // request payload and the model's token cost.
-    const resizedBuffers = await Promise.all(files.map((file) => this.resizeImageBuffer(file.buffer)));
+    // request payload and the model's token cost. A corrupt/undecodable
+    // upload must not crash uncaught here — credits were already deducted
+    // above, so a resize failure needs the same refund-then-clean-error
+    // handling as the try/catch below the model call.
+    let resizedBuffers: Buffer[];
+    try {
+      resizedBuffers = await Promise.all(files.map((file) => this.resizeImageBuffer(file.buffer)));
+    } catch (error: any) {
+      if (FEATURE_FLAGS.enableCredits) {
+        await this.creditsService.refund(userId, getCreditCost('ai_generation'), 'ai_generation_failed', creditActionId)
+          .catch((e: any) => this.logger.error(`credit refund failed: ${e.message}`));
+      }
+      this.logger.warn(`[analyze-photos] image resize failed: ${error.message}`);
+      throw new HttpException('Eines der Fotos konnte nicht verarbeitet werden. Bitte versuche es mit einem anderen Bild.', HttpStatus.BAD_REQUEST);
+    }
     const imageParts = resizedBuffers.map((buffer) => ({
       inlineData: {
         data: buffer.toString('base64'),
@@ -1136,12 +1152,16 @@ Respond ONLY with valid JSON, no markdown, no extra text:
       .toBuffer();
   }
 
-  /** Content hash (SHA-256) of the exact uploaded image bytes, used to key
-   *  analyzePhotos' cache. Unlike hashPhotoSet (URL-based, for an ad that
-   *  already exists), this runs before any ad/draft document exists. */
-  private hashImageBuffers(buffers: Buffer[]): string {
+  /** Content hash (SHA-256) of the exact uploaded image bytes plus language/hint,
+   *  used to key analyzePhotos' cache. Unlike hashPhotoSet (URL-based, for an ad
+   *  that already exists), this runs before any ad/draft document exists.
+   *  language and hint are included because both change the model's output —
+   *  hashing bytes alone would let a re-analysis with a different language or
+   *  hint wrongly hit the cache and return a stale result. */
+  private hashImageBuffers(buffers: Buffer[], language?: string, hint?: string): string {
     const hash = createHash('sha256');
     for (const buffer of buffers) hash.update(buffer);
+    hash.update(` lang:${language || ''} hint:${hint || ''}`);
     return hash.digest('hex');
   }
 }

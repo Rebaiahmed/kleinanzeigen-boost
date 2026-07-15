@@ -514,7 +514,14 @@ export class AdsService {
     // Repost, when it should schedule at the very next peak window. Now
     // passes the ad's real lastPostedAt (or null if it's never reposted),
     // so only ads actually reposted within the last 7 days get pushed out.
-    if (updateData.repostMode === 'smart' && updateData.autoRepost !== false) {
+    //
+    // Only recompute when the caller didn't already supply nextRepostAt. The
+    // extension does supply it after a client-side repost (computed from the
+    // repost that JUST happened, correctly), and at that moment the Firestore
+    // doc's lastPostedAt hasn't been written yet — recomputing here would read
+    // it as null and schedule the next peak window instead of +7 days,
+    // defeating Kleinanzeigen's one-free-refresh-per-7-days limit.
+    if (updateData.repostMode === 'smart' && updateData.autoRepost !== false && updateData.nextRepostAt === undefined) {
       const cur = await getCurrentDoc();
       const lastPostedAtMs = cur.lastPostedAt ? new Date(cur.lastPostedAt).getTime() : null;
       payload.nextRepostAt = computeNextSmartRepost(lastPostedAtMs);

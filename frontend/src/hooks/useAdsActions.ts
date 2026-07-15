@@ -32,6 +32,7 @@ export interface AdsActionsReturn {
   deleteDraft: (adId: string) => Promise<boolean>;
   optimizeExistingAd: (title: string, description: string, category: string, price: string | number) => Promise<any>;
   updateAdFields: (adId: string, fields: { title?: string; description?: string; status?: string; repostIntervalMinutes?: number; nextRepostAt?: string; autoRepost?: boolean }) => Promise<boolean>;
+  cancelScheduledRepost: (adId: string) => Promise<{ success: boolean; alreadyExecuting?: boolean }>;
   fetchSchedulerStatus: () => Promise<string | null>;
   isSyncing: boolean;
   toastMessage: string | null;
@@ -527,6 +528,33 @@ export function useAdsActions(): AdsActionsReturn {
     [showToast],
   );
 
+  const cancelScheduledRepost = useCallback(
+    async (adId: string): Promise<{ success: boolean; alreadyExecuting?: boolean }> => {
+      try {
+        const res = await fetch(`${API_URL}/ads/${adId}/cancel-repost`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${getToken()}` },
+        });
+        if (res.status === 401) { handleUnauthorized(); return { success: false }; }
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 409) {
+          showToast(data.message || 'Wird gerade ausgeführt — kann jetzt nicht abgebrochen werden.', 'error');
+          return { success: false, alreadyExecuting: true };
+        }
+        if (res.ok && data.success) {
+          showToast(data.message || 'Geplanter Repost wurde abgebrochen.', 'success');
+          return { success: true };
+        }
+        showToast(data.message || 'Abbrechen fehlgeschlagen.', 'error');
+        return { success: false };
+      } catch {
+        showToast('Netzwerkfehler beim Abbrechen.', 'error');
+        return { success: false };
+      }
+    },
+    [showToast],
+  );
+
   return {
     fetchAds,
     syncAds,
@@ -539,6 +567,7 @@ export function useAdsActions(): AdsActionsReturn {
     deleteDraft,
     optimizeExistingAd,
     updateAdFields,
+    cancelScheduledRepost,
     fetchSchedulerStatus,
     isSyncing,
     toastMessage,

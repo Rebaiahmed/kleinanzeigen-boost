@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, UnauthorizedException, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, UnauthorizedException, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { UpdateAdDto } from './dto/update-ad.dto';
 import { SaveDraftDto } from './dto/save-draft.dto';
 import { AdStatus } from './dto/ad-status.enum';
@@ -543,6 +543,43 @@ export class AdsService {
     }
 
     return { success: true, message: 'Anzeige erfolgreich aktualisiert' };
+  }
+
+  /**
+   * Cancels a scheduled (not-yet-due) recurring repost — clears autoRepost/
+   * nextRepostAt so the cron never picks it up. Rejects if the ad is currently
+   * `PENDING_REPOST` (the scheduler has already atomically locked it and is
+   * mid-execution via the automation worker — see scheduler.service.ts's
+   * runTransaction lock). That status flip is the actual point of no return:
+   * once set, the automation worker is either about to run or already
+   * running, and a plain field write here would race the worker's own
+   * post-completion update (which unconditionally re-sets autoRepost/
+   * nextRepostAt on success) — the cancellation would silently get reverted.
+   * Read-and-conditionally-write inside one transaction closes that race
+   * window entirely: either this commits before the scheduler's lock
+   * transaction, or it sees PENDING_REPOST and refuses.
+   */
+  async cancelScheduledRepost(userId: string, adId: string) {
+    const db = this.firebaseService.firestore;
+    const adRef = db.collection('users').doc(userId).collection('ads').doc(String(adId));
+
+    const result = await db.runTransaction(async (t): Promise<'cancelled' | 'executing' | 'not_scheduled'> => {
+      const snap = await t.get(adRef);
+      if (!snap.exists) return 'not_scheduled';
+      const cur = snap.data() as any;
+      if (cur.status === AdStatus.PENDING_REPOST) return 'executing';
+      if (cur.autoRepost !== true) return 'not_scheduled';
+      t.update(adRef, { autoRepost: false, nextRepostAt: null });
+      return 'cancelled';
+    });
+
+    if (result === 'executing') {
+      throw new ConflictException('Wird gerade ausgeführt — kann jetzt nicht abgebrochen werden.');
+    }
+    if (result === 'not_scheduled') {
+      return { success: true, message: 'Kein geplanter Repost vorhanden.' };
+    }
+    return { success: true, message: 'Geplanter Repost wurde abgebrochen.' };
   }
 
   async crossPostEbay(userId: string, adId: string) {

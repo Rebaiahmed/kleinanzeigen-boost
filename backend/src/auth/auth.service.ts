@@ -393,10 +393,18 @@ export class AuthService {
 
   async getStatus(userId: string) {
     const doc = await this.firebaseService.firestore.collection('sessions').doc(userId).get();
+    // kleinanzeigenAccountStatus is a SEPARATE concept from the dashboard-session
+    // `status` above: the scheduler sets users/{id}.accountStatus='expired' when
+    // it confirms the user's Kleinanzeigen cookies stopped authenticating (see
+    // scheduler.service.ts's confirmSessionExpired flow), independent of whether
+    // this JWT dashboard session is still valid. Surfaced so the frontend can show
+    // a "please reconnect" banner even while the dashboard itself stays logged in.
+    const userDoc = await this.firebaseService.firestore.collection('users').doc(userId).get();
+    const kleinanzeigenAccountStatus = userDoc.data()?.accountStatus === 'expired' ? 'expired' : 'active';
     if (doc.exists && doc.data()?.status === 'active') {
-      return { status: 'active' };
+      return { status: 'active', kleinanzeigenAccountStatus };
     }
-    return { status: 'expired' };
+    return { status: 'expired', kleinanzeigenAccountStatus };
   }
 
   /**

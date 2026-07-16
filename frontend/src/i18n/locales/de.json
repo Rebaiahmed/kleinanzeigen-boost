@@ -55,6 +55,10 @@
     "chromeOnly": "Die AnzeigenBoost-Erweiterung funktioniert nur in Google Chrome (oder Chromium-Browsern wie Edge & Brave).",
     "openChrome": "Chrome öffnen →"
   },
+  "sessionExpiredBanner": {
+    "message": "Deine Kleinanzeigen-Sitzung ist abgelaufen. Automatische Reposts sind pausiert.",
+    "hint": "Bitte melde dich über die Erweiterung erneut an"
+  },
   "footer": {
     "tagline": "AnzeigenBoost — Deine Anzeigen immer ganz oben",
     "madeWith": "Made with"

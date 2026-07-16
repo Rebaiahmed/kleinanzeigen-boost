@@ -52,6 +52,7 @@ export function useRepostNotifications(onRepostNotification?: () => void) {
           else if (data.type === 'repost_pending_notification') title = '📢 Repost bereit';
           else if (data.type === 'repost_disabled') title = '⚠️ Auto-Repost deaktiviert';
           else if (data.type === 'reposts_paused') title = '⛔ Reposts pausiert';
+          else if (data.type === 'session_expired') title = '🔐 Sitzung abgelaufen';
 
           show(title, data.message || 'Benachrichtigung von AnzeigenBoost');
 

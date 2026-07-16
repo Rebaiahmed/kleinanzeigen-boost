@@ -7,6 +7,7 @@ import { useExtension } from '../../hooks/useExtension';
 import { useRepostNotifications } from '../../hooks/useRepostNotifications';
 import { useFeatureFlags } from '../../hooks/useFeatureFlags';
 import { useWettbewerbSeen } from '../../hooks/useWettbewerbSeen';
+import { useAccountStatus } from '../../hooks/useAccountStatus';
 import { AlertCircle, MessageSquare } from 'lucide-react';
 
 const FEEDBACK_FORM_URL =
@@ -40,6 +41,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const hasSession = !!(localStorage.getItem('token') || localStorage.getItem('kb_session'));
   const showBanner = isChromiumBrowser && !isChecking && !isConnected && !hasSession;
 
+  const { kleinanzeigenSessionExpired } = useAccountStatus();
+
   return (
     <div className="min-h-screen bg-[#f5f5f5] dark:bg-[#1e2023] flex flex-col relative font-sans text-[#333] dark:text-[#e5e5e5] transition-colors duration-200">
       <TopBar />
@@ -72,6 +75,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
             <span className="text-red-800 text-xs">
               {t('extensionBanner.enableHint')}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {kleinanzeigenSessionExpired && (
+        <div className="bg-red-50 border-b border-red-200 py-3 px-4">
+          <div className="max-w-[900px] mx-auto flex items-center justify-between text-red-700 text-sm font-medium">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5" />
+              <span>{t('sessionExpiredBanner.message')}</span>
+            </div>
+            <span className="text-red-800 text-xs">
+              {t('sessionExpiredBanner.hint')}
             </span>
           </div>
         </div>

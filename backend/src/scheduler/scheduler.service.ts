@@ -544,6 +544,10 @@ export class SchedulerService {
 
           if (reallyExpired) {
             await db.collection('users').doc(userId).update({ accountStatus: 'expired' });
+            await this.notificationsService.emit(userId, {
+              type: 'session_expired',
+              message: 'Deine Kleinanzeigen-Sitzung ist abgelaufen. Automatische Reposts sind pausiert, bis du dich über die Erweiterung erneut anmeldest.',
+            }).catch(() => {});
             this.logger.warn(`${logCtx(userId, undefined, runId)} Session confirmed expired — halting remaining reposts`);
             break; // All ads share these cookies; no point continuing.
           }

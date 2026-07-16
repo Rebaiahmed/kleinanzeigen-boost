@@ -96,10 +96,15 @@ function performRepost(adId: string, adData: any): Promise<{ ok: boolean; step?:
         }
         setTimeout(() => {
           executeRepostFullFlow(newTab.id!, adId, adData).then((result) => {
-            const title = result.ok ? '✅ Anzeige neu eingestellt' : '❌ Neu einstellen fehlgeschlagen';
+            const isLoginRequired = !result.ok && result.error === 'LOGIN_REQUIRED';
+            const title = result.ok
+              ? '✅ Anzeige neu eingestellt'
+              : isLoginRequired ? '🔐 Kleinanzeigen-Anmeldung erforderlich' : '❌ Neu einstellen fehlgeschlagen';
             const msg = result.ok
               ? `Deine Anzeige wurde erfolgreich neu eingestellt.\n${result.finalUrl || ''}`
-              : `Bei Schritt "${result.step}": ${result.error}`;
+              : isLoginRequired
+                ? 'Deine Kleinanzeigen-Sitzung ist abgelaufen. Bitte melde dich erneut an, damit automatische Reposts weiterlaufen.'
+                : `Bei Schritt "${result.step}": ${result.error}`;
             chrome.notifications.create({ type: 'basic', iconUrl: 'icons/icon-128.png', title, message: msg.slice(0, 300) });
             resolve(result);
           }).catch((e) => {
@@ -138,21 +143,58 @@ async function runDueClientReposts(verbose = false): Promise<void> {
   const due = ads.filter((a) =>
     a.autoRepost === true &&
     a.nextRepostAt && new Date(a.nextRepostAt).getTime() <= now &&
-    (!a.listingState || a.listingState === 'active'));
+    (!a.listingState || a.listingState === 'active') &&
+    // The backend's server-side cron fallback locks an ad by flipping
+    // status to 'pending_repost' inside a Firestore transaction before it
+    // starts its own (up to ~2 min) automation-worker call — see
+    // scheduler.service.ts's runTransaction lock. That's the ONLY execution
+    // lock in the system; if the client claimed/reposted this ad too while
+    // the server already has it locked, both would repost the same ad
+    // concurrently (confirmed race — docs/SCHEDULED-REPOST-EDGE-CASES.md,
+    // Finding A). Skipping here doesn't fully close the window (the check
+    // and the claim below aren't atomic together), but it closes the
+    // overwhelmingly common case: the server already mid-flight when this
+    // fetch runs.
+    a.status !== 'pending_repost');
   if (due.length === 0) { if (verbose) console.log('[BG][sched] no due reposts'); return; }
 
-  console.log(`[BG][sched] ${due.length} due repost(s) — claiming all up front, then reposting one at a time`);
+  // Cap how many overdue ads get claimed+reposted in a single run. Without
+  // this, a long-overdue backlog (browser closed for weeks) claims and
+  // reposts EVERY due ad sequentially from a real tab, 4-8s apart — for 20+
+  // ads that's 15-30+ minutes of continuous automated tab activity right at
+  // startup, one OS notification per ad, and a plausible bot-detection
+  // signal (docs/SCHEDULED-REPOST-EDGE-CASES.md, Finding D). Oldest-overdue
+  // first; whatever doesn't fit this run stays due — the next 1-min alarm
+  // tick picks it up, or the server-side fallback does after its grace
+  // window, exactly like any other due ad the client hasn't gotten to yet.
+  const MAX_CLIENT_REPOSTS_PER_RUN = 5;
+  const sortedDue = [...due].sort(
+    (a, b) => new Date(a.nextRepostAt).getTime() - new Date(b.nextRepostAt).getTime(),
+  );
+  const batch = sortedDue.slice(0, MAX_CLIENT_REPOSTS_PER_RUN);
+  if (sortedDue.length > MAX_CLIENT_REPOSTS_PER_RUN) {
+    chrome.notifications.create(`repost-backlog-${Date.now()}`, {
+      type: 'basic',
+      iconUrl: 'icons/icon-128.png',
+      title: '📋 Mehrere Reposts überfällig',
+      message: `${sortedDue.length} Anzeigen sind überfällig. Die ${MAX_CLIENT_REPOSTS_PER_RUN} ältesten werden jetzt neu eingestellt, der Rest folgt automatisch.`,
+    });
+  }
+
+  console.log(`[BG][sched] ${sortedDue.length} due repost(s), processing ${batch.length} this run — claiming up front, then reposting one at a time`);
   clientSchedulerRunning = true;
   const authHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
   try {
-    // BATCH-CLAIM: advance nextRepostAt for ALL due ads up front, BEFORE reposting
-    // any. Otherwise ads later in the queue stay "due" while we work through it one
-    // at a time, and the server fallback (after its grace window) could grab and
-    // repost them in parallel → duplicate listings. Claiming the whole batch first
-    // mirrors the server's atomic lock across every due ad. Only successfully
-    // claimed ads are reposted; a failed claim is skipped (avoids a double post).
+    // BATCH-CLAIM: advance nextRepostAt for every ad in THIS RUN's batch up
+    // front, BEFORE reposting any. Otherwise ads later in the batch stay
+    // "due" while we work through it one at a time, and the server fallback
+    // (after its grace window) could grab and repost them in parallel →
+    // duplicate listings. Claiming the batch first mirrors the server's
+    // atomic lock across every ad in it. Only successfully claimed ads are
+    // reposted; a failed claim is skipped (avoids a double post). Ads beyond
+    // MAX_CLIENT_REPOSTS_PER_RUN are deliberately left unclaimed — see above.
     const claimed: any[] = [];
-    for (const ad of due) {
+    for (const ad of batch) {
       // Smart mode: claim the next slot before a peak (≥7 days out) and bump the
       // variation counter. Manual: interval.
       const smart = ad.repostMode === 'smart';
@@ -552,6 +594,15 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
         }
       } catch (err: any) {
         console.warn('[BG] failed to fetch ad data:', err.message);
+      }
+
+      // The server-side cron fallback may already have this ad locked
+      // (status='pending_repost') and be mid-repost via its own automation
+      // worker — see the matching check in runDueClientReposts. Reposting it
+      // here too would race the server's in-flight repost.
+      if (adData?.status === 'pending_repost') {
+        sendResponse({ ok: false, error: 'Repost läuft bereits im Hintergrund — bitte kurz warten.' });
+        return;
       }
 
       const isSmart = adData?.repostMode === 'smart';

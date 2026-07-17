@@ -9,6 +9,7 @@ import { VintedService } from '../vinted/vinted.service';
 import { classifyRepostError } from '../common/repost-error.util';
 import { SessionService } from '../auth/session.service';
 import { applySmartVariation, computeNextSmartRepost } from '../config/smart-repost';
+import { NotificationsService } from '../notifications/notifications.service';
 @Injectable()
 export class AdsService {
   private readonly logger = new Logger(AdsService.name);
@@ -19,7 +20,30 @@ export class AdsService {
     private readonly ebayService: EbayService,
     private readonly vintedService: VintedService,
     private readonly sessionService: SessionService,
+    private readonly notificationsService: NotificationsService,
   ) {}
+
+  /**
+   * Re-checks with a fresh worker call before trusting a SESSION_EXPIRED
+   * error — a single failure can be a false positive (worker hiccup,
+   * transient network issue). Mirrors scheduler.service.ts's
+   * confirmSessionExpired; duplicated rather than shared because it's a
+   * small, self-contained check and the scheduler's version is private to
+   * that service.
+   */
+  private async confirmSessionExpired(userId: string, adId: string): Promise<boolean> {
+    const freshCookies = await this.sessionService.getDecryptedCookies(userId);
+    if (freshCookies.length === 0) return true; // no cookies at all — definitely gone
+
+    try {
+      const result = await this.automationService.callAutomationWorker('scrape-views', { userId, cookies: freshCookies, adId });
+      if (result && (result.success || typeof result.views === 'number')) return false;
+      return false; // ambiguous response — don't confirm expiry, treat as transient
+    } catch (e: any) {
+      // Only a repeated SESSION_EXPIRED confirms the session is truly dead.
+      return e.message === 'SESSION_EXPIRED';
+    }
+  }
 
   async getAds(userId: string) {
     const db = this.firebaseService.firestore;
@@ -295,6 +319,27 @@ export class AdsService {
         executedAt: new Date().toISOString(), durationMs: Date.now() - startTime,
         triggeredBy: 'manual', runId: null,
       }).catch(() => {});
+
+      // Unlike the scheduler's cron, this endpoint previously had NO
+      // SESSION_EXPIRED handling at all — a user manually reposting (or the
+      // Wettbewerb tab's "repost this ad" trigger, which calls this same
+      // method) with an expired Kleinanzeigen session got a raw, unexplained
+      // 500 with no indication of why or what to do about it. Mirrors the
+      // scheduler's confirm-then-flag pattern so the same accountStatus
+      // banner + notification the scheduler already produces also covers
+      // this manual path.
+      if (errorCode === 'SESSION_EXPIRED') {
+        const reallyExpired = await this.confirmSessionExpired(userId, adId);
+        if (reallyExpired) {
+          await db.collection('users').doc(userId).update({ accountStatus: 'expired' }).catch(() => {});
+          await this.notificationsService.emit(userId, {
+            type: 'session_expired',
+            message: 'Deine Kleinanzeigen-Sitzung ist abgelaufen. Bitte melde dich über die Erweiterung erneut an.',
+          }).catch(() => {});
+          throw new UnauthorizedException('Deine Kleinanzeigen-Sitzung ist abgelaufen. Bitte melde dich über die Erweiterung erneut an.');
+        }
+      }
+
       throw new InternalServerErrorException(error.message);
     }
   }

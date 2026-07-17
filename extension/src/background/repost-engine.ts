@@ -87,6 +87,23 @@ async function waitForElement(tabId: number, selector: string, timeoutMs = 10000
   return false;
 }
 
+/**
+ * Detects a Kleinanzeigen login-wall redirect. When the session is expired,
+ * navigating to a form/action page redirects to m-einloggen.html instead of
+ * rendering the expected form — the caller would otherwise see a generic
+ * "element not found" timeout with no indication the session died. Checked
+ * via the tab's actual URL (not DOM content) since the login page's markup
+ * isn't otherwise inspected here.
+ */
+async function isOnLoginPage(tabId: number): Promise<boolean> {
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    return !!tab.url && /m-einloggen\.html/i.test(tab.url);
+  } catch {
+    return false;
+  }
+}
+
 // ─── DEV-only debug mode ──────────────────────────────────────────────────────
 // OFF in production. There is NO user-facing toggle and the production caller
 // never passes debug:true, so a shipped build always runs debug = false (no
@@ -965,7 +982,10 @@ export async function executeRepostFullFlow(
     step = 'navigate_form';
     await setStatus(tabId, 'Formular wird geöffnet…');
     await navigate(tabId, 'https://www.kleinanzeigen.de/p-anzeige-aufgeben-schritt2.html');
-    if (!(await waitForElement(tabId, 'input#ad-title', 15000))) throw new Error('form not found after navigation');
+    if (!(await waitForElement(tabId, 'input#ad-title', 15000))) {
+      if (await isOnLoginPage(tabId)) throw new Error('LOGIN_REQUIRED');
+      throw new Error('form not found after navigation');
+    }
     if (dbg) await setDebugOverlay(tabId); // re-assert widget after navigation
 
     // 1) Category FIRST (determines which fields render → no later reset).

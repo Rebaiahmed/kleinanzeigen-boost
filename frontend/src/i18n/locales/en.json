@@ -55,6 +55,10 @@
     "chromeOnly": "The AnzeigenBoost extension only works in Google Chrome (or Chromium browsers like Edge & Brave).",
     "openChrome": "Open Chrome →"
   },
+  "sessionExpiredBanner": {
+    "message": "Your Kleinanzeigen session has expired. Automatic reposts are paused.",
+    "hint": "Please reconnect via the extension"
+  },
   "footer": {
     "tagline": "AnzeigenBoost — Your ads, always on top",
     "madeWith": "Made with"

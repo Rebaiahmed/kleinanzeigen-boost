@@ -42,6 +42,17 @@ function cleanText(s: string | undefined | null): string {
     .trim();
 }
 
+// Kleinanzeigen's title field cap — same "60" assumption used consistently
+// across the UI counter (CreateWithAi.tsx) and the AI prompt
+// (analyze-photos.system.txt), not independently re-verified against
+// Kleinanzeigen's own documented limit. fillField below assigns via the
+// native React value-setter, which bypasses the KA form's own HTML
+// `maxlength` attribute (that only constrains user keystrokes, not
+// scripted .value assignment) — so if the AI ever returns a longer title
+// despite its instructions, this is the last line of defense before it's
+// written into the live form.
+const KA_TITLE_MAX_CHARS = 60;
+
 // ─── MAIN-world execution primitives ──────────────────────────────────────────
 
 /** Run a self-contained function in the page's MAIN world; return its result.
@@ -1051,8 +1062,8 @@ export async function executeRepostFullFlow(
 
     // 6) Title — deferred to right before submit (prevents React re-render clearing it)
     step = 'set_title';
-    const cleanTitle = cleanText(adData?.title);
-    log('title value:', cleanTitle ? `"${cleanTitle.slice(0, 60)}"` : '(empty)');
+    const cleanTitle = cleanText(adData?.title).slice(0, KA_TITLE_MAX_CHARS);
+    log('title value:', cleanTitle ? `"${cleanTitle}"` : '(empty)');
     if (cleanTitle) {
       const titleOk = await fillField(tabId, 'input#ad-title', cleanTitle, dbg, 'Titel');
       if (!titleOk) {

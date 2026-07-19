@@ -612,6 +612,22 @@ export class AiService {
       );
     }
 
+    // 5c. The prompt instructs the model to keep title/vinted.title under
+    // 60/50 characters, but nothing enforced this — a title over
+    // Kleinanzeigen's real limit would reach the DOM-fill step unclamped
+    // (repost-engine.ts assigns it via the native React value-setter, which
+    // bypasses the KA form's own HTML maxlength) and any resulting KA-side
+    // rejection wouldn't map to a known error code, surfacing as a generic
+    // failure. Clamp here as a last line of defense — the frontend's 60-char
+    // counter/submit-guard already assumes this holds.
+    if (typeof parsedJson.title === 'string' && parsedJson.title.length > 60) {
+      this.logger.warn(`[analyze-photos] AI title exceeded 60 chars (${parsedJson.title.length}) despite prompt instruction — truncating`);
+      parsedJson.title = parsedJson.title.slice(0, 60);
+    }
+    if (parsedJson.vinted && typeof parsedJson.vinted.title === 'string' && parsedJson.vinted.title.length > 50) {
+      parsedJson.vinted.title = parsedJson.vinted.title.slice(0, 50);
+    }
+
     // 6. Record usage — metered (counts toward the limit) + model/cost/lastActive tracking.
     // Only reached once we know the result is actually usable (see check above).
     await this.logUsage(userId, modelUsed, promptTokenCount, candidatesTokenCount, true);

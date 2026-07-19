@@ -104,10 +104,17 @@ export class CreditsService {
 
   /** Idempotent Stripe purchase credit — a stripeWebhookEvents/{eventId} doc
    *  written in the SAME transaction as the balance increment acts as the
-   *  dedup lock, so retried webhook deliveries never double-credit. */
+   *  dedup lock, so retried webhook deliveries never double-credit.
+   *
+   *  Also records a stripePaymentIntents/{paymentIntentId} → userId lookup
+   *  (when a payment intent id is available) so a LATER charge.refunded or
+   *  charge.dispute.created event — which only carries the charge/payment
+   *  intent id, not our own userId metadata — can be traced back to who
+   *  made the purchase. See handleChargeRefundOrDispute below. */
   async grantFromStripeEvent(
     eventId: string,
     metadata: { userId: string; packId: string; credits: string },
+    paymentIntentId?: string | null,
   ): Promise<void> {
     const db = this.firebaseService.firestore;
     const eventRef = db.collection('stripeWebhookEvents').doc(eventId);
@@ -131,7 +138,42 @@ export class CreditsService {
         timestamp: new Date().toISOString(), balanceAfter: newBalance,
         stripeEventId: eventId, stripePackId: metadata.packId,
       } as CreditTransaction);
+      if (paymentIntentId) {
+        t.set(db.collection('stripePaymentIntents').doc(paymentIntentId), {
+          userId: metadata.userId, packId: metadata.packId, amount, eventId,
+          grantedAt: new Date().toISOString(),
+        });
+      }
     });
+  }
+
+  /**
+   * Refund/dispute handling: currently OBSERVABILITY ONLY, deliberately not
+   * automated clawback or account suspension — see
+   * docs/FEATURE-EDGE-CASES.md, Area 2 #3. Clawing back credits that were
+   * already spent on completed AI generations has no clean "undo," and
+   * auto-suspending on a mere dispute could wrongly punish a user whose
+   * dispute is later resolved in their favor. This records the event
+   * against the purchase it maps to (via the stripePaymentIntents lookup
+   * above) and alerts an admin to review and decide manually — a real,
+   * useful middle ground between "unhandled" and "fully automated."
+   */
+  async handleChargeRefundOrDispute(
+    paymentIntentId: string | null | undefined,
+    kind: 'refunded' | 'disputed',
+    stripeEventId: string,
+  ): Promise<{ userId: string | null }> {
+    if (!paymentIntentId) return { userId: null };
+    const db = this.firebaseService.firestore;
+    const piDoc = await db.collection('stripePaymentIntents').doc(paymentIntentId).get();
+    if (!piDoc.exists) return { userId: null }; // not one of our credit purchases (or predates this tracking)
+
+    const { userId, packId, amount } = piDoc.data() as { userId: string; packId: string; amount: number };
+    await this.userRef(userId).collection('creditPurchaseAlerts').add({
+      kind, paymentIntentId, packId, amount, stripeEventId,
+      createdAt: new Date().toISOString(), reviewed: false,
+    });
+    return { userId };
   }
 
   /**

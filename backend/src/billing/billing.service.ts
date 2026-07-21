@@ -109,18 +109,18 @@ export class BillingService {
       switch (event.type) {
         case 'checkout.session.completed': {
           const session = event.data.object as Stripe.Checkout.Session;
-          await this.syncFromSubscription(session.customer as string, session.subscription as string);
+          await this.syncFromSubscription(session.customer as string, session.subscription as string, event.created);
           break;
         }
         case 'customer.subscription.updated':
         case 'customer.subscription.created': {
           const sub = event.data.object as Stripe.Subscription;
-          await this.applySubscription(sub.customer as string, sub);
+          await this.applySubscription(sub.customer as string, sub, event.created);
           break;
         }
         case 'customer.subscription.deleted': {
           const sub = event.data.object as Stripe.Subscription;
-          await this.downgradeToFree(sub.customer as string);
+          await this.downgradeToFree(sub.customer as string, event.created);
           break;
         }
         default:
@@ -135,47 +135,76 @@ export class BillingService {
     return { received: true };
   }
 
-  private async syncFromSubscription(customerId: string, subscriptionId: string) {
+  private async syncFromSubscription(customerId: string, subscriptionId: string, eventCreated: number) {
     const stripe = this.assertEnabled();
     if (!subscriptionId) return;
     const sub = await stripe.subscriptions.retrieve(subscriptionId);
-    await this.applySubscription(customerId, sub);
+    await this.applySubscription(customerId, sub, eventCreated);
   }
 
   /** Derive tier from a subscription's active price and persist it. */
-  private async applySubscription(customerId: string, sub: Stripe.Subscription) {
+  private async applySubscription(customerId: string, sub: Stripe.Subscription, eventCreated: number) {
     const priceId = sub.items.data[0]?.price?.id;
     const plan = planForPriceId(priceId);
     const active = ['active', 'trialing', 'past_due'].includes(sub.status);
 
-    const userRef = await this.userRefForCustomer(customerId);
-    if (!userRef) {
-      this.logger.warn(`[Billing] no user found for customer ${customerId}`);
-      return;
-    }
-
     if (active && plan) {
-      await userRef.set(
-        { tier: plan, subscriptionStatus: sub.status, stripeSubscriptionId: sub.id },
-        { merge: true },
-      );
-      this.logger.log(`[Billing] customer ${customerId} → tier=${plan} (${sub.status})`);
+      const applied = await this.applyIfNewer(customerId, eventCreated, {
+        tier: plan, subscriptionStatus: sub.status, stripeSubscriptionId: sub.id,
+      });
+      if (applied) this.logger.log(`[Billing] customer ${customerId} → tier=${plan} (${sub.status})`);
     } else {
-      await this.downgradeToFree(customerId);
+      await this.downgradeToFree(customerId, eventCreated);
     }
   }
 
-  private async downgradeToFree(customerId: string) {
-    const userRef = await this.userRefForCustomer(customerId);
-    if (!userRef) return;
-    await userRef.set({ tier: 'free', subscriptionStatus: 'canceled' }, { merge: true });
-    this.logger.log(`[Billing] customer ${customerId} → tier=free`);
+  private async downgradeToFree(customerId: string, eventCreated: number) {
+    const applied = await this.applyIfNewer(customerId, eventCreated, {
+      tier: 'free', subscriptionStatus: 'canceled',
+    });
+    if (applied) this.logger.log(`[Billing] customer ${customerId} → tier=free`);
   }
 
-  /** Find the user document for a Stripe customer id. */
-  private async userRefForCustomer(customerId: string) {
+  /**
+   * Stripe does not guarantee webhook delivery order, and this app has no
+   * event-ID dedup table for billing (unlike credits' stripeWebhookEvents —
+   * subscription state updates are naturally idempotent replay-wise since
+   * they always write the CURRENT derived tier rather than incrementing
+   * anything). Ordering is the separate risk that idempotency alone doesn't
+   * cover: a delayed customer.subscription.deleted arriving after a newer
+   * customer.subscription.updated could downgrade a user who has since
+   * resubscribed. Each Stripe Event carries its own `created` (Unix
+   * seconds) timestamp — stored per-customer as lastBillingEventAt inside
+   * the SAME transaction as the tier write, so a race between two
+   * concurrent webhook deliveries can't both pass the "is this newer" check
+   * before either commits. Returns whether the mutation was actually
+   * applied (false = skipped as stale/out-of-order), purely for logging.
+   */
+  private async applyIfNewer(
+    customerId: string,
+    eventCreated: number,
+    fields: Record<string, any>,
+  ): Promise<boolean> {
     const db = this.firebaseService.firestore;
     const q = await db.collection('users').where('stripeCustomerId', '==', customerId).limit(1).get();
-    return q.empty ? null : q.docs[0].ref;
+    if (q.empty) {
+      this.logger.warn(`[Billing] no user found for customer ${customerId}`);
+      return false;
+    }
+    const userRef = q.docs[0].ref;
+
+    return db.runTransaction(async (t: any) => {
+      const doc = await t.get(userRef);
+      const lastEventAt = doc.data()?.lastBillingEventAt ?? 0;
+      if (eventCreated <= lastEventAt) {
+        this.logger.warn(
+          `[Billing] skipping stale/out-of-order event for customer ${customerId} ` +
+          `(event created=${eventCreated}, already applied up to ${lastEventAt})`,
+        );
+        return false;
+      }
+      t.set(userRef, { ...fields, lastBillingEventAt: eventCreated }, { merge: true });
+      return true;
+    });
   }
 }

@@ -1,6 +1,7 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import Stripe from 'stripe';
 import { FirebaseService } from '../firebase/firebase.service';
+import { sendAdminAlert } from '../common/admin-alert.util';
 import {
   PaidPlan,
   STRIPE_PRICE_IDS,
@@ -123,6 +124,23 @@ export class BillingService {
           await this.downgradeToFree(sub.customer as string, event.created);
           break;
         }
+        case 'charge.refunded':
+        case 'charge.dispute.created': {
+          // Observability only, deliberately not an automatic downgrade —
+          // see docs/FEATURE-EDGE-CASES.md, Area 2 #3. Stripe already sends
+          // its own customer.subscription.updated/deleted events through the
+          // normal dunning/cancellation flow; reacting to a raw refund or
+          // dispute here too could downgrade a subscriber before the actual
+          // outcome (which may resolve in their favor) is known. This just
+          // gets a human in the loop.
+          const eventObject = event.data.object as any;
+          const customerId: string | undefined = eventObject.customer;
+          if (customerId) {
+            const kind = event.type === 'charge.refunded' ? 'refunded' : 'disputed';
+            await this.recordChargeAlert(customerId, kind, event.id);
+          }
+          break;
+        }
         default:
           // Ignore the long tail of events we don't act on.
           break;
@@ -206,5 +224,27 @@ export class BillingService {
       t.set(userRef, { ...fields, lastBillingEventAt: eventCreated }, { merge: true });
       return true;
     });
+  }
+
+  /** Logs a refund/dispute against the affected subscriber + alerts an
+   *  admin to review manually. See the call site's comment for why this
+   *  doesn't take automatic action on the subscription itself. */
+  private async recordChargeAlert(customerId: string, kind: 'refunded' | 'disputed', stripeEventId: string) {
+    const userRef = await this.userRefForCustomer(customerId);
+    if (!userRef) return;
+    await userRef.collection('billingAlerts').add({
+      kind, customerId, stripeEventId, createdAt: new Date().toISOString(), reviewed: false,
+    });
+    await sendAdminAlert(
+      `💳 Stripe subscription charge ${kind} — customerId=${customerId}, user=${userRef.id}. ` +
+      `No automatic downgrade taken; please review manually.`,
+    );
+  }
+
+  /** Find the user document for a Stripe customer id. */
+  private async userRefForCustomer(customerId: string) {
+    const db = this.firebaseService.firestore;
+    const q = await db.collection('users').where('stripeCustomerId', '==', customerId).limit(1).get();
+    return q.empty ? null : q.docs[0].ref;
   }
 }

@@ -6,6 +6,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FEATURE_FLAGS } from '../config/feature-flags';
 import { ReserveCreditsDto, ConfirmCreditsDto, CreateCheckoutDto } from './dto/credits.dto';
 import { CreditActionType } from '../config/credit-costs.constants';
+import { sendAdminAlert } from '../common/admin-alert.util';
 
 @Controller('api/credits')
 export class CreditsController {
@@ -82,7 +83,21 @@ export class CreditsController {
       const session = event.data.object as any;
       const metadata = session.metadata as { userId: string; packId: string; credits: string };
       if (metadata?.userId && metadata?.credits) {
-        await this.creditsService.grantFromStripeEvent(event.id, metadata);
+        await this.creditsService.grantFromStripeEvent(event.id, metadata, session.payment_intent || null);
+      }
+    } else if (event.type === 'charge.refunded' || event.type === 'charge.dispute.created') {
+      // Observability only, deliberately not automated clawback/suspension —
+      // see CreditsService.handleChargeRefundOrDispute's doc comment. Both
+      // Stripe's Charge and Dispute event objects carry `payment_intent`.
+      const eventObject = event.data.object as any;
+      const paymentIntentId: string | null = eventObject.payment_intent || null;
+      const kind = event.type === 'charge.refunded' ? 'refunded' : 'disputed';
+      const { userId } = await this.creditsService.handleChargeRefundOrDispute(paymentIntentId, kind, event.id);
+      if (userId) {
+        await sendAdminAlert(
+          `💳 Stripe credit purchase ${kind} — userId=${userId}, paymentIntent=${paymentIntentId}. ` +
+          `No automatic action taken (credits not clawed back); please review manually.`,
+        );
       }
     }
 

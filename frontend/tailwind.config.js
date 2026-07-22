@@ -9,7 +9,12 @@ module.exports = {
           green:     '#A8C300',
           'green-dark': '#86A000',
           'green-light': '#D4E680',
+          // WCAG AA-safe variants for text/icons directly on a white or light
+          // background — the brand green/orange above are ~2:1 contrast and
+          // fail AA for text use (accessibility audit, fix/accessibility-audit).
+          'green-text': '#5A6B00',
           orange:    '#FF6500',
+          'orange-text': '#B84800',
           'orange-light': '#FFE0CC',
           gray: {
             50:  '#F5F5F5',

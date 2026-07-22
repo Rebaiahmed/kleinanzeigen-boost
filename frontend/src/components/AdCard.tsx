@@ -461,7 +461,7 @@ export function AdCard({
               }}
             />
             <div className="text-[12px]">
-              <span className={`block font-semibold transition-colors ${repostLocked ? 'text-gray-400' : 'text-[#333] group-hover:text-ka-green'}`}>{t('adCard.repostNow')}</span>
+              <span className={`block font-semibold transition-colors ${repostLocked ? 'text-gray-400' : 'text-[#333] group-hover:text-ka-green-text'}`}>{t('adCard.repostNow')}</span>
               {repostLocked ? (
                 <span className="text-[12px] block text-orange-600 font-medium">
                   {t('adCard.pausedListing', { state: repostLockedLabel })}
@@ -747,9 +747,10 @@ export function AdCard({
       {showAnalytics && flags.enableAnalytics && (
         <div className="border-t border-ka-green/20 bg-green-50/40 p-3">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[12px] font-semibold text-ka-green uppercase tracking-wider">{t('adCard.repostPerformance')}</h3>
+            <h3 className="text-[12px] font-semibold text-ka-green-text uppercase tracking-wider">{t('adCard.repostPerformance')}</h3>
             <button
               onClick={() => setShowAnalytics(false)}
+              aria-label={t('adCard.close')}
               className="text-gray-400 hover:text-gray-600 transition-colors"
             >
               <X className="w-4 h-4" />
@@ -771,11 +772,11 @@ export function AdCard({
                 <div className="flex gap-4">
                   <div>
                     <span className="text-gray-500">{t('adCard.views')}</span>
-                    <span className="font-bold text-ka-green ml-1">{repost.views}</span>
+                    <span className="font-bold text-ka-green-text ml-1">{repost.views}</span>
                   </div>
                   <div>
                     <span className="text-gray-500">{t('adCard.messages')}</span>
-                    <span className="font-bold text-ka-green ml-1">{repost.messages}</span>
+                    <span className="font-bold text-ka-green-text ml-1">{repost.messages}</span>
                   </div>
                 </div>
               </div>

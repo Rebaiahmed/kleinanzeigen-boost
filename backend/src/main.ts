@@ -6,7 +6,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
-import * as cookieParser from 'cookie-parser';
+import cookieParser from 'cookie-parser';
 import { ALLOWED_ORIGINS } from './common/constants/cors.constants';
 import { GlobalHttpExceptionFilter } from './common/filters/http-exception.filter';
 import { FEATURE_FLAGS } from './config/feature-flags';

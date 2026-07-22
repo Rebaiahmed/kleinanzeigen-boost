@@ -471,6 +471,19 @@ async function setShipping(tabId: number, shippingType: 'ja' | 'nein', dbg = fal
  * the picker → click parent cat_<parent> → click the EXACT leaf cat_<leaf>
  * (not "first leaf") → Weiter. Falls back to first leaf if only a parent id is
  * known. Verifies a category actually got selected.
+ *
+ * `path` comes from fetchOriginalAdData scraping the numeric category ID
+ * straight off the EXISTING ad's own Kleinanzeigen page — this repost flow
+ * never touches AI-suggested category text. That's a separate, unrelated
+ * system (frontend/src/pages/CreateWithAi.tsx's human-readable category
+ * tree, used only for the copy-paste "create a new ad" assistant, which has
+ * no automated posting step at all) — see the comment above CATEGORY_TREE
+ * there for the full explanation of why these two don't interoperate.
+ *
+ * Also has a server-side twin with the same DOM logic:
+ * automation/src/repost.ts's setCategory (used by the backend Playwright
+ * worker instead of this client-side extension flow). The two are
+ * maintained independently — remember to update both if this logic changes.
  */
 async function setCategory(tabId: number, path?: string, dbg = false): Promise<boolean> {
   if (!path) return true;

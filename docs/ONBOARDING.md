@@ -312,9 +312,10 @@ Edit the relevant `.txt` file in `backend/src/ai/prompts/`. They are loaded at s
 
 | Environment | Backend URL | How to run |
 |---|---|---|
-| **Local (no Docker)** | `http://localhost:3000` | `npm run start:dev` in each service |
-| **Local (Docker)** | `http://localhost:3000` | `docker compose up` |
-| **Production** | `https://api.anzeigenboost.de` | `docker compose -f docker-compose.prod.yml up` |
+| **Local** | `http://localhost:3000` | `npm run dev` (frontend+backend) or `npm start` (+ automation worker) — see [LOCAL_DEV.md](../LOCAL_DEV.md) |
+| **Production** | `https://api.anzeigenboost.de` | PM2 (`anzeigenboost-api`) + nginx on the VPS, deployed via SSH from `.github/workflows/deploy-backend.yml` on every push to `main` |
+
+> No Docker setup exists in this repo currently — the `docker-compose*.yml`/`Dockerfile`s that used to sit here were unused scaffolding (never referenced by any deploy workflow, placeholder image names never filled in) and were removed. A real Docker migration is tracked separately (stale, unmerged PR #29) if that's revisited later.
 
 ---
 

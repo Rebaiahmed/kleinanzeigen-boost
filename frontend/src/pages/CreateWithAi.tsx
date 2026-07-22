@@ -24,6 +24,22 @@ import {
 } from '../config/legalDisclaimer';
 import categoryTreeData from '../config/kleinanzeigen-categories.json';
 
+// This whole page is a COPY-PASTE ASSISTANT, not an auto-poster: the AI
+// suggests text (title/description/category/...), the user reviews and
+// copies each field, then manually creates the ad on Kleinanzeigen's own
+// site themselves — "Als Anzeige speichern" only saves a Firestore draft
+// (see useAdsActions' saveDraft), there is no automation step that submits
+// a NEW ad to Kleinanzeigen. So `category`/`subcategory` here are plain
+// human-readable German category NAMES from this display tree, purely for
+// the user to read and manually re-select — never a numeric category ID.
+//
+// This is intentionally a different system from the numeric category IDs
+// used by the REPOST automation (extension/src/background/repost-engine.ts
+// and automation/src/repost.ts's setCategory) — repost re-creates an
+// EXISTING ad, so it scrapes the real numeric category ID straight off that
+// ad's own Kleinanzeigen page rather than trusting any AI/display text. The
+// two never need to interoperate; don't be surprised these categories look
+// unconnected to repost's category IDs — they solve different problems.
 const CATEGORY_TREE: Record<string, string[]> = categoryTreeData;
 
 // Appended verbatim to the end of the description. The leading separator

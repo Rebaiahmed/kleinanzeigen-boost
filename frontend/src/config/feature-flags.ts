@@ -9,7 +9,6 @@ export interface FeatureFlags {
   enableEbay: boolean;
   enableFacebookMarketplace: boolean;
   enableAnalytics: boolean;
-  enablePhotoFeedback: boolean;
   enablePriceSuggestion: boolean;
   enableDisclaimer: boolean;
   enableWettbewerb: boolean;
@@ -22,7 +21,6 @@ const DEFAULTS: FeatureFlags = {
   enableEbay: false,
   enableFacebookMarketplace: false,
   enableAnalytics: false,
-  enablePhotoFeedback: false,
   enablePriceSuggestion: false,
   enableDisclaimer: false,
   enableWettbewerb: false,

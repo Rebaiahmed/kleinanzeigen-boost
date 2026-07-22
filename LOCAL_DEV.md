@@ -16,7 +16,14 @@ npm run install:all      # installs root + frontend + backend + extension deps
 ```
 Make sure these env files exist (they hold secrets, not committed):
 - `backend/.env` — Firebase creds, `INTERNAL_SECRET`, `OPENROUTER_API_KEY`
-- `automation/.env` — only needed if you run the Playwright worker
+- `automation/.env` — only needed if you run the Playwright worker (`npm start`,
+  not plain `npm run dev`). Required: `PORT=3001` and `INTERNAL_SECRET` —
+  **must be the exact same value as `backend/.env`'s `INTERNAL_SECRET`**, since
+  the backend authenticates its calls to the worker with it; a mismatch fails
+  every repost/scrape call with a 401 (see `automation/src/index.ts`'s
+  `X-Internal-Secret` check). Everything else in `automation/.env.example`
+  (`CHROMIUM_PATH`, `PROXY_*`, `BLOCK_RESOURCES`) is optional — leave unset to
+  run with Playwright's bundled Chromium and no proxy.
 
 ## Day-to-day: just the app (most UI/backend work)
 ```bash

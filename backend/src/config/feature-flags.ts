@@ -10,7 +10,6 @@ export interface FeatureFlags {
   enableEbay: boolean;
   enableFacebookMarketplace: boolean;
   enableAnalytics: boolean;
-  enablePhotoFeedback: boolean;
   enablePriceSuggestion: boolean;
   enableDisclaimer: boolean;
   enableWettbewerb: boolean;
@@ -31,8 +30,6 @@ export const FEATURE_FLAGS: FeatureFlags = {
   enableFacebookMarketplace: parseEnvBool(process.env.ENABLE_FACEBOOK_MARKETPLACE, false),
   // Per-repost analytics — default OFF until UI is finalized
   enableAnalytics: parseEnvBool(process.env.ENABLE_ANALYTICS, false),
-  // Photo quality feedback — default OFF until ready
-  enablePhotoFeedback: parseEnvBool(process.env.ENABLE_PHOTO_FEEDBACK, false),
   // Price suggestion — default ON (Preis button on priced ads; the AdCard already
   // hides it for "Zu verschenken" give-aways). Set ENABLE_PRICE_SUGGESTION=false to disable.
   enablePriceSuggestion: parseEnvBool(process.env.ENABLE_PRICE_SUGGESTION, true),

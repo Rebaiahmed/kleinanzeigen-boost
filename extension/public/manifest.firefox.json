@@ -16,11 +16,6 @@
     "https://*.kleinanzeigen.de/*",
     "https://anzeigenboost.de/*"
   ],
-  "externally_connectable": {
-    "matches": [
-      "https://anzeigenboost.de/*"
-    ]
-  },
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",
@@ -38,7 +33,7 @@
     }
   },
   "background": {
-    "service_worker": "background.js",
+    "scripts": ["background.js"],
     "type": "module"
   },
   "content_scripts": [
@@ -60,5 +55,11 @@
       "run_at": "document_start",
       "all_frames": true
     }
-  ]
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "extension@anzeigenboost.de",
+      "strict_min_version": "128.0"
+    }
+  }
 }

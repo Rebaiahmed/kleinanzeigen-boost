@@ -30,8 +30,8 @@ Priority: **High** · **Medium** · **Low**
 | 2.1 | Publish extension to Chrome Web Store | Pending | High | Update `ENDPOINTS.*` to prod URLs first; store listing copy drafted |
 | 2.2 | Generate logo (icon + branding) | Pending | High | — |
 | 2.3 | Prepare Kleinanzeigen profile (testing/demo) | Pending | Medium | — |
-| 2.4 | In-page actions on Kleinanzeigen (content scripts) | **In Review** | Medium | PR #25: reply-template injection on Nachrichten + per-ad buttons (Neu stellen / KI-Inhalt / Dashboard) on Meine Anzeigen. Behind `FEATURES.*` flags. New backend `POST /api/ai/rewrite-variants`. |
-| 2.5 | Facebook Marketplace repost (POC) | **POC / In Review** | Low | PR #26: flag-gated (`FACEBOOK_MARKETPLACE_REPOST`, OFF). Tier 1 = automate FB's native renew; delete-and-relist deliberately not built. See [docs/POC-facebook-marketplace-repost.md](POC-facebook-marketplace-repost.md). Needs live-DOM selector validation. |
+| 2.4 | In-page actions on Kleinanzeigen (content scripts) | Pending | Medium | PR #25 (reply-template injection on Nachrichten + per-ad buttons on Meine Anzeigen, behind `FEATURES.*` flags) was **closed without merging** — not landed, needs a decision on whether to revisit or abandon. |
+| 2.5 | Facebook Marketplace repost (POC) | Pending | Low | PR #26 (flag-gated `FACEBOOK_MARKETPLACE_REPOST` POC) was **closed without merging** — not landed. See [docs/POC-facebook-marketplace-repost.md](POC-facebook-marketplace-repost.md) for the design if revisited. |
 
 ## Part 3 — Frontend & UX
 
@@ -48,8 +48,8 @@ Priority: **High** · **Medium** · **Low**
 |-----|------|--------|----------|-------|
 | 4.1 | Document AI credits/limits per plan (free/starter/pro) | **Done** | High | Documented in [docs/AI_AND_MONETIZATION.md](AI_AND_MONETIZATION.md) |
 | 4.2 | Document which AI models are used | **Done** | High | Documented in [docs/AI_AND_MONETIZATION.md](AI_AND_MONETIZATION.md) |
-| 4.3 | Document payment setup (Stripe/PayPal) | **Done (flag-gated)** | High | Stripe billing implemented behind `BILLING_ENABLED` (PR #27): checkout/portal/webhook → `users/{id}.tier`. Dormant until Stripe keys + price IDs set. Pending: Stripe config + HTTPS domain (1.2) to register webhook + test. |
-| 4.4 | Define monetization strategy (pricing, upgrade prompts, limits) | **In Progress** | High | Tiers/prompts wired (Settings "Dein Plan", flag-gated, PR #27). AI + template limits enforce via `tier`. Pending: validate €4.99/€9.99 pricing; enforce per-plan `maxAutoRepostAds` cap (scheduler change, not yet built). |
+| 4.3 | Document payment setup (Stripe/PayPal) | **Done (flag-gated)** | High | Stripe billing merged (as `feat/monetization-stripe`, superseding the earlier unmerged PR #27) behind `BILLING_ENABLED`: checkout/portal/webhook → `users/{id}.tier`. Verified end-to-end locally with a real Stripe test-mode purchase (checkout session → test card → webhook → tier applied). Dormant in production until real Stripe keys + price IDs are configured there. Separately, the pay-as-you-go credits wallet (`ENABLE_CREDITS`) is also merged and was verified the same way (test purchase → webhook → balance updated). |
+| 4.4 | Define monetization strategy (pricing, upgrade prompts, limits) | **In Progress** | High | Tiers/prompts wired (Settings "Dein Plan", flag-gated). AI + template limits enforce via `tier`. Still pending: validate €4.99/€9.99 pricing; the per-plan `maxAutoRepostAds` cap is NOT built (confirmed — no such field/check exists in the scheduler yet). |
 | 4.5 | Generate Firestore schema reference (`docs/firestore-schema.md`) | Pending | Medium | Explore every Firestore read/write; document all collections/subcollections (`meta`, `sessions`, `users/{id}`, `users/{id}/ads/{adId}`, `aiUsage`, `handshakes`, `loginJobs`, repostLogs, notifications, schedulerMeta/runs). Per doc type: every field (name, type, required/optional, description) inferred from code. TS interface + plain-language table. Flag inconsistent/optional/mixed-type fields. Note: `ads` now has `listingState` (active/reserved/paused/deleted) + repost-lifecycle `status`. |
 
 ## Part 5 — Epic: POST-SMARTER (Posting Tips & AI Photo Feedback)
@@ -68,18 +68,19 @@ Priority: **High** · **Medium** · **Low**
 ## Part 7 — Epic: Repost via Delete + Re-create
 
 > KA removed free bumping; deleted ads are unrecoverable (confirmed by testing).
-> The only free repost = snapshot → delete → re-create with photo re-upload.
+> The only free repost = scrape original data → delete → re-create with photo re-upload.
 > Full design + constraints + captured selectors in [docs/REPOST-DELETE-RECREATE.md](REPOST-DELETE-RECREATE.md).
 
 | #   | Task | Status | Priority | Notes |
 |-----|------|--------|----------|-------|
-| 7.1 | Phase 0 — Firebase Storage + snapshot schema | Pending | High | Foundation for photo backup |
-| 7.2 | Phase 1 — Snapshot + full-size photo backup (non-destructive, dryRun) | Pending | High | Scrape edit page (sync only stores 1 thumbnail); download all photos |
-| 7.3 | Phase 2 — Re-create from snapshot (fill form + re-upload photos + category picker) | Pending | High | Needs `p-anzeige-aufgeben.html` form DOM; category picker is the hard part |
-| 7.4 | Phase 3 — Wire delete↔recreate with verify guards + new-adId migration | Pending | High | Never delete without a verified complete snapshot |
+| 7.1 | Phase 0 — Firebase Storage + snapshot schema | **Superseded — not needed** | High | The plan was to pre-snapshot photos to Storage. What actually got built instead: `extension/src/background/repost-engine.ts`'s `fetchOriginalAdData` scrapes the original ad's live data (incl. photo URLs) fresh at repost time — no storage layer needed. |
+| 7.2 | Phase 1 — Snapshot + full-size photo backup | **Done (different approach)** | High | `fetchOriginalAdData` + `downloadPhoto`/`uploadPhotos` in `repost-engine.ts` scrape and re-upload photos directly at repost time, achieving the same goal without a separate backup step. |
+| 7.3 | Phase 2 — Re-create from snapshot (fill form + re-upload photos + category picker) | **Done** | High | `executeRepostFullFlow` in `repost-engine.ts`: category picker (`setCategory`), dynamic attributes, photo upload, price/shipping/title fill, submit — all implemented and this is the repost mechanism in production use today (both scheduled and manual reposts). |
+| 7.4 | Phase 3 — Wire delete↔recreate with verify guards + new-adId migration | **Done** | High | `executeRepostFullFlow` deletes the old ad only `AFTER_PUBLISH` (default), i.e. only once the new listing is confirmed live — never deletes without a successful re-create first. |
 
-> ⚠️ Fragile (breaks on KA form redesigns), ban-risk if frequent, deletes real
-> ads — must be bulletproof. The current `repost.ts` is a non-working stub.
+> This epic is done, just via a leaner technical path than originally planned
+> (scrape-at-repost-time instead of a persistent Storage snapshot). Still true:
+> fragile against KA form redesigns, ban-risk if reposted too frequently.
 
 ## Part 6 — Security & Anti-Ban
 

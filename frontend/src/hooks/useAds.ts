@@ -56,6 +56,16 @@ async function fetchAdsFromServer(): Promise<any[]> {
       window.location.href = '/login';
       return [];
     }
+    // A gateway/proxy error (502/503/504 from nginx when the backend process
+    // is down or unreachable) returns an HTML error page, not JSON. Calling
+    // res.json() unconditionally threw a raw "Unexpected token '<'..."
+    // SyntaxError that Ads.tsx renders verbatim in the error banner — not
+    // the graceful message the sibling network-failure cases below already
+    // get. Check res.ok first so a backend/gateway outage surfaces the same
+    // clear message as a network failure, not a confusing JS parse error.
+    if (!res.ok) {
+      throw new Error('Service momentan nicht verfügbar. Bitte versuche es in Kürze erneut.');
+    }
     const data = await res.json();
     return data.ads || [];
   } catch (err: any) {

@@ -1,8 +1,0 @@
-# Local development overrides — NOT used in production (docker-compose.prod.yml is used instead).
-# This file is merged automatically by `docker compose up` when present.
-#
-# Exposes the automation worker port on the host for local debugging (e.g. curl, Postman).
-version: '3.9'
-services:
-  automation:
-    ports: ["3001:3001"]

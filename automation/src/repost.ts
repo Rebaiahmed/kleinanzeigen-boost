@@ -243,7 +243,15 @@ async function setShipping(page: Page, type: 'ja' | 'nein' = 'ja'): Promise<bool
   }, targetId);
 }
 
-/** Category select: open picker → click parent (cat_ID) → first leaf → Weiter. */
+/**
+ * Category select: open picker → click parent (cat_ID) → first leaf → Weiter.
+ *
+ * Client-side twin: extension/src/background/repost-engine.ts's setCategory
+ * (same DOM logic, used by the extension instead of this backend Playwright
+ * worker) — that one is more defensive (verifies selection, exact-leaf
+ * matching, debug logging). Maintained independently; update both if this
+ * logic changes.
+ */
 async function setCategory(page: Page, categoryId: string): Promise<boolean> {
   await page.evaluate(() => {
     const t = Array.from(document.querySelectorAll('a, button, div[role="button"]'))

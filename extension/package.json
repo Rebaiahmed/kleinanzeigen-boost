@@ -9,6 +9,7 @@
     "build:dev": "tsc && vite build --mode development && node scripts/patch-dev-manifest.mjs",
     "build:firefox": "npm run build && node scripts/build-firefox.mjs",
     "package:zip": "node scripts/package-zip.mjs",
+    "package:zip:edge": "node scripts/package-zip-edge.mjs",
     "package:zip:firefox": "node scripts/package-zip-firefox.mjs",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"

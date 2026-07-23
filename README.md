@@ -3,7 +3,7 @@
 **German SaaS that keeps your Kleinanzeigen.de ads on top — automatically.**
 "Deine Kleinanzeigen immer ganz oben, vollautomatisch."
 
-📋 [Roadmap](docs/ROADMAP.md) · 💰 [AI & Monetization](docs/AI_AND_MONETIZATION.md) · 🚀 [Deployment](docs/DEPLOYMENT.md)
+📋 [Roadmap](docs/ROADMAP.md) · 💰 [AI & Monetization](docs/AI_AND_MONETIZATION.md) · 🚀 [Deployment](docs/DEPLOYMENT.md) · 📡 [Monitoring & Alerts](MONITORING.md)
 
 ---
 
@@ -23,7 +23,7 @@
 | `frontend/` | React + Vite dashboard **and landing page** | Firebase Hosting (free) |
 | `extension/` | Chrome MV3 extension (captures session, syncs ads) | Chrome Web Store |
 
-Data: Firebase Firestore. AI: Gemini (free tier) + OpenRouter fallback chain.
+Data: Firebase Firestore. AI: OpenRouter (multi-model fallback chain — no direct Gemini SDK).
 
 ## Local development
 
@@ -43,8 +43,8 @@ Without `firebase-credentials.json` the backend uses a local file-based mock, so
 ## Environment
 
 See `backend/.env.example` and `frontend/.env.example`. Production **requires**
-`JWT_SECRET`, `INTERNAL_SECRET`, an AI key (`GEMINI_API_KEY` or `OPENROUTER_API_KEY`),
-and an https `AUTOMATION_WORKER_URL` — the app fails fast on startup without them.
+`JWT_SECRET`, `INTERNAL_SECRET`, `OPENROUTER_API_KEY`, and an https
+`AUTOMATION_WORKER_URL` — the app fails fast on startup without them.
 
 ## Deployment
 
@@ -53,6 +53,12 @@ and an https `AUTOMATION_WORKER_URL` — the app fails fast on startup without t
 - **Firestore indexes:** `firebase deploy --only firestore:indexes` (required for the scheduler — see DEPLOYMENT.md).
 
 Health check: `curl https://<host>/api/health` → `{"status":"ok",...}`.
+
+Every backend deploy is gated on that health check and auto-rolls back on
+failure; a separate scheduled check pings production every 5 minutes and a
+GitHub Actions failure on any deploy/publish workflow posts to Slack — see
+**[MONITORING.md](MONITORING.md)** for the full setup and how to configure
+the Slack webhook.
 
 ## Support
 

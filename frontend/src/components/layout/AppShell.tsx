@@ -5,7 +5,6 @@ import { TopBar } from './TopBar';
 import { BrowserSupportBanner } from '../BrowserSupportBanner';
 import { useExtension } from '../../hooks/useExtension';
 import { useRepostNotifications } from '../../hooks/useRepostNotifications';
-import { useFeatureFlags } from '../../hooks/useFeatureFlags';
 import { useWettbewerbSeen } from '../../hooks/useWettbewerbSeen';
 import { useAccountStatus } from '../../hooks/useAccountStatus';
 import { AlertCircle, MessageSquare } from 'lucide-react';
@@ -28,11 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // Poll for repost notifications (incl. simulated reposts) → show desktop notif.
   useRepostNotifications();
 
-  const { enableWettbewerb } = useFeatureFlags();
-  // enabled=enableWettbewerb: while the flag is off, this hook's query never
-  // fires at all (see useWettbewerbUsage) — flag-off stays a real no-op here,
-  // not just an empty render.
-  const hasSeenWettbewerb = useWettbewerbSeen(enableWettbewerb);
+  const hasSeenWettbewerb = useWettbewerbSeen(true);
 
   // Only show the "not connected" banner when we're certain the extension is
   // missing — not while checking (avoids flash) and not if the user has a valid
@@ -133,25 +128,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             📋 {t('nav.templates')}
           </NavLink>
-          {enableWettbewerb && (
-            <NavLink
-              to="/wettbewerb"
-              className={({ isActive }) =>
-                `px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
-                  isActive
-                    ? 'border-[#A8C300] text-[#A8C300]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`
-              }
-            >
-              📊 {t('nav.competition')}
-              {!hasSeenWettbewerb && (
-                <span className="ml-1.5 inline-flex items-center text-[9px] font-bold bg-[#A8C300] text-white px-1.5 py-0.5 rounded-full align-middle">
-                  {t('nav.new')}
-                </span>
-              )}
-            </NavLink>
-          )}
+          <NavLink
+            to="/wettbewerb"
+            className={({ isActive }) =>
+              `px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
+                isActive
+                  ? 'border-[#A8C300] text-[#A8C300]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`
+            }
+          >
+            📊 {t('nav.competition')}
+            {!hasSeenWettbewerb && (
+              <span className="ml-1.5 inline-flex items-center text-[9px] font-bold bg-[#A8C300] text-white px-1.5 py-0.5 rounded-full align-middle">
+                {t('nav.new')}
+              </span>
+            )}
+          </NavLink>
         </div>
       </div>
 
@@ -202,22 +195,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <span className="text-[18px] leading-none">📋</span>
           <span>{t('nav.templates')}</span>
         </NavLink>
-        {enableWettbewerb && (
-          <NavLink
-            to="/wettbewerb"
-            className={({ isActive }) =>
-              `flex-1 min-h-[56px] flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors relative ${
-                isActive ? 'text-[#A8C300]' : 'text-gray-500'
-              }`
-            }
-          >
-            <span className="text-[18px] leading-none">📊</span>
-            <span>{t('nav.competition')}</span>
-            {!hasSeenWettbewerb && (
-              <span className="absolute top-1 right-[calc(50%-22px)] w-1.5 h-1.5 rounded-full bg-[#A8C300]" />
-            )}
-          </NavLink>
-        )}
+        <NavLink
+          to="/wettbewerb"
+          className={({ isActive }) =>
+            `flex-1 min-h-[56px] flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors relative ${
+              isActive ? 'text-[#A8C300]' : 'text-gray-500'
+            }`
+          }
+        >
+          <span className="text-[18px] leading-none">📊</span>
+          <span>{t('nav.competition')}</span>
+          {!hasSeenWettbewerb && (
+            <span className="absolute top-1 right-[calc(50%-22px)] w-1.5 h-1.5 rounded-full bg-[#A8C300]" />
+          )}
+        </NavLink>
       </nav>
 
       <footer className="bg-[#f5f5f5] py-8 mt-auto">

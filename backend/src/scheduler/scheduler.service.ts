@@ -717,7 +717,6 @@ export class SchedulerService {
    */
   @Cron(process.env.WETTBEWERB_SIMULATE === 'true' ? '*/1 * * * *' : '*/30 * * * *')
   async handleWettbewerbRecheckCron() {
-    if (!FEATURE_FLAGS.enableWettbewerb) return; // flag-off = instant no-op, no Firestore/worker calls
     if (this.wettbewerbCronRunning) {
       this.logger.warn('Wettbewerb recheck run skipped — previous run still in progress');
       return;

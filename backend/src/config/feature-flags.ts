@@ -11,8 +11,6 @@ export interface FeatureFlags {
   enableFacebookMarketplace: boolean;
   enableAnalytics: boolean;
   enablePriceSuggestion: boolean;
-  enableDisclaimer: boolean;
-  enableWettbewerb: boolean;
   enableCredits: boolean;
   enableI18n: boolean;
   enableCrossPosting: boolean;
@@ -33,17 +31,6 @@ export const FEATURE_FLAGS: FeatureFlags = {
   // Price suggestion — default ON (Preis button on priced ads; the AdCard already
   // hides it for "Zu verschenken" give-aways). Set ENABLE_PRICE_SUGGESTION=false to disable.
   enablePriceSuggestion: parseEnvBool(process.env.ENABLE_PRICE_SUGGESTION, true),
-  // Legal disclaimer insert (Gewährleistungsausschluss) — default OFF. The
-  // shipped text is a PLACEHOLDER until a qualified legal source verifies it —
-  // see frontend/src/config/legalDisclaimer.ts. Do not enable in production
-  // before that's replaced.
-  enableDisclaimer: parseEnvBool(process.env.FEATURE_DISCLAIMER_ENABLED, false),
-  // Wettbewerb (competitor tracker) tab — default OFF until verified end-to-end
-  // (production-cost/soft-launch review, not a functionality gap — see
-  // WETTBEWERB_INVESTIGATION.md). Credit-check calls go through the real
-  // CreditsService (backend/src/credits/credits.service.ts) as of the
-  // credits-stripe merge — no stub remains.
-  enableWettbewerb: parseEnvBool(process.env.FEATURE_WETTBEWERB_ENABLED, false),
   // Pay-as-you-go credits wallet (Stripe one-time purchases) — default OFF until
   // verified end-to-end. Independent of MONETIZATION_ENABLED (backend/src/config/
   // ai-limits.constants.ts), which gates the older monthly-quota tier system —

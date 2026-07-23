@@ -10,8 +10,6 @@ export interface FeatureFlags {
   enableFacebookMarketplace: boolean;
   enableAnalytics: boolean;
   enablePriceSuggestion: boolean;
-  enableDisclaimer: boolean;
-  enableWettbewerb: boolean;
   enableI18n: boolean;
   enableCrossPosting: boolean;
 }
@@ -22,8 +20,6 @@ const DEFAULTS: FeatureFlags = {
   enableFacebookMarketplace: false,
   enableAnalytics: false,
   enablePriceSuggestion: false,
-  enableDisclaimer: false,
-  enableWettbewerb: false,
   enableI18n: true,
   enableCrossPosting: false,
 };

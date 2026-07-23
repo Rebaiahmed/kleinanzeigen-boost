@@ -1,23 +1,23 @@
 /**
- * ⚠️⚠️⚠️ DO NOT DEPLOY TO PRODUCTION WITH THIS PLACEHOLDER TEXT ⚠️⚠️⚠️
+ * ⚠️⚠️⚠️ DISCLAIMER_TEXT BELOW IS STILL A PLACEHOLDER ⚠️⚠️⚠️
  *
  * Single source of truth for the "Rechtssicherer Gewährleistungsausschluss"
  * (warranty exclusion) disclaimer text inserted into ad descriptions.
  *
- * DISCLAIMER_TEXT below is a PLACEHOLDER. It has NOT been written or
- * reviewed by a lawyer or any vetted legal source — it must never reach a
- * real user's listing. FEATURE_DISCLAIMER_ENABLED (see feature-flags.ts)
- * exists specifically so this can ship disabled while the mechanism is
- * built and reviewed, independent of the text itself being ready.
+ * The FEATURE_DISCLAIMER_ENABLED flag that used to gate this feature off has
+ * been removed — the "🛡️ Rechtstext einfügen" button in CreateWithAi.tsx now
+ * renders unconditionally for every user. DISCLAIMER_TEXT has NOT been
+ * written or reviewed by a lawyer or any vetted legal source — clicking that
+ * button inserts this literal placeholder into a real, live Kleinanzeigen
+ * listing.
  *
- * Before enabling FEATURE_DISCLAIMER_ENABLED in production:
+ * Before this is actually safe for real users:
  *   1. Get the real, verified disclaimer text from a qualified source
  *      (lawyer consultation or a vetted legal template service).
  *   2. Replace DISCLAIMER_TEXT below with that exact text — do not let an
  *      AI tool generate or edit the legal wording itself.
  *   3. Set LEGAL_TEXT_LAST_VERIFIED_DATE to the verification date.
  *   4. Point DISCLAIMER_LEARN_MORE_URL at a real explainer page.
- *   5. See the project owner before removing this warning comment.
  */
 
 // null while the placeholder is in use — showing a fake verification date

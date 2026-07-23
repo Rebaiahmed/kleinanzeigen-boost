@@ -159,7 +159,14 @@ jobs:
             # locally in this same run, never successfully pushed yet.
             git tag -f "${{ steps.version.outputs.tag }}"
 
-            if git push origin main && git push origin "${{ steps.version.outputs.tag }}" --force; then
+            # HEAD:main (not "main") — pushes whatever's currently checked out
+            # to remote main regardless of what the local branch is actually
+            # named. actions/checkout names the local branch after whichever
+            # ref triggered the run (e.g. "debug/foo" for a workflow_dispatch
+            # --ref debug/foo test run), not necessarily "main" — a plain
+            # `git push origin main` then fails with "src refspec main does
+            # not match any" since no local branch is literally called main.
+            if git push origin HEAD:main && git push origin "${{ steps.version.outputs.tag }}" --force; then
               echo "✅ Pushed commit + tag successfully."
               exit 0
             fi

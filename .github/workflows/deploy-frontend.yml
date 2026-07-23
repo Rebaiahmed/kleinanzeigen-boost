@@ -13,6 +13,9 @@ jobs:
   build-and-deploy:
     name: Build & Deploy to VPS
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read   # needed by notify-slack-failure to look up the failed step
 
     steps:
       - name: Checkout
@@ -60,3 +63,9 @@ jobs:
             echo "❌ Frontend verification failed."
             exit 1
           fi
+
+      - name: Notify Slack on failure
+        if: failure()
+        uses: ./.github/actions/notify-slack-failure
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}

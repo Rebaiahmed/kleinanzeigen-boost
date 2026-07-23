@@ -25,6 +25,7 @@ jobs:
 
     permissions:
       contents: write   # needed to push version bump commit + create release
+      actions: read     # needed by notify-slack-failure to look up the failed step
 
     outputs:
       new_version: ${{ steps.version.outputs.new }}
@@ -224,6 +225,12 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           cat /tmp/changelog.md >> $GITHUB_STEP_SUMMARY
 
+      - name: Notify Slack on failure
+        if: failure()
+        uses: ./.github/actions/notify-slack-failure
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+
   # ── Job 2: the actual, irreversible "go live" call. Gated behind the
   # `publish-to-chrome-web-store` GitHub Environment — configure required
   # reviewers on that environment (Settings → Environments) and this job will
@@ -233,8 +240,16 @@ jobs:
     needs: build-and-upload
     runs-on: ubuntu-latest
     environment: publish-to-chrome-web-store
+    permissions:
+      contents: read
+      actions: read   # needed by notify-slack-failure to look up the failed step
 
     steps:
+      # Only needed so notify-slack-failure's composite action files are
+      # present on the runner — everything else in this job is pure API calls.
+      - name: Checkout (for the Slack notify action)
+        uses: actions/checkout@v4
+
       - name: Get Chrome Web Store access token
         id: cws_token
         run: |
@@ -268,3 +283,9 @@ jobs:
       - name: Summary
         run: |
           echo "### ✅ Extension v${{ needs.build-and-upload.outputs.new_version }} published live" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify Slack on failure
+        if: failure()
+        uses: ./.github/actions/notify-slack-failure
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}

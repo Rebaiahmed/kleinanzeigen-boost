@@ -401,7 +401,8 @@
       "you": "DU",
       "negotiable": "VB",
       "yourAdRank": "Deine Anzeige: Platz {{rank}} von {{total}}",
-      "yourAdNotFound": "Deine Anzeige wurde in den Ergebnissen nicht gefunden."
+      "yourAdNotFound": "Deine Anzeige wurde in den Ergebnissen nicht gefunden.",
+      "updated": "Aktualisiert"
     }
   }
 }

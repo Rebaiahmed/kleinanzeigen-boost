@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trash2 } from 'lucide-react';
 import type { WettbewerbSearch } from '../../hooks/useWettbewerbSearches';
@@ -9,7 +9,15 @@ interface SavedSearchCardProps {
   onDelete: (searchId: string) => void;
   onApplyPrice: (searchId: string, adId: string) => Promise<{ success: boolean; message?: string }>;
   onRepost: (searchId: string, adId: string) => Promise<{ success: boolean; message?: string }>;
+  onMarkViewed: (searchId: string) => void;
 }
+
+// The card has no collapse/expand affordance today — everything renders in
+// full always. "Viewed" is approximated as "actually stayed rendered for a
+// beat while the user was on this tab", not just flashed past during a
+// scroll — matches the spirit of "opened/looked at this card" without
+// inventing a new collapse/expand interaction as a side effect of this work.
+const VIEWED_DWELL_MS = 1500;
 
 function formatRelative(iso: string, t: (key: string, opts?: any) => string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -28,10 +36,29 @@ const Tag = ({ children }: { children: React.ReactNode }) => (
   </span>
 );
 
-export function SavedSearchCard({ search, onDelete, onApplyPrice, onRepost }: SavedSearchCardProps) {
+export function SavedSearchCard({ search, onDelete, onApplyPrice, onRepost, onMarkViewed }: SavedSearchCardProps) {
   const { t } = useTranslation();
   const [actionPending, setActionPending] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+
+  // Fires onMarkViewed once per genuinely-unseen-change card, after a short
+  // dwell so a quick scroll-past doesn't count as "viewed". The markedRef
+  // guard stops it firing again if hasUnseenChange flips back to true from
+  // a later check while the card is still mounted (re-flags correctly next
+  // render since markedRef resets when hasUnseenChange itself changes).
+  const markedRef = useRef(false);
+  useEffect(() => {
+    if (!search.hasUnseenChange) {
+      markedRef.current = false;
+      return;
+    }
+    if (markedRef.current) return;
+    const timer = setTimeout(() => {
+      markedRef.current = true;
+      onMarkViewed(search.id);
+    }, VIEWED_DWELL_MS);
+    return () => clearTimeout(timer);
+  }, [search.hasUnseenChange, search.id, onMarkViewed]);
 
   const snapshot = search.latestSnapshot;
   const intervalLabel = CHECK_INTERVAL_OPTIONS.find((o) => o.value === search.checkIntervalDays)?.labelKey;
@@ -50,15 +77,24 @@ export function SavedSearchCard({ search, onDelete, onApplyPrice, onRepost }: Sa
   };
 
   return (
-    <div className="bg-white border border-[#e5e5e5] rounded-sm shadow-sm p-4">
+    <div
+      className={`bg-white rounded-sm shadow-sm p-4 transition-colors ${
+        search.hasUnseenChange ? 'border-2 border-[#A8C300]' : 'border border-[#e5e5e5]'
+      }`}
+    >
       <div className="flex justify-between items-start mb-3">
         <div>
           <span className="text-[15px] font-semibold text-[#333]">
             {search.keyword} · {search.plz}
           </span>
-          <div className="flex gap-1.5 mt-1">
+          <div className="flex gap-1.5 mt-1 items-center">
             <Tag>{search.radiusKm === 0 ? t('wettbewerb.form.onlyPlz') : `${search.radiusKm} km`}</Tag>
             <Tag>{intervalLabel ? t(intervalLabel) : ''}</Tag>
+            {search.hasUnseenChange && (
+              <span className="inline-flex items-center text-[11px] font-bold bg-[#A8C300] text-white px-2 py-0.5 rounded-full">
+                {t('wettbewerb.card.updated')}
+              </span>
+            )}
           </div>
           <div className="text-[12px] text-[#888] mt-1">
             {search.lastCheckedAt ? t('wettbewerb.card.lastChecked', { time: formatRelative(search.lastCheckedAt, t) }) : t('wettbewerb.card.firstCheckRunning')}

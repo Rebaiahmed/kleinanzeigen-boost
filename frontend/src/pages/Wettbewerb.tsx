@@ -16,7 +16,7 @@ export function Wettbewerb() {
   const { searches, isLoading } = useWettbewerbSearches();
   const { freeSearchUsed, freeLimit, additionalCost, hasSeenWettbewerb, isPlaceholderData: usageIsPlaceholder } =
     useWettbewerbUsage();
-  const { createSavedSearch, deleteSavedSearch, applySuggestedPrice, triggerRepost, markGuideSeen, isCreating } =
+  const { createSavedSearch, deleteSavedSearch, applySuggestedPrice, triggerRepost, markGuideSeen, markSearchViewed, isCreating } =
     useWettbewerbActions();
 
   const [guideOpen, setGuideOpen] = useState(false);
@@ -115,6 +115,7 @@ export function Wettbewerb() {
               onDelete={handleDelete}
               onApplyPrice={applySuggestedPrice}
               onRepost={triggerRepost}
+              onMarkViewed={markSearchViewed}
             />
           ))}
           {quotaReached && (

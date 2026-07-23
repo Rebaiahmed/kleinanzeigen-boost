@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { HelpCircle, X } from 'lucide-react';
 
@@ -13,21 +13,68 @@ const STEP_KEYS = [
   { n: 3, titleKey: 'wettbewerb.guide.step3Title', textKey: 'wettbewerb.guide.step3Text' },
 ];
 
+const FOCUSABLE_SELECTOR = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
 // No onClick on the backdrop by design — this age group can lose the modal
-// accidentally via click-outside-to-close, so the ✕ button and "Verstanden"
-// are the only two ways to dismiss it.
+// accidentally via click-outside-to-close, so the ✕ button, Escape, and
+// "Verstanden" are the only ways to dismiss it.
 export function WettbewerbGuideModal({ open, onClose }: WettbewerbGuideModalProps) {
   const { t } = useTranslation();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    // Move focus into the dialog so the first Tab press stays inside it.
+    closeButtonRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab' || !dialogRef.current) return;
+
+      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#333] bg-opacity-50">
-      <div className="bg-white rounded-sm shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="wettbewerb-guide-title"
+        className="bg-white rounded-sm shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+      >
         <div className="px-5 py-3 border-b border-[#e5e5e5] flex justify-between items-center">
-          <h3 className="text-[16px] font-semibold text-[#333] flex items-center gap-2">
+          <h3 id="wettbewerb-guide-title" className="text-[16px] font-semibold text-[#333] flex items-center gap-2">
             <HelpCircle className="w-4 h-4 text-[#A8C300]" /> {t('wettbewerb.guide.title')}
           </h3>
-          <button onClick={onClose} className="text-[#666] hover:text-[#333]">
+          <button
+            ref={closeButtonRef}
+            onClick={onClose}
+            aria-label={t('wettbewerb.guide.close')}
+            className="text-[#666] hover:text-[#333]"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -35,7 +82,7 @@ export function WettbewerbGuideModal({ open, onClose }: WettbewerbGuideModalProp
         <div className="p-5 space-y-4">
           {STEP_KEYS.map((step) => (
             <div key={step.n} className="flex gap-3">
-              <div className="shrink-0 w-6 h-6 rounded-full bg-[#f2f7e6] border border-[#d4e39a] text-[#6f8f00] text-[12px] font-bold flex items-center justify-center">
+              <div className="shrink-0 w-6 h-6 rounded-full bg-[#f2f7e6] border border-[#d4e39a] text-[#4F6600] text-[12px] font-bold flex items-center justify-center">
                 {step.n}
               </div>
               <div>
@@ -49,7 +96,7 @@ export function WettbewerbGuideModal({ open, onClose }: WettbewerbGuideModalProp
         <div className="px-5 py-3 border-t border-[#e5e5e5] flex justify-end">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 text-[13px] font-medium text-white bg-[#A8C300] hover:bg-[#96ae00] rounded-sm transition-colors"
+            className="px-3 py-1.5 text-[13px] font-medium text-ka-gray-900 bg-[#A8C300] hover:bg-[#96ae00] rounded-sm transition-colors"
           >
             {t('wettbewerb.guide.understood')}
           </button>

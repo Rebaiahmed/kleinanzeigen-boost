@@ -353,7 +353,8 @@
       "step2Text": "From now on we regularly check what comparable listings cost in your area — you don't need to do anything.",
       "step3Title": "Act with one click",
       "step3Text": "As soon as a better price range appears, you can apply your price directly or repost your listing with one click.",
-      "understood": "Got it"
+      "understood": "Got it",
+      "close": "Close"
     },
     "form": {
       "keyword": "Keyword",

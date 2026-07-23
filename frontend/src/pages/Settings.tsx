@@ -369,20 +369,20 @@ export function Settings() {
                   <button
                     onClick={() => billing.startCheckout('starter')}
                     disabled={billing.busy}
-                    className="mt-auto px-5 py-2 border border-ka-green text-ka-green hover:bg-[#f3f7d6] disabled:opacity-50 font-bold text-[13px] rounded-sm transition-colors"
+                    className="mt-auto px-5 py-2 border border-ka-green text-ka-green-text hover:bg-[#f3f7d6] disabled:opacity-50 font-bold text-[13px] rounded-sm transition-colors"
                   >
                     {billing.busy ? 'Öffne…' : 'Starter wählen'}
                   </button>
                 </div>
                 <div className="border-2 border-ka-green rounded-lg p-5 flex flex-col relative">
-                  <span className="absolute top-3 right-3 text-[10px] font-bold bg-ka-green text-white px-2 py-0.5 rounded-full">Beliebt</span>
+                  <span className="absolute top-3 right-3 text-[10px] font-bold bg-ka-green text-ka-gray-900 px-2 py-0.5 rounded-full">Beliebt</span>
                   <h3 className="text-lg font-bold text-gray-800">Pro</h3>
                   <p className="text-sm text-gray-500 mt-1 mb-3">Unbegrenzte KI-Analysen · unbegrenztes Auto-Repost · Priorität-Support</p>
                   <p className="text-2xl font-bold text-gray-900 mb-4">€9,99<span className="text-sm font-normal text-gray-500">/Monat</span></p>
                   <button
                     onClick={() => billing.startCheckout('pro')}
                     disabled={billing.busy}
-                    className="mt-auto px-5 py-2 bg-ka-green hover:bg-[#96ae00] disabled:opacity-50 text-white font-bold text-[13px] rounded-sm transition-colors"
+                    className="mt-auto px-5 py-2 bg-ka-green hover:bg-[#96ae00] disabled:opacity-50 text-ka-gray-900 font-bold text-[13px] rounded-sm transition-colors"
                   >
                     {billing.busy ? 'Öffne…' : 'Pro wählen'}
                   </button>

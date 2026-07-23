@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
 import {
@@ -19,6 +19,12 @@ interface SearchFormProps {
 
 export function SearchForm({ onSubmit, isSubmitting }: SearchFormProps) {
   const { t } = useTranslation();
+  const keywordId = useId();
+  const keywordErrorId = useId();
+  const plzId = useId();
+  const plzErrorId = useId();
+  const radiusId = useId();
+  const intervalId = useId();
   const [keyword, setKeyword] = useState('');
   const [plz, setPlz] = useState('');
   const [radiusKm, setRadiusKm] = useState<number>(DEFAULT_RADIUS_KM);
@@ -59,34 +65,41 @@ export function SearchForm({ onSubmit, isSubmitting }: SearchFormProps) {
     <form onSubmit={handleSubmit} className="bg-white border border-[#e5e5e5] rounded-sm shadow-sm p-4 mb-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-[12px] font-medium text-[#555] mb-1">{t('wettbewerb.form.keyword')}</label>
+          <label htmlFor={keywordId} className="block text-[12px] font-medium text-[#555] mb-1">{t('wettbewerb.form.keyword')}</label>
           <input
+            id={keywordId}
             type="text"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder={t('wettbewerb.form.keywordPlaceholder')}
+            aria-invalid={!!keywordError}
+            aria-describedby={keywordError || keywordWarning ? keywordErrorId : undefined}
             className={fieldClass(!!keywordError)}
           />
-          {keywordError && <p className="mt-1 text-[11px] text-red-600">{keywordError}</p>}
-          {!keywordError && keywordWarning && <p className="mt-1 text-[11px] text-amber-600">{keywordWarning}</p>}
+          {keywordError && <p id={keywordErrorId} role="alert" className="mt-1 text-[11px] text-red-600">{keywordError}</p>}
+          {!keywordError && keywordWarning && <p id={keywordErrorId} role="alert" className="mt-1 text-[11px] text-amber-600">{keywordWarning}</p>}
         </div>
 
         <div>
-          <label className="block text-[12px] font-medium text-[#555] mb-1">{t('wettbewerb.form.plz')}</label>
+          <label htmlFor={plzId} className="block text-[12px] font-medium text-[#555] mb-1">{t('wettbewerb.form.plz')}</label>
           <input
+            id={plzId}
             type="text"
             inputMode="numeric"
             value={plz}
             onChange={(e) => setPlz(e.target.value.replace(/[^\d]/g, '').slice(0, 5))}
             placeholder={t('wettbewerb.form.plzPlaceholder')}
+            aria-invalid={!!plzError}
+            aria-describedby={plzError ? plzErrorId : undefined}
             className={fieldClass(!!plzError)}
           />
-          {plzError && <p className="mt-1 text-[11px] text-red-600">{plzError}</p>}
+          {plzError && <p id={plzErrorId} role="alert" className="mt-1 text-[11px] text-red-600">{plzError}</p>}
         </div>
 
         <div>
-          <label className="block text-[12px] font-medium text-[#555] mb-1">{t('wettbewerb.form.radius')}</label>
+          <label htmlFor={radiusId} className="block text-[12px] font-medium text-[#555] mb-1">{t('wettbewerb.form.radius')}</label>
           <select
+            id={radiusId}
             value={radiusKm}
             onChange={(e) => setRadiusKm(Number(e.target.value))}
             className={fieldClass(false)}
@@ -100,8 +113,9 @@ export function SearchForm({ onSubmit, isSubmitting }: SearchFormProps) {
         </div>
 
         <div>
-          <label className="block text-[12px] font-medium text-[#555] mb-1">{t('wettbewerb.form.checkInterval')}</label>
+          <label htmlFor={intervalId} className="block text-[12px] font-medium text-[#555] mb-1">{t('wettbewerb.form.checkInterval')}</label>
           <select
+            id={intervalId}
             value={checkIntervalDays}
             onChange={(e) => setCheckIntervalDays(Number(e.target.value))}
             className={fieldClass(false)}
@@ -118,7 +132,7 @@ export function SearchForm({ onSubmit, isSubmitting }: SearchFormProps) {
       <button
         type="submit"
         disabled={!canSubmit || isSubmitting}
-        className="mt-3 inline-flex items-center gap-1.5 bg-[#A8C300] hover:bg-[#96ae00] disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-1.5 px-3 rounded-sm text-[13px] transition-colors"
+        className="mt-3 inline-flex items-center gap-1.5 bg-[#A8C300] hover:bg-[#96ae00] disabled:bg-gray-300 disabled:cursor-not-allowed text-ka-gray-900 font-medium py-1.5 px-3 rounded-sm text-[13px] transition-colors"
       >
         <Search className="w-3.5 h-3.5" />
         {isSubmitting ? t('wettbewerb.form.saving') : t('wettbewerb.form.saveSearch')}

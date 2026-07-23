@@ -353,7 +353,8 @@
       "step2Text": "Ab jetzt prüfen wir regelmäßig für dich, was vergleichbare Anzeigen in deiner Region kosten — du musst nichts weiter tun.",
       "step3Title": "Handeln mit einem Klick",
       "step3Text": "Sobald sich eine bessere Preisspanne zeigt, kannst du deinen Preis direkt übernehmen oder deine Anzeige mit einem Klick neu inserieren.",
-      "understood": "Verstanden"
+      "understood": "Verstanden",
+      "close": "Schließen"
     },
     "form": {
       "keyword": "Suchbegriff",

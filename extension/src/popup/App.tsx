@@ -6,6 +6,13 @@ import { ENDPOINTS } from '../config/endpoints';
 const DASHBOARD = ENDPOINTS.DASHBOARD_BASE;
 const KA_LOGIN_URL = 'https://www.kleinanzeigen.de/m-einloggen.html';
 const GREEN = '#A8C300';
+// White text on GREEN is ~2:1 contrast (fails WCAG AA) — dark text on GREEN
+// is ~8.7:1, so buttons/badges filled with GREEN use this for their label.
+const ON_GREEN_TEXT = '#1A1A1A';
+// GREEN itself is also too light for text sitting directly on a white
+// background (~2:1) — this darker shade clears AA (~5.9:1) while staying
+// visibly "the brand green".
+const GREEN_TEXT = '#5A6B00';
 
 function openTab(path: string) {
   chrome.tabs.create({ url: `${DASHBOARD}${path}` });
@@ -72,14 +79,14 @@ function App() {
     <div style={{ width: 280, fontFamily: 'system-ui, sans-serif', background: '#fff' }}>
       {/* Header */}
       <div style={{ background: GREEN, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontWeight: 700, fontSize: 15, color: '#fff' }}>kleinanzeigen</span>
-        <span style={{ fontWeight: 400, fontSize: 15, color: 'rgba(255,255,255,0.85)' }}>Boost</span>
+        <span style={{ fontWeight: 700, fontSize: 15, color: ON_GREEN_TEXT }}>kleinanzeigen</span>
+        <span style={{ fontWeight: 400, fontSize: 15, color: 'rgba(26,26,26,0.75)' }}>Boost</span>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5 }}>
           <div style={{
             width: 8, height: 8, borderRadius: '50%',
-            background: state === 'connected' ? '#fff' : 'rgba(255,255,255,0.4)',
+            background: state === 'connected' ? ON_GREEN_TEXT : 'rgba(26,26,26,0.35)',
           }} />
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.9)' }}>{statusLabel}</span>
+          <span style={{ fontSize: 12, color: ON_GREEN_TEXT }}>{statusLabel}</span>
         </div>
       </div>
 
@@ -131,7 +138,7 @@ function NotConnected() {
     <div style={{ padding: '14px 12px 12px' }}>
       <StepGuide activeStep={2} />
 
-      {error && <p style={{ fontSize: 11, color: '#e53e3e', margin: '0 0 8px' }}>{error}</p>}
+      {error && <p role="alert" style={{ fontSize: 12, color: '#e53e3e', margin: '0 0 8px' }}>{error}</p>}
       <PrimaryButton
         label={state === 'loading' ? 'Verbinde…' : 'Verbinden'}
         onClick={connect}
@@ -188,7 +195,7 @@ function Connected() {
             onClick={buyCredits}
             disabled={buying}
             style={{
-              fontSize: 11, fontWeight: 700, color: GREEN, background: 'none', border: 'none',
+              fontSize: 12, fontWeight: 700, color: GREEN_TEXT, background: 'none', border: 'none',
               cursor: buying ? 'default' : 'pointer', padding: 0, opacity: buying ? 0.6 : 1,
             }}
           >
@@ -226,7 +233,7 @@ function StepGuide({ activeStep }: { activeStep: 1 | 2 }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 11, fontWeight: 700,
           background: done ? GREEN : active ? '#fff' : '#f0f0f0',
-          color: done ? '#fff' : active ? GREEN : '#bbb',
+          color: done ? ON_GREEN_TEXT : active ? GREEN_TEXT : '#bbb',
           border: active ? `1.5px solid ${GREEN}` : '1.5px solid transparent',
         }}>
           {done ? '✓' : n}
@@ -255,7 +262,7 @@ function PrimaryButton({ label, onClick, disabled = false }: { label: string; on
       disabled={disabled}
       style={{
         display: 'block', width: '100%', padding: '10px',
-        background: GREEN, color: '#fff', border: 'none', borderRadius: 8,
+        background: GREEN, color: ON_GREEN_TEXT, border: 'none', borderRadius: 8,
         fontSize: 13, fontWeight: 700, cursor: disabled ? 'default' : 'pointer',
         opacity: disabled ? 0.6 : 1,
       }}
@@ -269,7 +276,7 @@ function DividerLabel({ text }: { text: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '14px 0 8px' }}>
       <div style={{ flex: 1, height: 1, background: '#eee' }} />
-      <span style={{ fontSize: 10, color: '#bbb', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{text}</span>
+      <span style={{ fontSize: 11, color: '#bbb', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{text}</span>
       <div style={{ flex: 1, height: 1, background: '#eee' }} />
     </div>
   );
@@ -317,7 +324,7 @@ function LockedList() {
 /** Small reassurance line — fills reclaimed space and builds trust. */
 function TrustFooter() {
   return (
-    <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10.5, color: '#999', margin: '12px 2px 0', lineHeight: 1.4 }}>
+    <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: '#999', margin: '12px 2px 0', lineHeight: 1.4 }}>
       <span style={{ display: 'flex' }}><LockIcon /></span>
       Deine Login-Daten bleiben sicher. Wir speichern kein Passwort.
     </p>

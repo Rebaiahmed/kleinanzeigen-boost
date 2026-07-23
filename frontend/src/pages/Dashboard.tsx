@@ -3,10 +3,10 @@ import { Sparkles, Activity, CheckCircle2, XCircle } from 'lucide-react';
 import { ReplyTemplatesList } from '../components/reply-templates/ReplyTemplatesList';
 
 const MOCK_STATS = [
-  { label: 'Aktive Anzeigen', value: '12', color: 'text-ka-green-dark' },
-  { label: 'Heute fällig', value: '3', color: 'text-ka-orange' },
+  { label: 'Aktive Anzeigen', value: '12', color: 'text-ka-green-text' },
+  { label: 'Heute fällig', value: '3', color: 'text-ka-orange-text' },
   { label: 'Reposts diesen Monat', value: '45', color: 'text-ka-gray-900' },
-  { label: 'Erfolgsrate', value: '98%', color: 'text-ka-green-dark' },
+  { label: 'Erfolgsrate', value: '98%', color: 'text-ka-green-text' },
 ];
 
 const MOCK_ACTIVITY = [

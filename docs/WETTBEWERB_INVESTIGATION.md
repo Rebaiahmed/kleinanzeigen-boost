@@ -1,7 +1,11 @@
 # Wettbewerb (Competitor Tracker) — Pre-Launch Investigation
 
 Investigation date: see git log for this file's introducing commit.
-Flag: `FEATURE_WETTBEWERB_ENABLED` (backend `.env`), default `false` — **left OFF**, not changed by this investigation.
+
+> **Update:** `FEATURE_WETTBEWERB_ENABLED` has since been removed — the
+> Wettbewerb tab is now always on for all users, unconditionally. The flag
+> state described below (`false`/OFF) reflects this doc's original
+> investigation date, not the current state.
 
 The code already lives on `main` (no separate unmerged branch) — the earlier plan referenced `feature/wettbewerb-tab`, but that work has already been merged.
 

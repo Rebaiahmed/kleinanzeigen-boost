@@ -6,7 +6,6 @@ export const AI_CONFIG = {
   /** Per-request timeouts (ms) for AI provider calls.
    *  Image analysis is slower, so has a longer timeout.
    *  Configurable via environment variables. */
-  geminiTimeoutMs: Number(process.env.AI_GEMINI_TIMEOUT_MS) || 45000,        // 45s for Gemini (vision-capable)
-  openRouterTimeoutMs: Number(process.env.AI_OPENROUTER_TIMEOUT_MS) || 30000, // 30s for OpenRouter (fallback)
+  openRouterTimeoutMs: Number(process.env.AI_OPENROUTER_TIMEOUT_MS) || 30000,
   imageAnalysisTimeoutMs: Number(process.env.AI_IMAGE_ANALYSIS_TIMEOUT_MS) || 60000, // 60s for image analysis
 };

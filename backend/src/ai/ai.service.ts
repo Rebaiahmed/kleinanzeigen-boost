@@ -1,5 +1,4 @@
 import { Injectable, HttpException, HttpStatus, Logger } from '@nestjs/common';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { FirebaseService } from '../firebase/firebase.service';
 import { getEffectiveLimit, estimateCostUsd } from '../config/ai-limits.constants';
 import { AI_CONFIG } from '../config/ai.constants';
@@ -51,7 +50,6 @@ function stripHashtagsFromResult(parsed: any): any {
 @Injectable()
 export class AiService {
   private readonly logger = new Logger(AiService.name);
-  private genAI: GoogleGenerativeAI | null = null;
   private analyzePhotosPrompt: string;
   private optimizeAdPrompt: string;
   private priceCheckPrompt: string;
@@ -60,13 +58,6 @@ export class AiService {
     private readonly firebaseService: FirebaseService,
     private readonly creditsService: CreditsService,
   ) {
-    // Construct the Gemini client only when a key is actually configured.
-    // If absent, genAI stays null and the model fallback chain skips Gemini and
-    // uses OpenRouter. (App-level startup validation already fails fast when
-    // NEITHER provider key is set — see main.ts validateEnv.)
-    const geminiKey = process.env.GEMINI_API_KEY?.trim();
-    this.genAI = geminiKey ? new GoogleGenerativeAI(geminiKey) : null;
-
     // Load system prompts from files at module initialization (Rule Five)
     this.analyzePhotosPrompt = fs.readFileSync(
       path.join(__dirname, 'prompts/analyze-photos.system.txt'),
@@ -82,14 +73,10 @@ export class AiService {
     );
   }
 
-  /** Throws only if NO AI provider is configured. Either Gemini or OpenRouter
-   *  is sufficient — the model fallback chain uses whichever key(s) exist. */
   private assertAiConfigured() {
-    const hasGemini = !!process.env.GEMINI_API_KEY?.trim();
-    const hasOpenRouter = !!process.env.OPENROUTER_API_KEY?.trim();
-    if (!hasGemini && !hasOpenRouter) {
+    if (!process.env.OPENROUTER_API_KEY?.trim()) {
       throw new HttpException(
-        'KI-Dienst nicht konfiguriert. Bitte trage GEMINI_API_KEY oder OPENROUTER_API_KEY in der backend/.env Datei ein.',
+        'KI-Dienst nicht konfiguriert. Bitte trage OPENROUTER_API_KEY in der backend/.env Datei ein.',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -105,35 +92,25 @@ export class AiService {
     // rate limits, so under load we fall through to paid — that reduces cost, not
     // eliminates it. `vision` marks models that accept image input; text-only models
     // are filtered out when the request contains images (see hasImages below).
-    // Paid-first. The free ($0) models (gemini-2.0-flash free tier, *:free on
-    // OpenRouter) are perpetually rate-limited (429), so trying them first only
-    // added 1–2s of wasted latency before falling through to a paid model. We lead
-    // with the cheap, reliable paid model so a normal request is a single call.
-    // (Gemini-native entries are dropped automatically when AI_DISABLE_GEMINI=true
-    // or no GEMINI_API_KEY — see providerChain below.)
+    // Paid-first. The free ($0) models (*:free on OpenRouter) are perpetually
+    // rate-limited (429), so trying them first only added 1–2s of wasted latency
+    // before falling through to a paid model. We lead with the cheap, reliable
+    // paid model so a normal request is a single call. All models route through
+    // OpenRouter (OPENROUTER_API_KEY) — including the Gemini one below, which is
+    // OpenRouter's proxy to Google's model, not a direct Gemini API call.
     const fullModelChain = [
-      { type: 'openrouter', name: 'google/gemini-2.5-flash-lite', vision: true },  // ~$0.10/$0.40, reliable German + vision
-      { type: 'openrouter', name: 'openai/gpt-4o-mini', vision: true },            // vision fallback
-      { type: 'openrouter', name: 'qwen/qwen3-235b-a22b-2507', vision: false },    // ~$0.09/$0.10, strong cheap text
-      { type: 'openrouter', name: 'x-ai/grok-3-mini', vision: false },
-      { type: 'openrouter', name: 'deepseek/deepseek-chat', vision: false },
+      { name: 'google/gemini-2.5-flash-lite', vision: true },  // ~$0.10/$0.40, reliable German + vision
+      { name: 'openai/gpt-4o-mini', vision: true },            // vision fallback
+      { name: 'qwen/qwen3-235b-a22b-2507', vision: false },    // ~$0.09/$0.10, strong cheap text
+      { name: 'x-ai/grok-3-mini', vision: false },
+      { name: 'deepseek/deepseek-chat', vision: false },
     ];
-
-    // Drop Gemini (Google-native) models from the chain when there's no Gemini key
-    // or when explicitly running OpenRouter-only (AI_DISABLE_GEMINI=true). This
-    // avoids wasted attempts + noisy 429/exhausted logs when Gemini's free quota
-    // is unusable and OpenRouter is the intended provider.
-    const geminiDisabled =
-      !process.env.GEMINI_API_KEY?.trim() || process.env.AI_DISABLE_GEMINI === 'true';
-    const providerChain = geminiDisabled
-      ? fullModelChain.filter((m) => m.type !== 'google')
-      : fullModelChain;
 
     // Detect image input: image parts are objects with inlineData/image_url, not strings.
     const hasImages = contents.some(
       (c) => c && typeof c === 'object' && (c.inlineData || c.image_url || c.type === 'image_url'),
     );
-    const modelChain = hasImages ? providerChain.filter((m) => m.vision) : providerChain;
+    const modelChain = hasImages ? fullModelChain.filter((m) => m.vision) : fullModelChain;
     if (hasImages) {
       this.logger.log(`[AI Service] Image input detected — using vision models only: ${modelChain.map(m => m.name).join(', ')}`);
     }
@@ -151,161 +128,110 @@ export class AiService {
 
     for (const modelInfo of modelChain) {
       try {
-        if (modelInfo.type === 'google') {
-          // Google Native API call
-          const geminiKey = process.env.GEMINI_API_KEY;
-          if (!geminiKey || geminiKey.trim() === '' || !this.genAI) {
-            throw new Error('GEMINI_API_KEY is not configured or empty');
-          }
-
-          const model = this.genAI.getGenerativeModel(
-            {
-              model: modelInfo.name,
-              systemInstruction: finalSystemInstruction,
-              generationConfig,
-            },
-            // requestOptions — the SDK aborts the request after `timeout` ms.
-            // (timeout belongs here, NOT in generationConfig, where it's ignored.)
-            { timeout: options.timeoutMs || AI_CONFIG.geminiTimeoutMs },
-          );
-
-          let result = await model.generateContent(contents);
-          let response = await result.response;
-          let responseText = response.text();
-          let promptTokenCount = response.usageMetadata?.promptTokenCount || 0;
-          let candidatesTokenCount = response.usageMetadata?.candidatesTokenCount || 0;
-
-          // Validate JSON if required
-          if (generationConfig?.responseMimeType === 'application/json') {
-            try {
-              JSON.parse(cleanAndExtractJson(responseText));
-            } catch (jsonErr: any) {
-              this.logger.warn(`[AI Service] Gemini JSON parse failed. Retrying... Error: ${jsonErr.message}`);
-              const retryPrompt = `Your previous response was not valid JSON. Error: ${jsonErr.message}. You MUST return ONLY valid JSON. No explanation before or after. Start with { and end with }. Original request: ${JSON.stringify(contents.filter(c => typeof c === 'string'))}`;
-              result = await model.generateContent([...contents, retryPrompt]);
-              response = await result.response;
-              responseText = response.text();
-              promptTokenCount += response.usageMetadata?.promptTokenCount || 0;
-              candidatesTokenCount += response.usageMetadata?.candidatesTokenCount || 0;
-              // Verify again
-              JSON.parse(cleanAndExtractJson(responseText));
-            }
-          }
-          
-          return {
-            responseText,
-            promptTokenCount,
-            candidatesTokenCount,
-            modelName: modelInfo.name,
-          };
-        } else {
-          // OpenRouter API call
-          const openRouterKey = process.env.OPENROUTER_API_KEY || '';
-          if (!openRouterKey || openRouterKey.trim() === '') {
-            throw new Error('OPENROUTER_API_KEY is not configured or empty');
-          }
-          
-          // Prepare messages: system prompt + user contents (text + images)
-          const messages: any[] = [];
-          if (finalSystemInstruction) {
-            messages.push({ role: 'system', content: finalSystemInstruction });
-          }
-
-          // Build multimodal content array for OpenRouter (supports vision models)
-          const userContent: any[] = [];
-          for (const item of contents) {
-            if (typeof item === 'string') {
-              userContent.push({ type: 'text', text: item });
-            } else if (item?.inlineData?.data && item?.inlineData?.mimeType) {
-              // Convert Gemini inlineData format → OpenRouter image_url format
-              userContent.push({
-                type: 'image_url',
-                image_url: {
-                  url: `data:${item.inlineData.mimeType};base64,${item.inlineData.data}`,
-                },
-              });
-            }
-          }
-
-          if (userContent.length > 0) {
-            messages.push({ role: 'user', content: userContent });
-          }
-
-          const requestBody: any = {
-            model: modelInfo.name,
-            messages,
-            temperature: 0.7,
-            max_tokens: generationConfig.maxOutputTokens || 400,
-          };
-
-          this.logger.log(`[AI Service] Attempting fallback with OpenRouter model: ${modelInfo.name}`);
-          let response = await axios.post(
-            'https://openrouter.ai/api/v1/chat/completions',
-            requestBody,
-            {
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${openRouterKey}`,
-                'HTTP-Referer': 'https://anzeigenboost.de',
-                'X-Title': 'AnzeigenBoost',
-              },
-              timeout: options.timeoutMs || AI_CONFIG.openRouterTimeoutMs,
-            }
-          );
-
-          if (!response.data || !response.data.choices || response.data.choices.length === 0) {
-            throw new Error(`Invalid response from OpenRouter: ${JSON.stringify(response.data)}`);
-          }
-
-          let responseText = response.data.choices[0].message.content;
-          let promptTokenCount = response.data.usage?.prompt_tokens || 0;
-          let candidatesTokenCount = response.data.usage?.completion_tokens || 0;
-
-          // Validate JSON if required
-          if (generationConfig?.responseMimeType === 'application/json') {
-            try {
-              JSON.parse(cleanAndExtractJson(responseText));
-            } catch (jsonErr: any) {
-              this.logger.warn(`[AI Service] OpenRouter JSON parse failed. Retrying... Error: ${jsonErr.message}`);
-              messages.push({ role: 'assistant', content: responseText });
-              messages.push({
-                role: 'user',
-                content: `Your previous response was not valid JSON. Error: ${jsonErr.message}. You MUST return ONLY valid JSON. No explanation before or after. Start with { and end with }.`
-              });
-              
-              response = await axios.post(
-                'https://openrouter.ai/api/v1/chat/completions',
-                { ...requestBody, messages },
-                {
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${openRouterKey}`,
-                    'HTTP-Referer': 'https://anzeigenboost.de',
-                    'X-Title': 'AnzeigenBoost',
-                  },
-                  timeout: options.timeoutMs || AI_CONFIG.openRouterTimeoutMs,
-                }
-              );
-
-              if (!response.data || !response.data.choices || response.data.choices.length === 0) {
-                throw new Error(`Invalid response from OpenRouter during retry: ${JSON.stringify(response.data)}`);
-              }
-
-              responseText = response.data.choices[0].message.content;
-              promptTokenCount += response.data.usage?.prompt_tokens || 0;
-              candidatesTokenCount += response.data.usage?.completion_tokens || 0;
-              // Verify again
-              JSON.parse(cleanAndExtractJson(responseText));
-            }
-          }
-
-          return {
-            responseText,
-            promptTokenCount,
-            candidatesTokenCount,
-            modelName: modelInfo.name,
-          };
+        const openRouterKey = process.env.OPENROUTER_API_KEY || '';
+        if (!openRouterKey || openRouterKey.trim() === '') {
+          throw new Error('OPENROUTER_API_KEY is not configured or empty');
         }
+
+        // Prepare messages: system prompt + user contents (text + images)
+        const messages: any[] = [];
+        if (finalSystemInstruction) {
+          messages.push({ role: 'system', content: finalSystemInstruction });
+        }
+
+        // Build multimodal content array for OpenRouter (supports vision models)
+        const userContent: any[] = [];
+        for (const item of contents) {
+          if (typeof item === 'string') {
+            userContent.push({ type: 'text', text: item });
+          } else if (item?.inlineData?.data && item?.inlineData?.mimeType) {
+            userContent.push({
+              type: 'image_url',
+              image_url: {
+                url: `data:${item.inlineData.mimeType};base64,${item.inlineData.data}`,
+              },
+            });
+          }
+        }
+
+        if (userContent.length > 0) {
+          messages.push({ role: 'user', content: userContent });
+        }
+
+        const requestBody: any = {
+          model: modelInfo.name,
+          messages,
+          temperature: 0.7,
+          max_tokens: generationConfig.maxOutputTokens || 400,
+        };
+
+        this.logger.log(`[AI Service] Attempting fallback with OpenRouter model: ${modelInfo.name}`);
+        let response = await axios.post(
+          'https://openrouter.ai/api/v1/chat/completions',
+          requestBody,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${openRouterKey}`,
+              'HTTP-Referer': 'https://anzeigenboost.de',
+              'X-Title': 'AnzeigenBoost',
+            },
+            timeout: options.timeoutMs || AI_CONFIG.openRouterTimeoutMs,
+          }
+        );
+
+        if (!response.data || !response.data.choices || response.data.choices.length === 0) {
+          throw new Error(`Invalid response from OpenRouter: ${JSON.stringify(response.data)}`);
+        }
+
+        let responseText = response.data.choices[0].message.content;
+        let promptTokenCount = response.data.usage?.prompt_tokens || 0;
+        let candidatesTokenCount = response.data.usage?.completion_tokens || 0;
+
+        // Validate JSON if required
+        if (generationConfig?.responseMimeType === 'application/json') {
+          try {
+            JSON.parse(cleanAndExtractJson(responseText));
+          } catch (jsonErr: any) {
+            this.logger.warn(`[AI Service] OpenRouter JSON parse failed. Retrying... Error: ${jsonErr.message}`);
+            messages.push({ role: 'assistant', content: responseText });
+            messages.push({
+              role: 'user',
+              content: `Your previous response was not valid JSON. Error: ${jsonErr.message}. You MUST return ONLY valid JSON. No explanation before or after. Start with { and end with }.`
+            });
+
+            response = await axios.post(
+              'https://openrouter.ai/api/v1/chat/completions',
+              { ...requestBody, messages },
+              {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${openRouterKey}`,
+                  'HTTP-Referer': 'https://anzeigenboost.de',
+                  'X-Title': 'AnzeigenBoost',
+                },
+                timeout: options.timeoutMs || AI_CONFIG.openRouterTimeoutMs,
+              }
+            );
+
+            if (!response.data || !response.data.choices || response.data.choices.length === 0) {
+              throw new Error(`Invalid response from OpenRouter during retry: ${JSON.stringify(response.data)}`);
+            }
+
+            responseText = response.data.choices[0].message.content;
+            promptTokenCount += response.data.usage?.prompt_tokens || 0;
+            candidatesTokenCount += response.data.usage?.completion_tokens || 0;
+            // Verify again
+            JSON.parse(cleanAndExtractJson(responseText));
+          }
+        }
+
+        return {
+          responseText,
+          promptTokenCount,
+          candidatesTokenCount,
+          modelName: modelInfo.name,
+        };
       } catch (error: any) {
         const isTimeout = error.code === 'ECONNABORTED' || error.message?.includes('timeout') || error.message?.includes('deadline');
         const logMsg = isTimeout
@@ -538,7 +464,7 @@ export class AiService {
       const errMsg = error.message || '';
       if (errMsg.includes('API key not valid') || errMsg.includes('API_KEY_INVALID')) {
         throw new HttpException(
-          'Der konfigurierte GEMINI_API_KEY ist ungültig. Bitte überprüfe deinen API-Schlüssel in der backend/.env Datei.',
+          'Der konfigurierte OPENROUTER_API_KEY ist ungültig. Bitte überprüfe deinen API-Schlüssel in der backend/.env Datei.',
           HttpStatus.INTERNAL_SERVER_ERROR,
         );
       }
@@ -551,7 +477,7 @@ export class AiService {
       const cleaned = cleanAndExtractJson(responseText);
       parsedJson = stripHashtagsFromResult(JSON.parse(cleaned));
     } catch (parseError) {
-      this.logger.error('Failed to parse Gemini response on first attempt. Raw response:', responseText);
+      this.logger.error('Failed to parse AI response on first attempt. Raw response:', responseText);
       this.logger.error('Parse error:', parseError);
       const retryPrompt = `${langInstruction}\nDeine vorherige Antwort war kein valides JSON. Bitte generiere ein striktes, valides JSON.`;
       try {
@@ -569,7 +495,7 @@ export class AiService {
         const cleanedRetry = cleanAndExtractJson(responseText);
         parsedJson = stripHashtagsFromResult(JSON.parse(cleanedRetry));
       } catch (retryError) {
-        this.logger.error('Failed to parse Gemini response on second attempt. Raw response:', responseText);
+        this.logger.error('Failed to parse AI response on second attempt. Raw response:', responseText);
         this.logger.error('Retry parse error:', retryError);
         if (FEATURE_FLAGS.enableCredits) {
           await this.creditsService.refund(userId, getCreditCost('ai_generation'), 'ai_generation_failed', creditActionId)
@@ -662,7 +588,7 @@ export class AiService {
     let parsedJson: any = null;
 
     try {
-      this.logger.log('[KI-Opt] Calling Gemini API (attempt 1)...');
+      this.logger.log('[KI-Opt] Calling AI provider (attempt 1)...');
       const fallbackResult = await this.executeWithFallback(
         [userPrompt],
         this.optimizeAdPrompt,
@@ -697,7 +623,7 @@ export class AiService {
         `Ad title: ${title}\nAd category: ${category}`;
 
       try {
-        this.logger.log('[KI-Opt] Calling Gemini API (retry attempt 2)...');
+        this.logger.log('[KI-Opt] Calling AI provider (retry attempt 2)...');
         const fallbackResult = await this.executeWithFallback(
           [retryPrompt],
           this.optimizeAdPrompt,
@@ -765,7 +691,7 @@ export class AiService {
       const cleaned = cleanAndExtractJson(responseText);
       parsedJson = JSON.parse(cleaned);
     } catch (error: any) {
-      this.logger.error('Gemini Price Valuate failed on first attempt. Raw response:', responseText);
+      this.logger.error('AI price valuation failed on first attempt. Raw response:', responseText);
       this.logger.error('Parse error:', error);
       try {
         const retryPrompt = `${userPrompt}\nReturn ONLY a valid JSON object matching the requested schema. Do not include markdown code fences, do not include surrounding text.`;
@@ -783,7 +709,7 @@ export class AiService {
         const cleaned = cleanAndExtractJson(responseText);
         parsedJson = JSON.parse(cleaned);
       } catch (retryError: any) {
-        this.logger.error('Gemini Price Valuate retry failed. Raw response:', responseText);
+        this.logger.error('AI price valuation retry failed. Raw response:', responseText);
         this.logger.error('Retry parse error:', retryError);
         throw new HttpException(
           `Fehler bei der Preisanalyse: Die Antwort konnte nicht verarbeitet werden. Bitte versuche es erneut.`,
@@ -904,19 +830,19 @@ ${JSON.stringify(dataset)}`;
 
 
   /**
-   * Health check — does NOT call Gemini (would burn quota).
-   * Validates only: key is present, non-empty, looks like a real key (39+ chars).
+   * Health check — does NOT call OpenRouter (would burn quota/cost).
+   * Validates only: key is present, non-empty, looks like a real key.
    * Returns ok=true if the key is configured; latencyMs=0 (no network call).
    */
   async healthCheck(): Promise<{ ok: boolean; latencyMs: number; error?: string }> {
-    const geminiKey = process.env.GEMINI_API_KEY;
-    if (!geminiKey || geminiKey.trim() === '') {
-      return { ok: false, latencyMs: 0, error: 'GEMINI_API_KEY not configured' };
+    const openRouterKey = process.env.OPENROUTER_API_KEY;
+    if (!openRouterKey || openRouterKey.trim() === '') {
+      return { ok: false, latencyMs: 0, error: 'OPENROUTER_API_KEY not configured' };
     }
-    // A real Gemini API key is always 39 characters starting with "AI"
-    const looksValid = geminiKey.length >= 30 && !geminiKey.includes('dummy');
+    // A real OpenRouter key starts with "sk-or-"
+    const looksValid = openRouterKey.startsWith('sk-or-') && !openRouterKey.includes('dummy');
     if (!looksValid) {
-      return { ok: false, latencyMs: 0, error: 'GEMINI_API_KEY looks invalid' };
+      return { ok: false, latencyMs: 0, error: 'OPENROUTER_API_KEY looks invalid' };
     }
     return { ok: true, latencyMs: 0 };
   }
@@ -1184,8 +1110,8 @@ Respond ONLY with valid JSON, no markdown, no extra text:
 
 
 /**
- * Detects a Google API quota-exceeded (429) error and returns a German-language
- * user-facing message including how long to wait.
+ * Detects an OpenRouter quota/rate-limit-exceeded (429) error and returns a
+ * German-language user-facing message including how long to wait.
  */
 function extractQuotaError(err: any): { message: string } | null {
   const raw = err?.message || '';
@@ -1203,7 +1129,7 @@ function extractQuotaError(err: any): { message: string } | null {
     : ' Bitte versuche es später erneut.';
 
   return {
-    message: `KI-Tageslimit erreicht (Free-Tier: 1.500 Anfragen/Tag).${waitMsg} Für unbegrenzte Nutzung: Gemini API-Schlüssel auf Paid-Tier upgraden.`,
+    message: `KI-Anbieter momentan ausgelastet.${waitMsg} Falls das häufiger vorkommt: OpenRouter-Guthaben prüfen unter openrouter.ai.`,
   };
 }
 

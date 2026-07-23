@@ -1,8 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { HelpCircle } from 'lucide-react';
-import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useWettbewerbSearches } from '../hooks/useWettbewerbSearches';
 import { useWettbewerbUsage } from '../hooks/useWettbewerbUsage';
 import { useWettbewerbActions } from '../hooks/useWettbewerbActions';
@@ -15,10 +13,9 @@ import type { ToastType } from '../hooks/useAdsActions';
 
 export function Wettbewerb() {
   const { t } = useTranslation();
-  const { enableWettbewerb, isLoaded: flagsLoaded } = useFeatureFlags();
-  const { searches, isLoading } = useWettbewerbSearches(enableWettbewerb);
+  const { searches, isLoading } = useWettbewerbSearches();
   const { freeSearchUsed, freeLimit, additionalCost, hasSeenWettbewerb, isPlaceholderData: usageIsPlaceholder } =
-    useWettbewerbUsage(enableWettbewerb);
+    useWettbewerbUsage();
   const { createSavedSearch, deleteSavedSearch, applySuggestedPrice, triggerRepost, markGuideSeen, isCreating } =
     useWettbewerbActions();
 
@@ -39,13 +36,6 @@ export function Wettbewerb() {
       void markGuideSeen();
     }
   }, [usageIsPlaceholder, hasSeenWettbewerb, hasAutoOpened, markGuideSeen]);
-
-  // Wait for the real flag value before deciding to redirect — flags start
-  // at all-false defaults until fetchFeatureFlags() resolves, so bouncing
-  // on that first render would wrongly redirect away a flag-ON user too.
-  if (flagsLoaded && !enableWettbewerb) {
-    return <Navigate to="/meine-anzeigen" replace />;
-  }
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToastMessage(message);

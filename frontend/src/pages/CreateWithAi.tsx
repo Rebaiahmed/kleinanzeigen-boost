@@ -108,7 +108,7 @@ export function CreateWithAi() {
   const { ads } = useAds();
   const { saveDraft, handleEbayCrossPost, handlePriceCheck } = useAdsActions();
   const { callsCount, limit, remaining, pct, isWarning, isBlocked, unlimited, incrementUsage } = useAiUsage();
-  const { enableDisclaimer, enableCrossPosting } = useFeatureFlags();
+  const { enableCrossPosting } = useFeatureFlags();
 
   // Navigation step
   const [step, setStep] = useState<'upload' | 'result'>('upload');
@@ -1007,61 +1007,60 @@ export function CreateWithAi() {
               />
 
               {/* Legal disclaimer insert — free trust/safety feature, never
-                  credit-gated. Flag-gated because the shipped text is a
-                  placeholder until legally verified (see legalDisclaimer.ts). */}
-              {enableDisclaimer && (
-                <div className="mt-2">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    {!disclaimerInserted ? (
+                  credit-gated. No longer flag-gated (see legalDisclaimer.ts) —
+                  DISCLAIMER_TEXT there is STILL a placeholder pending real
+                  legal review; replace it before this reaches real listings. */}
+              <div className="mt-2">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  {!disclaimerInserted ? (
+                    <button
+                      type="button"
+                      onClick={insertDisclaimer}
+                      className="inline-flex items-center gap-1 bg-[#f2f2f2] hover:bg-[#e6e6e6] border border-[#ccc] text-[#333] font-medium py-1 px-2.5 rounded-sm text-[12px] transition-colors"
+                    >
+                      🛡️ Rechtstext einfügen
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center text-[11px] font-bold bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full">
+                        EINGEFÜGT
+                      </span>
                       <button
                         type="button"
-                        onClick={insertDisclaimer}
-                        className="inline-flex items-center gap-1 bg-[#f2f2f2] hover:bg-[#e6e6e6] border border-[#ccc] text-[#333] font-medium py-1 px-2.5 rounded-sm text-[12px] transition-colors"
+                        onClick={removeDisclaimer}
+                        className="text-[12px] text-gray-500 hover:text-red-600 font-medium underline hover:no-underline"
                       >
-                        🛡️ Rechtstext einfügen
+                        Entfernen
                       </button>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center text-[11px] font-bold bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full">
-                          EINGEFÜGT
-                        </span>
-                        <button
-                          type="button"
-                          onClick={removeDisclaimer}
-                          className="text-[12px] text-gray-500 hover:text-red-600 font-medium underline hover:no-underline"
-                        >
-                          Entfernen
-                        </button>
-                      </div>
-                    )}
-                    <span className="text-[11px] text-gray-400">
-                      Geprüft: {formatVerifiedDateLabel()}
-                    </span>
-                  </div>
-
-                  {/* Distinct preview block — the raw textarea already has this
-                      exact text appended (that's what actually gets posted);
-                      this is purely the "visually set apart" affordance a
-                      plain textarea can't render inline. */}
-                  {disclaimerInserted && (
-                    <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-sm text-[12px] text-amber-900 whitespace-pre-wrap">
-                      {DISCLAIMER_TEXT}
                     </div>
                   )}
-
-                  <p className="mt-1.5 text-[11px] text-gray-400 leading-snug">
-                    Dieser Text wird regelmäßig von uns überprüft. Ersetzt keine individuelle Rechtsberatung.{' '}
-                    <a
-                      href={DISCLAIMER_LEARN_MORE_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline hover:no-underline"
-                    >
-                      Mehr erfahren
-                    </a>
-                  </p>
+                  <span className="text-[11px] text-gray-400">
+                    Geprüft: {formatVerifiedDateLabel()}
+                  </span>
                 </div>
-              )}
+
+                {/* Distinct preview block — the raw textarea already has this
+                    exact text appended (that's what actually gets posted);
+                    this is purely the "visually set apart" affordance a
+                    plain textarea can't render inline. */}
+                {disclaimerInserted && (
+                  <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-sm text-[12px] text-amber-900 whitespace-pre-wrap">
+                    {DISCLAIMER_TEXT}
+                  </div>
+                )}
+
+                <p className="mt-1.5 text-[11px] text-gray-400 leading-snug">
+                  Dieser Text wird regelmäßig von uns überprüft. Ersetzt keine individuelle Rechtsberatung.{' '}
+                  <a
+                    href={DISCLAIMER_LEARN_MORE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:no-underline"
+                  >
+                    Mehr erfahren
+                  </a>
+                </p>
+              </div>
             </div>
 
             {/* Key Features pills */}

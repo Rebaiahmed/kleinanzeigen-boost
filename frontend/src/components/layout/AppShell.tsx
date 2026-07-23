@@ -6,6 +6,7 @@ import { BrowserSupportBanner } from '../BrowserSupportBanner';
 import { useExtension } from '../../hooks/useExtension';
 import { useRepostNotifications } from '../../hooks/useRepostNotifications';
 import { useWettbewerbSeen } from '../../hooks/useWettbewerbSeen';
+import { useWettbewerbSearches } from '../../hooks/useWettbewerbSearches';
 import { useAccountStatus } from '../../hooks/useAccountStatus';
 import { AlertCircle, MessageSquare } from 'lucide-react';
 
@@ -28,6 +29,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useRepostNotifications();
 
   const hasSeenWettbewerb = useWettbewerbSeen(true);
+  // Shares the 'wettbewerb-searches' query cache with the Wettbewerb page
+  // itself (same React Query key) — visiting this nav item doesn't cause a
+  // second fetch, just reads whatever's already cached/being fetched.
+  const { searches: wettbewerbSearches } = useWettbewerbSearches();
+  const unseenWettbewerbCount = wettbewerbSearches.filter((s) => s.hasUnseenChange).length;
 
   // Only show the "not connected" banner when we're certain the extension is
   // missing — not while checking (avoids flash) and not if the user has a valid
@@ -144,6 +150,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {t('nav.new')}
               </span>
             )}
+            {hasSeenWettbewerb && unseenWettbewerbCount > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center min-w-[16px] h-4 text-[9px] font-bold bg-[#A8C300] text-white px-1 rounded-full align-middle">
+                {unseenWettbewerbCount}
+              </span>
+            )}
           </NavLink>
         </div>
       </div>
@@ -205,7 +216,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         >
           <span className="text-[18px] leading-none">📊</span>
           <span>{t('nav.competition')}</span>
-          {!hasSeenWettbewerb && (
+          {(!hasSeenWettbewerb || unseenWettbewerbCount > 0) && (
             <span className="absolute top-1 right-[calc(50%-22px)] w-1.5 h-1.5 rounded-full bg-[#A8C300]" />
           )}
         </NavLink>

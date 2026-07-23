@@ -33,6 +33,8 @@ export interface WettbewerbSearch {
   lastCheckedAt: string | null;
   lastCheckError: string | null;
   latestSnapshot: WettbewerbSnapshot | null;
+  lastViewedSnapshot: WettbewerbSnapshot | null;
+  hasUnseenChange: boolean;
 }
 
 async function fetchSavedSearches(): Promise<WettbewerbSearch[]> {

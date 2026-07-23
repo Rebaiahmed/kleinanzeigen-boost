@@ -401,7 +401,8 @@
       "you": "YOU",
       "negotiable": "Neg.",
       "yourAdRank": "Your listing: rank {{rank}} of {{total}}",
-      "yourAdNotFound": "Your listing wasn't found in the results."
+      "yourAdNotFound": "Your listing wasn't found in the results.",
+      "updated": "Updated"
     }
   }
 }

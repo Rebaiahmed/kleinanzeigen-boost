@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 
 const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -15,6 +16,7 @@ function getToken() {
  */
 export function useRepostNotifications(onRepostNotification?: () => void) {
   const esRef = useRef<EventSource | null>(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const token = getToken();
@@ -53,8 +55,16 @@ export function useRepostNotifications(onRepostNotification?: () => void) {
           else if (data.type === 'repost_disabled') title = '⚠️ Auto-Repost deaktiviert';
           else if (data.type === 'reposts_paused') title = '⛔ Reposts pausiert';
           else if (data.type === 'session_expired') title = '🔐 Sitzung abgelaufen';
+          else if (data.type === 'wettbewerb_update') title = '📊 Wettbewerb-Update';
 
           show(title, data.message || 'Benachrichtigung von AnzeigenBoost');
+
+          // Live-updates the nav-tab badge count immediately instead of only
+          // after the next reload/manual refetch of the searches list —
+          // otherwise the desktop notification and the badge would disagree.
+          if (data.type === 'wettbewerb_update') {
+            queryClient.invalidateQueries({ queryKey: ['wettbewerb-searches'] });
+          }
 
           // When repost notification arrives, trigger refresh in parent component
           if (data.type === 'repost_pending_notification' && onRepostNotification) {
@@ -85,5 +95,5 @@ export function useRepostNotifications(onRepostNotification?: () => void) {
       if (reconnectTimer) window.clearTimeout(reconnectTimer);
       esRef.current?.close();
     };
-  }, [onRepostNotification]);
+  }, [onRepostNotification, queryClient]);
 }

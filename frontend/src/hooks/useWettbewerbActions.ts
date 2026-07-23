@@ -151,5 +151,24 @@ export function useWettbewerbActions() {
     }
   }, [queryClient]);
 
-  return { createSavedSearch, deleteSavedSearch, applySuggestedPrice, triggerRepost, markGuideSeen, isCreating };
+  /** Fire-and-forget — called when a specific saved search's card is
+   *  actually viewed, to clear its unseen-change state (card highlight +
+   *  contributes to the nav-tab badge count). Non-critical if it fails: at
+   *  worst the highlight/badge for that search persists one extra visit. */
+  const markSearchViewed = useCallback(
+    async (searchId: string): Promise<void> => {
+      try {
+        await fetch(`${API_URL}/wettbewerb/searches/${searchId}/view`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${getToken()}` },
+        });
+        queryClient.invalidateQueries({ queryKey: ['wettbewerb-searches'] });
+      } catch {
+        // Non-critical — see doc comment above.
+      }
+    },
+    [queryClient],
+  );
+
+  return { createSavedSearch, deleteSavedSearch, applySuggestedPrice, triggerRepost, markGuideSeen, markSearchViewed, isCreating };
 }

@@ -145,6 +145,13 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           exit 1
 
+      - name: Notify Slack on success
+        if: success()
+        uses: ./.github/actions/notify-slack-success
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          message: 'Backend deployed and health check passed'
+
       - name: Notify Slack on failure
         if: failure()
         uses: ./.github/actions/notify-slack-failure

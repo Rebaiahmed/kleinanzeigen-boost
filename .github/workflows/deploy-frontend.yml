@@ -64,6 +64,13 @@ jobs:
             exit 1
           fi
 
+      - name: Notify Slack on success
+        if: success()
+        uses: ./.github/actions/notify-slack-success
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          message: 'Frontend dashboard deployed and verified live'
+
       - name: Notify Slack on failure
         if: failure()
         uses: ./.github/actions/notify-slack-failure

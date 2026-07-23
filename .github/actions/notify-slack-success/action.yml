@@ -1,0 +1,77 @@
+name: 'Notify Slack on workflow success'
+description: >
+  Posts a Slack alert when the calling job has succeeded. Add as the last
+  step of a job with `if: success()`, alongside notify-slack-failure's
+  `if: failure()` step in the same job — the two conditions are mutually
+  exclusive within one job run, so exactly one of them ever fires. Mirrors
+  notify-slack-failure's structure and shares the same SLACK_WEBHOOK_URL
+  secret, with a distinct ✅ green-checkmark style so success and failure
+  alerts are visually distinguishable at a glance in the channel.
+inputs:
+  webhook_url:
+    description: 'Slack Incoming Webhook URL (usually secrets.SLACK_WEBHOOK_URL). Safe no-op if empty.'
+    required: true
+  message:
+    description: >
+      What to report as succeeded, e.g. "Backend deployed" or
+      "Extension v1.0.6 is now LIVE on the Chrome Web Store". Workflow,
+      branch, commit, and run link are appended automatically — don't
+      repeat them here.
+    required: true
+  include_approver:
+    description: >
+      Set to "true" for jobs gated behind a required-reviewers GitHub
+      Environment (e.g. deploy-extension.yml's `publish` job) to look up
+      and include who approved the deployment. Best-effort — silently
+      omitted if the API call fails or returns nothing (e.g. permissions,
+      or the environment has no reviewer history for this run).
+    required: false
+    default: 'false'
+runs:
+  using: 'composite'
+  steps:
+    - name: Post Slack success alert
+      shell: bash
+      env:
+        WEBHOOK_URL: ${{ inputs.webhook_url }}
+        MESSAGE: ${{ inputs.message }}
+        INCLUDE_APPROVER: ${{ inputs.include_approver }}
+        GH_TOKEN: ${{ github.token }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        APPROVALS_URL: ${{ github.api_url }}/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/approvals
+      run: |
+        if [ -z "$WEBHOOK_URL" ]; then
+          echo "No webhook_url provided — skipping Slack notification (this step is a safe no-op until SLACK_WEBHOOK_URL is set)."
+          exit 0
+        fi
+
+        BRANCH="${{ github.ref_name }}"
+        SHA_SHORT="${{ github.sha }}"
+        SHA_SHORT="${SHA_SHORT:0:7}"
+        # git log only works if the calling job checked out the repo — several
+        # deploy jobs don't (they SSH straight to the VPS), so this is best-effort.
+        COMMIT_MSG=$(git log -1 --format=%s 2>/dev/null || echo "")
+        WORKFLOW="${{ github.workflow }}"
+
+        # Best-effort: the exact response shape for this endpoint isn't
+        # something we could verify against a real approval before shipping,
+        # so try a couple of plausible field paths and fall back to omitting
+        # the approver entirely rather than risk a malformed message.
+        APPROVER_SUFFIX=""
+        if [ "$INCLUDE_APPROVER" = "true" ]; then
+          APPROVER=$(curl -s -H "Authorization: Bearer $GH_TOKEN" "$APPROVALS_URL" 2>/dev/null \
+            | jq -r '[.[]? | (.user.login // .reviewers[]?.reviewer.login // empty)] | first // empty' 2>/dev/null)
+          [ -n "$APPROVER" ] && APPROVER_SUFFIX=" (approved by ${APPROVER})"
+        fi
+
+        COMMIT_SUFFIX=""
+        [ -n "$COMMIT_MSG" ] && COMMIT_SUFFIX=" — ${COMMIT_MSG}"
+
+        # printf's own \n (not the shell's) becomes a real newline here, which
+        # jq -Rs then correctly JSON-escapes back to \n for Slack to render.
+        TEXT=$(printf '✅ *%s*%s\n• Workflow: *%s*  Branch: `%s`  Commit: `%s`%s\n• <%s|View run>' \
+          "$MESSAGE" "$APPROVER_SUFFIX" "$WORKFLOW" "$BRANCH" "$SHA_SHORT" "$COMMIT_SUFFIX" "$RUN_URL")
+
+        curl -fsS -X POST -H 'Content-Type: application/json' \
+          -d "{\"text\": $(printf '%s' "$TEXT" | jq -Rs .)}" \
+          "$WEBHOOK_URL" && echo "Posted success alert to Slack." || echo "⚠️ Slack post itself failed (non-fatal, not re-failing the job for this)."

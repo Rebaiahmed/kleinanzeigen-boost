@@ -9,11 +9,20 @@ on:
       - '.github/workflows/deploy-backend.yml'
   workflow_dispatch: {} # allow manual run from the Actions tab
 
+# Prevent overlapping deploys — a second push landing mid-deploy could stomp
+# the rollback point (PREV_SHA / dist backup) the first run just recorded.
+concurrency:
+  group: backend-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
     name: Deploy over SSH
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout (for the health-check script)
+        uses: actions/checkout@v4
+
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -22,8 +31,24 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             set -e
-            echo "▶ Pulling latest code…"
             cd /root/kleinanzeigen-boost
+
+            # ── Record a rollback point BEFORE touching anything ─────────────
+            # This is "whatever was running right before this deploy" — sound
+            # as a rollback target because every past deploy that reached this
+            # point either passed its own post-deploy health check or was
+            # itself rolled back by this same mechanism (see the health-check
+            # gate + rollback step below in the GH Actions workflow).
+            echo "▶ Recording rollback point…"
+            PREV_SHA=$(git rev-parse HEAD)
+            echo "$PREV_SHA" > /root/.anzeigenboost-last-good-sha
+            if [ -d backend/dist ]; then
+              rm -rf /root/.anzeigenboost-dist-backup
+              cp -r backend/dist /root/.anzeigenboost-dist-backup
+              echo "   backed up dist/ from $PREV_SHA"
+            fi
+
+            echo "▶ Pulling latest code…"
             # Self-heal the recurring "incorrect old value provided" ref corruption:
             # drop the stale remote ref + prune, then fetch fresh.
             git fetch origin main || {
@@ -44,13 +69,75 @@ jobs:
             pm2 save
             echo "✅ Deploy complete."
 
-      - name: Health check
-        run: |
-          sleep 5
-          for i in 1 2 3 4 5; do
-            if curl -fsS "https://api.anzeigenboost.de/api/health"; then
-              echo "" && echo "✅ Backend healthy."; exit 0
+      # This is the check that would have caught the Jul 15-22 outage on day
+      # one instead of day seven — see MONITORING.md for the full story.
+      - name: Health check (post-deploy gate)
+        id: health_check
+        run: ./scripts/health-check.sh "https://api.anzeigenboost.de/api/health" 6 5 5
+
+      # Runs whenever ANY prior step failed (bad build, crash on restart,
+      # failed health check) — restores the last known-good commit + dist/
+      # and restarts PM2, so a broken deploy self-heals instead of leaving
+      # production down until someone notices.
+      - name: Automatic rollback to last known-good deploy
+        if: failure()
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            cd /root/kleinanzeigen-boost
+            echo "🔴 Deploy step failed — attempting automatic rollback…"
+            if [ ! -f /root/.anzeigenboost-last-good-sha ]; then
+              echo "❌ No rollback point recorded (first-ever deploy?). Cannot auto-rollback."
+              echo "   MANUAL INTERVENTION REQUIRED — see MONITORING.md for manual rollback steps."
+              exit 1
             fi
-            echo "Attempt $i failed, retrying in 5s…"; sleep 5
-          done
-          echo "❌ Health check failed after deploy."; exit 1
+            PREV_SHA=$(cat /root/.anzeigenboost-last-good-sha)
+            echo "▶ Rolling back to $PREV_SHA…"
+            git reset --hard "$PREV_SHA"
+            if [ -d /root/.anzeigenboost-dist-backup ]; then
+              echo "▶ Restoring previously-working dist/ (faster + safer than rebuilding)…"
+              rm -rf backend/dist
+              cp -r /root/.anzeigenboost-dist-backup backend/dist
+            else
+              echo "▶ No dist/ backup available — rebuilding from $PREV_SHA…"
+              cd backend && npm ci && npm run build && cd ..
+            fi
+            cd backend
+            pm2 restart anzeigenboost-api --update-env
+            pm2 save
+            echo "🔁 Rollback deploy complete — re-verifying health next."
+
+      - name: Verify rollback restored health
+        if: failure()
+        run: ./scripts/health-check.sh "https://api.anzeigenboost.de/api/health" 6 5 5
+
+      # Always runs on failure, whether or not rollback succeeded — this is
+      # the "make the failure loud and unmissable" half of the gate. See
+      # MONITORING.md Part 3 for how you actually get notified.
+      - name: Loud failure summary
+        if: failure()
+        run: |
+          {
+            echo "## 🚨 BACKEND DEPLOY FAILED 🚨"
+            echo ""
+            echo "The post-deploy health check failed and automatic rollback was attempted."
+            echo "Check the 'Automatic rollback' and 'Verify rollback restored health' steps"
+            echo "above to see whether production is currently on the last known-good build"
+            echo "or still broken."
+            echo ""
+            echo "### If automatic rollback did NOT restore health, manual steps:"
+            echo '```'
+            echo 'ssh <VPS_USER>@<VPS_HOST>'
+            echo 'cd /root/kleinanzeigen-boost'
+            echo 'cat /root/.anzeigenboost-last-good-sha   # commit that was last healthy'
+            echo 'git reset --hard "$(cat /root/.anzeigenboost-last-good-sha)"'
+            echo 'cd backend && npm ci && npm run build'
+            echo 'pm2 restart anzeigenboost-api --update-env && pm2 save'
+            echo 'curl -fsS https://api.anzeigenboost.de/api/health'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1

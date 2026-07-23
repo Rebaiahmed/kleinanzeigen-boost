@@ -1,0 +1,79 @@
+name: Production Uptime Check
+
+# Catches outages that happen BETWEEN deploys — the deploy-gate in
+# deploy-backend.yml only checks health right after a deploy. This is the
+# safety net for everything else (VPS reboot, process crash, disk full, an
+# expired cert, etc.). See MONITORING.md for why this exists.
+#
+# This is the GitHub-Actions-only fallback. A real third-party uptime
+# monitor (UptimeRobot recommended — see MONITORING.md) is more reliable
+# because it doesn't depend on you having GitHub notifications configured,
+# but that needs a one-time signup outside this repo. This workflow needs
+# nothing beyond what's already here.
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # every 5 minutes
+  workflow_dispatch: {} # allow a manual "check right now" run
+
+concurrency:
+  group: uptime-check
+  cancel-in-progress: true # a stale overlapping run isn't worth waiting for
+
+jobs:
+  check:
+    name: Ping production health endpoint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (for the health-check script)
+        uses: actions/checkout@v4
+
+      - name: Check production health
+        id: health_check
+        run: ./scripts/health-check.sh "https://api.anzeigenboost.de/api/health" 3 10 0
+
+      # Fires only when the check above failed. Posts to Slack or Discord if
+      # a webhook secret is configured (SLACK_WEBHOOK_URL / DISCORD_WEBHOOK_URL
+      # under Settings → Secrets and variables → Actions) — safe no-op
+      # otherwise. Either way, the failed run itself (red X + GitHub's own
+      # workflow-failure notification) is the baseline signal — see
+      # MONITORING.md Part 3 for the full notification story.
+      - name: Notify (Slack/Discord, if configured)
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          MESSAGE="🚨 AnzeigenBoost backend is DOWN — production health check failed at $(date -u +%Y-%m-%dT%H:%M:%SZ). Run: ${RUN_URL}"
+
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            curl -fsS -X POST -H 'Content-Type: application/json' \
+              -d "{\"text\": $(printf '%s' "$MESSAGE" | jq -Rs .)}" \
+              "$SLACK_WEBHOOK_URL" && echo "Posted to Slack."
+          fi
+
+          if [ -n "$DISCORD_WEBHOOK_URL" ]; then
+            curl -fsS -X POST -H 'Content-Type: application/json' \
+              -d "{\"content\": $(printf '%s' "$MESSAGE" | jq -Rs .)}" \
+              "$DISCORD_WEBHOOK_URL" && echo "Posted to Discord."
+          fi
+
+          if [ -z "$SLACK_WEBHOOK_URL" ] && [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "No SLACK_WEBHOOK_URL or DISCORD_WEBHOOK_URL secret configured — skipping chat notification."
+            echo "Relying on GitHub's own failed-workflow notification. See MONITORING.md to add a webhook."
+          fi
+
+      - name: Failure summary
+        if: failure()
+        run: |
+          {
+            echo "## 🚨 PRODUCTION IS DOWN 🚨"
+            echo ""
+            echo "\`https://api.anzeigenboost.de/api/health\` did not respond with 2xx"
+            echo "after 3 attempts, 10s apart. This is the scheduled uptime check, not"
+            echo "a deploy — nothing was just pushed, so this is a live incident."
+            echo ""
+            echo "Check the VPS directly: \`pm2 status\`, \`pm2 logs anzeigenboost-api\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1

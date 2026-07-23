@@ -50,8 +50,16 @@ The deploy gate only checks health immediately after a deploy. It would
 **not** have caught, say, the VPS running out of disk, PM2 crash-looping
 hours after a clean deploy, or an expired cert — anything that breaks
 production between deploys. This workflow runs on a 5-minute cron,
-independent of any deploy, hitting the same `/api/health` endpoint via the
-same `scripts/health-check.sh`.
+independent of any deploy, checking BOTH `https://api.anzeigenboost.de/api/health`
+(backend) and `https://anzeigenboost.de` (frontend dashboard) via the same
+`scripts/health-check.sh`.
+
+Alerts are **transition-only** — one message when a service goes down, one
+when it recovers, never a repeat "still down" every 5 minutes during an
+ongoing outage. State (`up`/`down` per service) lives in
+`.github/uptime-state.json`, committed back to `main` only when a status
+actually changes, so the workflow is silent (zero commits) during normal
+operation.
 
 **Recommendation: also set up a real third-party monitor (UptimeRobot).**
 This GitHub Actions workflow is a good zero-signup baseline, but it has one
@@ -77,30 +85,62 @@ signup because:
 If you'd rather not sign up anywhere new, the GitHub Actions workflow above
 covers the same ground without any external account.
 
-## Part 3 — Notification
+## Part 3 — Slack alerting
 
-Two layers, in order of effort:
+Two independent alert sources, both posting to the same Slack channel:
 
-1. **GitHub's own failed-workflow-run notification** — works today with zero
-   setup, as long as your GitHub notification settings actually deliver
-   Actions failures to you (Settings → Notifications → Actions). Worth
-   double-checking this is on, since the fact that it didn't get noticed for
-   6.5 days suggests either it wasn't enabled or the email got lost in
-   volume.
-2. **Slack/Discord webhook** (optional, already wired up in
-   `uptime-check.yml`) — add a repo secret named `SLACK_WEBHOOK_URL` or
-   `DISCORD_WEBHOOK_URL` (Settings → Secrets and variables → Actions → New
-   repository secret) and the scheduled check will post directly to that
-   channel on failure. Safe no-op until you add one — nothing breaks if you
-   skip this.
+1. **Deploy/publish failures** — every deploy/publish workflow
+   (`deploy-backend`, `deploy-frontend`, `deploy-automation`, and both jobs
+   of `deploy-extension`) posts on failure via the reusable
+   `.github/actions/notify-slack-failure` composite action. Message includes
+   the workflow name, which step failed, the branch/commit, and a direct
+   link to the failed run. `deploy.yml` (the older, disabled, manual-only
+   pipeline superseded by the four above) is intentionally not wired up.
+2. **Uptime transitions** — `uptime-check.yml` (Part 2 above) posts once on
+   down, once on recovery, for backend and frontend independently.
 
-**My actual recommendation**, given what already failed silently once:
-don't rely on GitHub notifications alone. Either set up UptimeRobot (its
-alerting is independent of GitHub and purpose-built for this), or at minimum
-add a Slack/Discord webhook secret so a failure posts somewhere you actually
-look. Ideally both — they cover different gaps (UptimeRobot catches
-between-deploy downtime from outside GitHub entirely; the webhook makes
-in-repo failures, like a bad deploy, impossible to miss).
+Both reuse the **same** `SLACK_WEBHOOK_URL` repo secret — deliberately a
+**new, dedicated channel** (e.g. `#deploys` or `#alerts`), not the existing
+`ALERT_WEBHOOK_URL` used by the backend's AI-cost/credit-refund monitoring
+(`backend/src/common/admin-alert.util.ts`,
+`backend/src/monitoring/credit-monitor.service.ts`). That channel is
+business/cost alerting and has been noisy enough during testing to bury
+things in it — deploy and uptime alerts need to be reliably seen, so they
+get their own quiet channel instead of competing with that noise. If you'd
+rather consolidate, you can always point `SLACK_WEBHOOK_URL` at the same
+webhook as `ALERT_WEBHOOK_URL` later — nothing about this wiring assumes a
+dedicated channel, it's just the recommendation.
+
+### Setting up `SLACK_WEBHOOK_URL` (one-time, ~5 minutes)
+
+1. In Slack, create the target channel first if it doesn't exist yet (e.g.
+   `#deploys`).
+2. Go to https://api.slack.com/apps → **Create New App** → **From scratch**.
+   Name it something like "AnzeigenBoost Alerts", pick your workspace.
+3. In the app's settings sidebar: **Incoming Webhooks** → toggle **Activate
+   Incoming Webhooks** to on.
+4. Click **Add New Webhook to Workspace**, pick the `#deploys` channel you
+   created, **Allow**.
+5. Copy the generated Webhook URL (`https://hooks.slack.com/services/...`).
+6. GitHub → repo → **Settings → Secrets and variables → Actions → New
+   repository secret** → Name: `SLACK_WEBHOOK_URL` → Value: paste it → **Add
+   secret**.
+
+That's it — no code change needed, every alert step already reads this
+secret and is a safe no-op (with a logged skip message) until it exists.
+
+Also still worth having as a baseline, independent of Slack: **GitHub's own
+failed-workflow-run notification** — works today with zero setup, as long as
+your GitHub notification settings actually deliver Actions failures to you
+(Settings → Notifications → Actions). Worth double-checking this is on,
+since the fact that the original outage didn't get noticed for 6.5 days
+suggests either it wasn't enabled or the email got lost in volume.
+
+**My actual recommendation**: set up `SLACK_WEBHOOK_URL` (5 minutes, covers
+both deploy failures and uptime transitions) *and* consider UptimeRobot on
+top of it for the uptime piece specifically — UptimeRobot's alerting runs
+entirely outside GitHub/Slack, so it's the one layer that survives if GitHub
+Actions itself has an outage or the Slack webhook silently breaks.
 
 ## Manual rollback (if automatic rollback can't recover)
 

@@ -1,0 +1,52 @@
+name: 'Notify Slack on workflow failure'
+description: >
+  Posts a Slack alert when the calling job has failed. Add as the last step
+  of a job with `if: failure()`. Looks up which step actually failed via the
+  GitHub Jobs API (matched by $RUNNER_NAME, since the API has no direct way
+  to identify "the job currently running this step") so it works generically
+  across any workflow without needing per-step IDs everywhere.
+inputs:
+  webhook_url:
+    description: 'Slack Incoming Webhook URL (usually secrets.SLACK_WEBHOOK_URL). Safe no-op if empty.'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Post Slack failure alert
+      shell: bash
+      env:
+        WEBHOOK_URL: ${{ inputs.webhook_url }}
+        GH_TOKEN: ${{ github.token }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        JOBS_URL: ${{ github.api_url }}/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs?per_page=100
+      run: |
+        if [ -z "$WEBHOOK_URL" ]; then
+          echo "No webhook_url provided — skipping Slack notification (this step is a safe no-op until SLACK_WEBHOOK_URL is set)."
+          exit 0
+        fi
+
+        BRANCH="${{ github.ref_name }}"
+        SHA_SHORT="${{ github.sha }}"
+        SHA_SHORT="${SHA_SHORT:0:7}"
+        # git log only works if the calling job checked out the repo — several
+        # deploy jobs don't (they SSH straight to the VPS), so this is best-effort.
+        COMMIT_MSG=$(git log -1 --format=%s 2>/dev/null || echo "")
+        WORKFLOW="${{ github.workflow }}"
+
+        FAILED_STEP=$(curl -s -H "Authorization: Bearer $GH_TOKEN" "$JOBS_URL" \
+          | jq -r --arg runner "$RUNNER_NAME" '
+              .jobs[] | select(.runner_name == $runner) | .steps[]
+              | select(.conclusion == "failure") | .name
+            ' 2>/dev/null | head -1)
+        FAILED_STEP="${FAILED_STEP:-(unknown step — see run log)}"
+
+        # printf's own \n (not the shell's) becomes a real newline here, which
+        # jq -Rs then correctly JSON-escapes back to \n for Slack to render.
+        COMMIT_SUFFIX=""
+        [ -n "$COMMIT_MSG" ] && COMMIT_SUFFIX=" — ${COMMIT_MSG}"
+        TEXT=$(printf '🔴 *%s* failed at step: *%s*\n• Branch: `%s`  Commit: `%s`%s\n• <%s|View failed run>' \
+          "$WORKFLOW" "$FAILED_STEP" "$BRANCH" "$SHA_SHORT" "$COMMIT_SUFFIX" "$RUN_URL")
+
+        curl -fsS -X POST -H 'Content-Type: application/json' \
+          -d "{\"text\": $(printf '%s' "$TEXT" | jq -Rs .)}" \
+          "$WEBHOOK_URL" && echo "Posted failure alert to Slack." || echo "⚠️ Slack post itself failed (non-fatal, not re-failing the job for this)."

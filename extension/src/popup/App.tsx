@@ -171,7 +171,7 @@ function Connected() {
 
   const buyCredits = () => {
     setBuying(true);
-    chrome.runtime.sendMessage({ type: 'CREATE_CREDITS_CHECKOUT', packId: 'pack_100' }, (resp) => {
+    chrome.runtime.sendMessage({ type: 'CREATE_CREDITS_CHECKOUT', packId: 'pack_50' }, (resp) => {
       setBuying(false);
       if (!chrome.runtime.lastError && resp?.ok && resp.url) {
         openUrl(resp.url);

@@ -6,6 +6,7 @@ import { AdsService } from '../ads/ads.service';
 import { AdStatus } from '../ads/dto/ad-status.enum';
 import { PlzValidationService } from './plz-validation.service';
 import { CreditsService } from '../credits/credits.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateSavedSearchDto } from './dto/wettbewerb.dto';
 import {
   RADIUS_OPTIONS_KM,
@@ -25,10 +26,57 @@ interface CompetitorRowWithOwn extends CompetitorRow {
   isOwn: boolean;
 }
 
+interface WettbewerbSnapshot {
+  checkedAt: string;
+  totalResultsFound: number;
+  userAdRank: number | null;
+  userAdId: string | null;
+  priceRangeLow: number | null;
+  priceRangeHigh: number | null;
+  suggestedPriceLow: number | null;
+  suggestedPriceHigh: number | null;
+  topCompetitors: Array<{ rank: number; title: string; priceEUR: number | null; adId: string; isOwn: boolean }>;
+}
+
 // After this many consecutive check failures, a saved search flips to
 // status:'error' (shown on the card with a retry affordance) instead of
 // silently staying 'active' forever with a stale snapshot.
 const MAX_CONSECUTIVE_FAILURES = 3;
+
+/**
+ * Compares a fresh snapshot against whatever the user last actually viewed
+ * (NOT against the previous check — a search that's been unviewed across
+ * several check cycles should still surface everything that changed since
+ * the user's real last look, not just the most recent tick). Pure function,
+ * no I/O, so it's directly unit-testable without Firestore/network.
+ *
+ * `previous === null` means the search has never been viewed (e.g. its
+ * first-ever check) — deliberately returns false in that case. A brand-new
+ * search's first result isn't "new since you looked", it's just the first
+ * result; notifying on it would just be noise right after creating a search.
+ */
+function hasMeaningfulChange(previous: WettbewerbSnapshot | null, next: WettbewerbSnapshot): boolean {
+  if (!previous) return false;
+
+  // 1. Rank changed (including appearing/disappearing from the results).
+  if (previous.userAdRank !== next.userAdRank) return true;
+
+  // 2. A new competitor (not the user's own ad) entered the top 5 that
+  // wasn't there last time.
+  const previousIds = new Set(previous.topCompetitors.filter((c) => !c.isOwn).map((c) => c.adId));
+  const newCompetitorEntered = next.topCompetitors.some((c) => !c.isOwn && !previousIds.has(c.adId));
+  if (newCompetitorEntered) return true;
+
+  // 3. Suggested price range shifted.
+  if (
+    previous.suggestedPriceLow !== next.suggestedPriceLow ||
+    previous.suggestedPriceHigh !== next.suggestedPriceHigh
+  ) {
+    return true;
+  }
+
+  return false;
+}
 
 type ScrapeErrorCode = 'IP_BLOCKED' | 'SCRAPE_TIMEOUT' | 'SCRAPE_MALFORMED_PAGE' | 'CAPTCHA_DETECTED' | 'UNKNOWN';
 
@@ -58,6 +106,7 @@ export class WettbewerbService {
     private readonly adsService: AdsService,
     private readonly plzValidationService: PlzValidationService,
     private readonly creditsService: CreditsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private searchesCol(userId: string) {
@@ -130,6 +179,10 @@ export class WettbewerbService {
       lastCheckError: null,
       failureCount: 0,
       latestSnapshot: null,
+      // What the user actually last looked at — compared against each new
+      // snapshot to decide whether to notify. null until the first view.
+      lastViewedSnapshot: null,
+      hasUnseenChange: false,
     };
     try {
       await searchRef.set(doc);
@@ -156,6 +209,26 @@ export class WettbewerbService {
       .collection('users')
       .doc(userId)
       .set({ hasSeenWettbewerb: true }, { merge: true });
+    return { success: true };
+  }
+
+  /**
+   * Called when the user actually views a specific saved search's card (not
+   * just "is on the Wettbewerb tab"). Snapshots the current latestSnapshot
+   * as the new comparison baseline for hasMeaningfulChange and clears the
+   * unseen-change flag, so both the per-card highlight and the nav-tab
+   * badge count (derived client-side from hasUnseenChange across all
+   * searches) clear for exactly this search.
+   */
+  async markSearchViewed(userId: string, searchId: string) {
+    const searchRef = this.searchesCol(userId).doc(searchId);
+    const doc = await searchRef.get();
+    if (!doc.exists) throw new NotFoundException('Suche nicht gefunden.');
+
+    await searchRef.update({
+      lastViewedSnapshot: doc.data()?.latestSnapshot ?? null,
+      hasUnseenChange: false,
+    });
     return { success: true };
   }
 
@@ -310,7 +383,7 @@ export class WettbewerbService {
     const { userAdRank, userAdId, topCompetitors } = this.matchOwnAds(matchedRows);
     const priceInsights = this.computePriceInsights(matchedRows);
 
-    const latestSnapshot = {
+    const latestSnapshot: WettbewerbSnapshot = {
       checkedAt: nowIso,
       totalResultsFound,
       userAdRank,
@@ -318,6 +391,10 @@ export class WettbewerbService {
       ...priceInsights,
       topCompetitors,
     };
+
+    // Compare against what the user actually last VIEWED (not the previous
+    // check) — see hasMeaningfulChange's doc comment for why.
+    const changed = hasMeaningfulChange(searchData.lastViewedSnapshot ?? null, latestSnapshot);
 
     await searchRef.update({
       status: 'active',
@@ -327,12 +404,20 @@ export class WettbewerbService {
       nextCheckAt,
       latestSnapshot,
       updatedAt: nowIso,
+      ...(changed ? { hasUnseenChange: true } : {}),
     });
 
     await searchRef
       .collection('snapshots')
       .add({ ...latestSnapshot, runId, rawResultCount: results.length })
       .catch((e: any) => this.logger.warn(`[wettbewerb run=${runId}] Failed to write snapshot log: ${e.message}`));
+
+    if (changed) {
+      await this.notificationsService.emit(userId, {
+        type: 'wettbewerb_update',
+        message: `🔔 Neue Entwicklung bei „${searchData.keyword}“ — Rang, Preis oder Konkurrenz hat sich geändert.`,
+      }).catch((e: any) => this.logger.warn(`[wettbewerb run=${runId}] Failed to emit notification: ${e.message}`));
+    }
   }
 
   private async handleCheckFailure(

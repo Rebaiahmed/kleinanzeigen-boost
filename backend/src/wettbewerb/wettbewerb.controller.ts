@@ -52,6 +52,12 @@ export class WettbewerbController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post('searches/:id/view')
+  async markSearchViewed(@Req() req: any, @Param('id') id: string) {
+    return this.wettbewerbService.markSearchViewed(req.user.userId, id);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post('guide-seen')
   async markGuideSeen(@Req() req: any) {
     return this.wettbewerbService.markGuideSeen(req.user.userId);

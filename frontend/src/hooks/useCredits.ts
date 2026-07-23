@@ -37,7 +37,7 @@ async function fetchPacks(): Promise<Record<string, CreditPack>> {
 
 export function useCredits() {
   const queryClient = useQueryClient();
-  const [busy, setBusy] = useState(false);
+  const [busyPackId, setBusyPackId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const { data: balanceData } = useQuery({
@@ -55,7 +55,7 @@ export function useCredits() {
   });
 
   const buyCredits = useCallback(async (packId: string) => {
-    setBusy(true);
+    setBusyPackId(packId);
     setError(null);
     try {
       const res = await fetch(`${API_URL}/credits/checkout`, {
@@ -72,7 +72,7 @@ export function useCredits() {
     } catch {
       setError('Netzwerkfehler.');
     } finally {
-      setBusy(false);
+      setBusyPackId(null);
     }
   }, []);
 
@@ -84,7 +84,8 @@ export function useCredits() {
     enabled: balanceData?.enabled === true,
     balance: balanceData?.balance ?? 0,
     packs: packs || {},
-    busy,
+    busy: busyPackId !== null,
+    busyPackId,
     error,
     buyCredits,
     refetchBalance,

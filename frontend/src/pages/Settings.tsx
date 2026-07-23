@@ -421,7 +421,7 @@ export function Settings() {
                   disabled={credits.busy}
                   className="mt-auto px-5 py-2 bg-ka-green hover:bg-[#96ae00] disabled:opacity-50 text-ka-gray-900 font-bold text-[13px] rounded-sm transition-colors"
                 >
-                  {credits.busy ? 'Öffne…' : 'Aufladen'}
+                  {credits.busyPackId === packId ? 'Öffne…' : 'Aufladen'}
                 </button>
               </div>
             ))}

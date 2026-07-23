@@ -193,18 +193,6 @@ jobs:
       # ── 8. Upload draft to Chrome Web Store ────────────────────────────────
       # This only replaces the item's PENDING draft in the Developer Dashboard —
       # it is not visible to users until the separate "publish" job runs.
-
-      # TEMPORARY DEBUG STEP — remove once the unauthorized_client issue is
-      # resolved. Logs only character counts, never the secret values
-      # themselves, to check for trailing whitespace/newlines from copy-paste
-      # (a very common cause of this exact error).
-      - name: "DEBUG: check Chrome secret lengths (no values printed)"
-        run: |
-          echo "CHROME_CLIENT_ID length:     $(echo -n "${{ secrets.CHROME_CLIENT_ID }}" | wc -c)"
-          echo "CHROME_CLIENT_SECRET length: $(echo -n "${{ secrets.CHROME_CLIENT_SECRET }}" | wc -c)"
-          echo "CHROME_REFRESH_TOKEN length: $(echo -n "${{ secrets.CHROME_REFRESH_TOKEN }}" | wc -c)"
-          echo "CHROME_EXTENSION_ID length:  $(echo -n "${{ secrets.CHROME_EXTENSION_ID }}" | wc -c)"
-
       - name: Get Chrome Web Store access token
         id: cws_token
         run: |

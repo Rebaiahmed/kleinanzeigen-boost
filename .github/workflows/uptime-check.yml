@@ -5,6 +5,13 @@ name: Production Uptime Check
 # safety net for everything else (VPS reboot, process crash, disk full, an
 # expired cert, etc.). See MONITORING.md for why this exists.
 #
+# Checks BOTH the backend API and the frontend dashboard. Alerts are
+# transition-only (fires once on down, once on recovery) — never repeats
+# "still down" every 5 minutes while an outage is ongoing. State is tracked
+# in .github/uptime-state.json, committed back to main only when a service's
+# status actually changes (so this workflow is silent, with zero commits,
+# during normal operation).
+#
 # This is the GitHub-Actions-only fallback. A real third-party uptime
 # monitor (UptimeRobot recommended — see MONITORING.md) is more reliable
 # because it doesn't depend on you having GitHub notifications configured,
@@ -14,66 +21,139 @@ name: Production Uptime Check
 on:
   schedule:
     - cron: '*/5 * * * *' # every 5 minutes
-  workflow_dispatch: {} # allow a manual "check right now" run
+  workflow_dispatch:
+    inputs:
+      backend_url:
+        description: 'Override backend health URL (testing only — leave blank for real prod)'
+        required: false
+        default: ''
+      frontend_url:
+        description: 'Override frontend URL (testing only — leave blank for real prod)'
+        required: false
+        default: ''
 
 concurrency:
   group: uptime-check
   cancel-in-progress: true # a stale overlapping run isn't worth waiting for
 
+permissions:
+  contents: write # needed to commit the state file on a status transition
+
 jobs:
   check:
-    name: Ping production health endpoint
+    name: Ping production health endpoints
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (for the health-check script)
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check production health
-        id: health_check
-        run: ./scripts/health-check.sh "https://api.anzeigenboost.de/api/health" 3 10 0
+      - name: Resolve target URLs
+        id: urls
+        run: |
+          BACKEND="${{ github.event.inputs.backend_url }}"
+          FRONTEND="${{ github.event.inputs.frontend_url }}"
+          echo "backend=${BACKEND:-https://api.anzeigenboost.de/api/health}" >> "$GITHUB_OUTPUT"
+          echo "frontend=${FRONTEND:-https://anzeigenboost.de}" >> "$GITHUB_OUTPUT"
 
-      # Fires only when the check above failed. Posts to Slack or Discord if
-      # a webhook secret is configured (SLACK_WEBHOOK_URL / DISCORD_WEBHOOK_URL
-      # under Settings → Secrets and variables → Actions) — safe no-op
-      # otherwise. Either way, the failed run itself (red X + GitHub's own
-      # workflow-failure notification) is the baseline signal — see
-      # MONITORING.md Part 3 for the full notification story.
-      - name: Notify (Slack/Discord, if configured)
-        if: failure()
+      # continue-on-error so a backend failure doesn't skip the frontend
+      # check, and so the "evaluate" step below always runs regardless.
+      - name: Check backend health
+        id: backend_check
+        continue-on-error: true
+        run: ./scripts/health-check.sh "${{ steps.urls.outputs.backend }}" 3 10 0
+
+      - name: Check frontend
+        id: frontend_check
+        continue-on-error: true
+        run: ./scripts/health-check.sh "${{ steps.urls.outputs.frontend }}" 3 10 0
+
+      - name: Evaluate state transitions & notify
+        id: evaluate
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          BACKEND_OUTCOME: ${{ steps.backend_check.outcome }}
+          FRONTEND_OUTCOME: ${{ steps.frontend_check.outcome }}
+          BACKEND_URL: ${{ steps.urls.outputs.backend }}
+          FRONTEND_URL: ${{ steps.urls.outputs.frontend }}
         run: |
-          MESSAGE="🚨 AnzeigenBoost backend is DOWN — production health check failed at $(date -u +%Y-%m-%dT%H:%M:%SZ). Run: ${RUN_URL}"
+          STATE_FILE=".github/uptime-state.json"
+          [ -f "$STATE_FILE" ] || echo '{"backend":"up","frontend":"up"}' > "$STATE_FILE"
 
-          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+          PREV_BACKEND=$(jq -r '.backend // "up"' "$STATE_FILE")
+          PREV_FRONTEND=$(jq -r '.frontend // "up"' "$STATE_FILE")
+
+          NEW_BACKEND="down"; [ "$BACKEND_OUTCOME" = "success" ] && NEW_BACKEND="up"
+          NEW_FRONTEND="down"; [ "$FRONTEND_OUTCOME" = "success" ] && NEW_FRONTEND="up"
+
+          send_slack() {
+            local text="$1"
+            if [ -z "$SLACK_WEBHOOK_URL" ]; then
+              echo "No SLACK_WEBHOOK_URL set — skipping (would have sent): $text"
+              return
+            fi
             curl -fsS -X POST -H 'Content-Type: application/json' \
-              -d "{\"text\": $(printf '%s' "$MESSAGE" | jq -Rs .)}" \
-              "$SLACK_WEBHOOK_URL" && echo "Posted to Slack."
+              -d "{\"text\": $(printf '%s' "$text" | jq -Rs .)}" \
+              "$SLACK_WEBHOOK_URL" && echo "Posted to Slack." || echo "⚠️ Slack post failed (non-fatal)."
+          }
+
+          TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          CHANGED=0
+
+          if [ "$PREV_BACKEND" != "$NEW_BACKEND" ]; then
+            CHANGED=1
+            if [ "$NEW_BACKEND" = "down" ]; then
+              send_slack "🔴 *Backend* is DOWN — \`${BACKEND_URL}\` failed to respond after retries. (${TS})"
+            else
+              send_slack "✅ *Backend* is back UP — \`${BACKEND_URL}\` responding normally again. (${TS})"
+            fi
           fi
 
-          if [ -n "$DISCORD_WEBHOOK_URL" ]; then
-            curl -fsS -X POST -H 'Content-Type: application/json' \
-              -d "{\"content\": $(printf '%s' "$MESSAGE" | jq -Rs .)}" \
-              "$DISCORD_WEBHOOK_URL" && echo "Posted to Discord."
+          if [ "$PREV_FRONTEND" != "$NEW_FRONTEND" ]; then
+            CHANGED=1
+            if [ "$NEW_FRONTEND" = "down" ]; then
+              send_slack "🔴 *Dashboard* is DOWN — \`${FRONTEND_URL}\` failed to respond after retries. (${TS})"
+            else
+              send_slack "✅ *Dashboard* is back UP — \`${FRONTEND_URL}\` responding normally again. (${TS})"
+            fi
           fi
 
-          if [ -z "$SLACK_WEBHOOK_URL" ] && [ -z "$DISCORD_WEBHOOK_URL" ]; then
-            echo "No SLACK_WEBHOOK_URL or DISCORD_WEBHOOK_URL secret configured — skipping chat notification."
-            echo "Relying on GitHub's own failed-workflow notification. See MONITORING.md to add a webhook."
-          fi
+          jq -n --arg b "$NEW_BACKEND" --arg f "$NEW_FRONTEND" --arg t "$TS" \
+            '{backend: $b, frontend: $f, lastChecked: $t}' > "$STATE_FILE"
 
-      - name: Failure summary
-        if: failure()
+          echo "changed=$CHANGED" >> "$GITHUB_OUTPUT"
+          echo "backend_status=$NEW_BACKEND" >> "$GITHUB_OUTPUT"
+          echo "frontend_status=$NEW_FRONTEND" >> "$GITHUB_OUTPUT"
+
+      # Only commits when a status actually flipped — this is what keeps the
+      # workflow silent (zero commits) during normal up/up operation, and is
+      # also what makes the transition-only alerting possible across runs
+      # (each run reads the previous run's committed state).
+      - name: Commit state file (only on transition)
+        if: steps.evaluate.outputs.changed == '1'
         run: |
-          {
-            echo "## 🚨 PRODUCTION IS DOWN 🚨"
-            echo ""
-            echo "\`https://api.anzeigenboost.de/api/health\` did not respond with 2xx"
-            echo "after 3 attempts, 10s apart. This is the scheduled uptime check, not"
-            echo "a deploy — nothing was just pushed, so this is a live incident."
-            echo ""
-            echo "Check the VPS directly: \`pm2 status\`, \`pm2 logs anzeigenboost-api\`."
-          } >> "$GITHUB_STEP_SUMMARY"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/uptime-state.json
+          git commit -q -m "chore(uptime): backend=${{ steps.evaluate.outputs.backend_status }} frontend=${{ steps.evaluate.outputs.frontend_status }} [skip ci]"
+
+          for i in 1 2 3; do
+            git fetch -q origin main
+            if git rebase origin/main -q; then
+              if git push -q origin main; then
+                echo "✅ State committed."
+                exit 0
+              fi
+            else
+              git rebase --abort
+            fi
+            echo "Retrying state commit ($i)…"
+            sleep 2
+          done
+          echo "⚠️ Could not commit uptime state after retries (non-fatal — the next run will re-detect the current status either way)."
+
+      - name: Fail run if currently down
+        if: steps.evaluate.outputs.backend_status == 'down' || steps.evaluate.outputs.frontend_status == 'down'
+        run: |
+          echo "Backend: ${{ steps.evaluate.outputs.backend_status }}"
+          echo "Frontend: ${{ steps.evaluate.outputs.frontend_status }}"
           exit 1

@@ -160,7 +160,14 @@ jobs:
             # locally in this same run, never successfully pushed yet.
             git tag -f "${{ steps.version.outputs.tag }}"
 
-            if git push origin main && git push origin "${{ steps.version.outputs.tag }}" --force; then
+            # HEAD:main (not "main") — pushes whatever's currently checked out
+            # to remote main regardless of what the local branch is actually
+            # named. actions/checkout names the local branch after whichever
+            # ref triggered the run (e.g. "debug/foo" for a workflow_dispatch
+            # --ref debug/foo test run), not necessarily "main" — a plain
+            # `git push origin main` then fails with "src refspec main does
+            # not match any" since no local branch is literally called main.
+            if git push origin HEAD:main && git push origin "${{ steps.version.outputs.tag }}" --force; then
               echo "✅ Pushed commit + tag successfully."
               exit 0
             fi
@@ -186,6 +193,18 @@ jobs:
       # ── 8. Upload draft to Chrome Web Store ────────────────────────────────
       # This only replaces the item's PENDING draft in the Developer Dashboard —
       # it is not visible to users until the separate "publish" job runs.
+
+      # TEMPORARY DEBUG STEP — remove once the unauthorized_client issue is
+      # resolved. Logs only character counts, never the secret values
+      # themselves, to check for trailing whitespace/newlines from copy-paste
+      # (a very common cause of this exact error).
+      - name: "DEBUG: check Chrome secret lengths (no values printed)"
+        run: |
+          echo "CHROME_CLIENT_ID length:     $(echo -n "${{ secrets.CHROME_CLIENT_ID }}" | wc -c)"
+          echo "CHROME_CLIENT_SECRET length: $(echo -n "${{ secrets.CHROME_CLIENT_SECRET }}" | wc -c)"
+          echo "CHROME_REFRESH_TOKEN length: $(echo -n "${{ secrets.CHROME_REFRESH_TOKEN }}" | wc -c)"
+          echo "CHROME_EXTENSION_ID length:  $(echo -n "${{ secrets.CHROME_EXTENSION_ID }}" | wc -c)"
+
       - name: Get Chrome Web Store access token
         id: cws_token
         run: |

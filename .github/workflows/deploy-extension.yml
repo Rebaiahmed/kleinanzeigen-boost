@@ -131,14 +131,45 @@ jobs:
           echo "path=/tmp/changelog.md" >> $GITHUB_OUTPUT
 
       # ── 6. Commit version bump & push ─────────────────────────────────────
+      # main can move between checkout and push (another PR merging mid-run),
+      # which makes a plain `git push` fail non-fast-forward. Commit locally
+      # first, then rebase onto the latest origin/main and retry the push a
+      # few times — tagging happens AFTER each rebase (not before), since
+      # rebase rewrites the commit hash and a pre-rebase tag would end up
+      # pointing at an orphaned commit.
       - name: Commit & tag version bump
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add extension/public/manifest.json
           git commit -m "chore(extension): bump version ${{ steps.version.outputs.old }} → ${{ steps.version.outputs.new }} [skip ci]"
-          git tag "${{ steps.version.outputs.tag }}"
-          git push origin main --tags
+
+          MAX_ATTEMPTS=5
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            echo "▶ Attempt $i/$MAX_ATTEMPTS — syncing with origin/main…"
+            git fetch origin main
+
+            if ! git rebase origin/main; then
+              echo "❌ Rebase hit a real conflict (not just a race) — aborting. Likely another run touched extension/public/manifest.json concurrently."
+              git rebase --abort
+              exit 1
+            fi
+
+            # -f: safe to overwrite on retry — this tag was only ever created
+            # locally in this same run, never successfully pushed yet.
+            git tag -f "${{ steps.version.outputs.tag }}"
+
+            if git push origin main && git push origin "${{ steps.version.outputs.tag }}" --force; then
+              echo "✅ Pushed commit + tag successfully."
+              exit 0
+            fi
+
+            echo "⚠️  Push rejected — origin/main moved again mid-push. Retrying…"
+            sleep $((RANDOM % 5 + 1))
+          done
+
+          echo "❌ Push failed after $MAX_ATTEMPTS attempts — origin/main kept moving faster than we could rebase."
+          exit 1
 
       # ── 7. Create GitHub Release ──────────────────────────────────────────
       - name: Create GitHub Release

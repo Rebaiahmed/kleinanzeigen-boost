@@ -74,6 +74,13 @@ jobs:
             fi
             echo "✅ Automation worker deployed & healthy (online, .env loaded)."
 
+      - name: Notify Slack on success
+        if: success()
+        uses: ./.github/actions/notify-slack-success
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          message: 'Automation worker deployed and health check passed'
+
       - name: Notify Slack on failure
         if: failure()
         uses: ./.github/actions/notify-slack-failure

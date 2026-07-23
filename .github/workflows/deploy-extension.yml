@@ -303,6 +303,14 @@ jobs:
         run: |
           echo "### ✅ Extension v${{ needs.build-and-upload.outputs.new_version }} published live" >> $GITHUB_STEP_SUMMARY
 
+      - name: Notify Slack on success
+        if: success()
+        uses: ./.github/actions/notify-slack-success
+        with:
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          message: 'Extension v${{ needs.build-and-upload.outputs.new_version }} is now LIVE on the Chrome Web Store'
+          include_approver: 'true'
+
       - name: Notify Slack on failure
         if: failure()
         uses: ./.github/actions/notify-slack-failure

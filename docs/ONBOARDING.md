@@ -130,11 +130,12 @@ cp frontend/.env.example frontend/.env
 | `INTERNAL_SECRET` | Shared secret between backend ↔ automation | Same value in both `.env` files |
 | `GEMINI_API_KEY` | Google AI Studio key | `AIza...` |
 | `AUTOMATION_WORKER_URL` | URL of the automation worker | `http://localhost:3001` (local) or `http://automation:3001` (Docker) |
-| `FIREBASE_PROJECT_ID` | Your Firebase project ID | `my-project-12345` |
-| `FIREBASE_CLIENT_EMAIL` | Service account email | From downloaded SA key |
-| `FIREBASE_PRIVATE_KEY` | Service account private key | From downloaded SA key (keep `\n` escapes) |
 | `EBAY_CLIENT_ID` | eBay app Client ID | From eBay developer portal |
 | `EBAY_CLIENT_SECRET` | eBay app Client Secret | From eBay developer portal |
+
+Firebase Admin credentials are **not** env vars — download your service
+account key from Firebase Console → Project Settings → Service Accounts,
+save it as `backend/firebase-credentials.json` (gitignored).
 
 #### `automation/.env` — critical values:
 

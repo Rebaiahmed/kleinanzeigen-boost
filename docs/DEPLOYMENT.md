@@ -72,11 +72,11 @@ ADMIN_API_KEY=__generate_with: openssl rand -hex 24__
 GEMINI_API_KEY=__your_AIza..._key__
 OPENROUTER_API_KEY=__your_key__
 AUTOMATION_WORKER_URL=https://__your_worker__
-FIREBASE_PROJECT_ID=kleinanzeigen-app
-FIREBASE_CLIENT_EMAIL=__your_firebase_client_email__
-FIREBASE_PRIVATE_KEY="__your_firebase_private_key__"
 MONETIZATION_ENABLED=false
 EOF
+
+# Firebase Admin credentials aren't env vars — copy your service account key
+# to backend/firebase-credentials.json (gitignored) before starting.
 
 # Build + start
 npm run build

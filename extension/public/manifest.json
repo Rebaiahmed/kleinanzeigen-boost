@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AnzeigenBoost – Kleinanzeigen automatisch neu einstellen & aktualisieren",
-  "version": "1.0.3",
+  "version": "1.0.5",
   "description": "Kleinanzeigen-Anzeigen automatisch aktualisieren & neu einstellen. Plus: Anzeigen per Foto erstellen – für Kleinanzeigen & Vinted.",
   "permissions": [
     "storage",

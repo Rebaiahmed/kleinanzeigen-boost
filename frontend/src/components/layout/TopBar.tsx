@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, LogOut, Settings, HelpCircle, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { BrandMark } from '../BrandMark';
 
 function getUserFromToken(): { email: string; initials: string; fullEmail: string } | null {
   try {
@@ -76,7 +77,8 @@ export function TopBar() {
         <div className="flex justify-between items-center h-14">
           {/* Left: Logo */}
           <div className="flex">
-            <Link to="/meine-anzeigen" className="flex-shrink-0 flex items-center text-[22px] tracking-tight">
+            <Link to="/meine-anzeigen" className="flex-shrink-0 flex items-center gap-1.5 text-[22px] tracking-tight">
+              <BrandMark className="h-7 w-auto shrink-0" />
               <span className="font-bold text-[#1F2937] dark:text-[#f5f5f5]">Anzeigen</span>
               <span className="font-bold text-[#A8C300]">Boost</span>
             </Link>

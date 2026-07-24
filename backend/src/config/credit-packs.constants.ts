@@ -8,9 +8,9 @@
  * rounding bugs with EUR amounts.
  */
 export const CREDIT_PACKS = {
-  pack_100: { credits: 100, priceEurCents: 499 },
-  pack_500: { credits: 500, priceEurCents: 1999 },
-  pack_2000: { credits: 2000, priceEurCents: 6999 },
+  pack_50: { credits: 50, priceEurCents: 299 },
+  pack_200: { credits: 200, priceEurCents: 799 },
+  pack_500: { credits: 500, priceEurCents: 1499 },
 } as const;
 
 export type CreditPackId = keyof typeof CREDIT_PACKS;

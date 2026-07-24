@@ -6,6 +6,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FEATURE_FLAGS } from '../config/feature-flags';
 import { ReserveCreditsDto, ConfirmCreditsDto, CreateCheckoutDto } from './dto/credits.dto';
 import { CreditActionType } from '../config/credit-costs.constants';
+import { CREDIT_PACKS } from '../config/credit-packs.constants';
 import { sendAdminAlert } from '../common/admin-alert.util';
 
 @Controller('api/credits')
@@ -24,6 +25,14 @@ export class CreditsController {
     await this.creditsService.ensureInitialized(req.user.userId);
     const balance = await this.creditsService.getBalance(req.user.userId);
     return { enabled: true, balance };
+  }
+
+  /** Public (no auth) — pricing info, not sensitive, same pattern as
+   *  /api/config/feature-flags. Keeps credit-packs.constants.ts the single
+   *  source of truth instead of duplicating prices in the frontend. */
+  @Get('packs')
+  async getPacks() {
+    return { packs: CREDIT_PACKS };
   }
 
   @UseGuards(JwtAuthGuard)

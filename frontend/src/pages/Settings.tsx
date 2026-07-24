@@ -7,6 +7,7 @@ import { Toast } from '../components/Toast';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useBilling } from '../hooks/useBilling';
+import { useCredits } from '../hooks/useCredits';
 
 const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -55,6 +56,7 @@ export function Settings() {
   const { t, i18n } = useTranslation();
   const { isDark, setDark, isLoaded: isDarkModeLoaded } = useDarkMode();
   const billing = useBilling();
+  const credits = useCredits();
   const [ebayConnected, setEbayConnected] = useState(false);
   const [ebayUsername, setEbayUsername] = useState('');
   const [isLoadingEbay, setIsLoadingEbay] = useState(false);
@@ -392,6 +394,40 @@ export function Settings() {
           </section>
         );
       })()}
+
+      {/* Credits — pay-as-you-go top-ups, independent of the subscription
+          billing above; gated on ENABLE_CREDITS via useCredits()'s own
+          balance call, same pattern as the billing.enabled check. */}
+      {flags.enableCredits && credits.enabled && (
+        <section className="bg-white p-6 rounded-lg shadow-sm border border-ka-gray-200">
+          <h2 className="text-xl font-semibold mb-1 text-ka-gray-900">Credits</h2>
+          <p className="text-sm text-gray-500 mb-5">
+            Guthaben: <span className={`font-semibold ${credits.balance < 5 ? 'text-red-600' : 'text-gray-800'}`}>{credits.balance} Credits</span>
+          </p>
+
+          {credits.error && (
+            <p className="text-sm text-red-600 mb-4">{credits.error}</p>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {Object.entries(credits.packs).map(([packId, pack]) => (
+              <div key={packId} className="border border-gray-200 rounded-lg p-5 flex flex-col">
+                <h3 className="text-lg font-bold text-gray-800">{pack.credits} Credits</h3>
+                <p className="text-2xl font-bold text-gray-900 mb-4 mt-1">
+                  €{(pack.priceEurCents / 100).toFixed(2).replace('.', ',')}
+                </p>
+                <button
+                  onClick={() => credits.buyCredits(packId)}
+                  disabled={credits.busyPackId === packId}
+                  className="mt-auto px-5 py-2 bg-ka-green hover:bg-[#96ae00] disabled:opacity-50 text-ka-gray-900 font-bold text-[13px] rounded-sm transition-colors"
+                >
+                  {credits.busyPackId === packId ? 'Öffne…' : 'Aufladen'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="bg-white p-6 rounded-lg shadow-sm border border-ka-gray-200">
         <h2 className="text-xl font-semibold mb-6 text-ka-gray-900">{t('settings.aiOptimizations')}</h2>

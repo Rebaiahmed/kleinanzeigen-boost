@@ -39,8 +39,8 @@ Priority: **High** · **Medium** · **Low**
 |-----|------|--------|----------|-------|
 | 3.1 | Add pagination for ads synchronization | **Done** | Medium | Client-side, 12/page (commit 047f917f) |
 | 3.2 | Better loading spinner during sync | Pending | Medium | Small corner spinner exists; this is a polish pass |
-| 3.3 | Apply official logo to frontend header, landing & favicon | Pending | Low | Use `docs/assets/branding/anzeigenboost_logo_final.svg` (PNG export drops the wordmark — SVG renders correctly). Replace the `Zap` mark + text wordmark in TopBar & Landing; set favicon. Extension icon already done. |
-| 3.4 | „Nur aktive Anzeigen" filter / hide-deleted toggle | Pending | Low | Now that `listingState` is synced (active/reserved/paused/deleted), add a dashboard filter to show only active ads or hide „Gelöscht" listings. |
+| 3.3 | Apply official logo to frontend header, landing & favicon | **Done** | Low | Extracted the icon mark from `docs/assets/branding/anzeigenboost_logo_final.svg` into a reusable `BrandMark` component (frontend/src/components/BrandMark.tsx) placed next to the existing text wordmark in `TopBar` & `Landing` (keeps i18n/dark-mode text control instead of baking in a flat-color SVG wordmark). `favicon.svg` updated to the same arrow mark on the brand-green rounded square. |
+| 3.4 | „Nur aktive Anzeigen" filter / hide-deleted toggle | **Done** | Low | Deleted ads were already always hidden. Added a "Nur aktive Anzeigen" toggle button on the Ads page (`frontend/src/pages/Ads.tsx`) that additionally hides reserved/paused listings, filtering on the existing `listingState` field. |
 
 ## Part 4 — Documentation & Monetization
 

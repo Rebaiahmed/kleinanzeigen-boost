@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { RefreshCw, Camera, Wallet, Clock, ShieldCheck } from 'lucide-react';
 import { SupportMe } from '../components/SupportMe';
 import { useTranslation } from 'react-i18next';
+import { BrandMark } from '../components/BrandMark';
 
 /* ────────────────────────────────────────────────────────────────────────
  * Things to swap
@@ -151,6 +152,7 @@ export function Landing() {
         <section className="pt-14 pb-12 px-4 sm:px-6 text-center">
           <div className="max-w-2xl mx-auto">
             <div className="flex items-center justify-center gap-1.5 mb-8">
+              <BrandMark className="h-8 w-auto shrink-0" />
               <span className="font-bold text-slate-900">Anzeigen</span>
               <span className="font-bold text-[#A8C300]">Boost</span>
             </div>

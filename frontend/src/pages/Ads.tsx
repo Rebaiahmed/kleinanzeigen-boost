@@ -35,6 +35,7 @@ export function Ads() {
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'views-desc' | 'views-asc' | 'messages-desc' | 'favorites-desc'>('newest');
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showOnlyActive, setShowOnlyActive] = useState(false);
   const ADS_PER_PAGE = 12;
   const [isBackgroundSyncing, setIsBackgroundSyncing] = useState(false);
   const [scheduleModalAd, setScheduleModalAd] = useState<string | null>(null);
@@ -153,12 +154,18 @@ export function Ads() {
   // "Meine Entwürfe" page/tab, so exclude them here too.
   const visibleAds = ads.filter((a: any) => a.listingState !== 'deleted' && a.status !== 'pending');
 
+  // Optional "Nur aktive Anzeigen" toggle — hides reserved/paused listings too,
+  // on top of the always-hidden deleted ones above.
+  const activeFilteredAds = showOnlyActive
+    ? visibleAds.filter((a: any) => a.listingState === 'active')
+    : visibleAds;
+
   // Title search — matters more than paging at high ad counts. Case-insensitive
   // substring match on the title.
   const q = searchQuery.trim().toLowerCase();
   const searchedAds = q
-    ? visibleAds.filter((a: any) => (a.title || '').toLowerCase().includes(q))
-    : visibleAds;
+    ? activeFilteredAds.filter((a: any) => (a.title || '').toLowerCase().includes(q))
+    : activeFilteredAds;
 
   // Coerce a possibly-missing/string count to a number (missing → 0, so they sort
   // to the bottom of any "Meiste …" order rather than jumping around).
@@ -188,8 +195,8 @@ export function Ads() {
   const safePage = Math.min(currentPage, totalPages);
   const paginatedAds = sortedAds.slice((safePage - 1) * ADS_PER_PAGE, safePage * ADS_PER_PAGE);
 
-  // Reset to page 1 when the sort order or search query changes.
-  useEffect(() => { setCurrentPage(1); }, [sortBy, q]);
+  // Reset to page 1 when the sort order, search query, or active filter changes.
+  useEffect(() => { setCurrentPage(1); }, [sortBy, q, showOnlyActive]);
   // Clamp if the list shrank (e.g. an ad was deleted) and the current page no longer exists.
   useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages); }, [totalPages, currentPage]);
 
@@ -253,6 +260,19 @@ export function Ads() {
               <option value="favorites-desc">{t('ads.sortMostFavorites')}</option>
             </select>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setShowOnlyActive((v) => !v)}
+            aria-pressed={showOnlyActive}
+            className={`flex items-center gap-1.5 border rounded-sm px-2.5 py-1.5 text-[13px] font-medium shadow-sm transition-colors ${
+              showOnlyActive
+                ? 'bg-[#f2f7e6] border-[#A8C300] text-[#5a6e00]'
+                : 'bg-white border-[#ccc] text-[#333] hover:bg-[#f7f7f7]'
+            }`}
+          >
+            {t('ads.onlyActive')}
+          </button>
 
           {(isFetching || isBackgroundSyncing) && ads.length > 0 && (
             <div className="flex items-center gap-1.5 text-xs text-gray-500 py-1.5 px-1 shrink-0">
@@ -363,12 +383,19 @@ export function Ads() {
             {t('ads.syncNow')}
           </button>
         </div>
-      ) : sortedAds.length === 0 ? (
+      ) : sortedAds.length === 0 && q ? (
         <div className="text-center py-12 text-[#666]">
           <Search className="w-6 h-6 mx-auto mb-3 text-[#bbb]" />
           <p className="mb-1">{t('ads.noAdsForSearch', { query: searchQuery })}</p>
           <button onClick={() => setSearchQuery('')} className="text-[#A8C300] font-semibold hover:underline text-[13px]">
             {t('ads.resetSearch')}
+          </button>
+        </div>
+      ) : sortedAds.length === 0 ? (
+        <div className="text-center py-12 text-[#666]">
+          <p className="mb-3">{t('ads.noActiveAds')}</p>
+          <button onClick={() => setShowOnlyActive(false)} className="text-[#A8C300] font-semibold hover:underline text-[13px]">
+            {t('ads.showAllAds')}
           </button>
         </div>
       ) : (
